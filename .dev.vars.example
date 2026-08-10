@@ -1,0 +1,6 @@
+# Local override (.dev.vars). Production values live in wrangler.jsonc vars.
+
+WEBAUTHN_RP_ID=localhost
+WEBAUTHN_ORIGIN=http://localhost:5173
+WEBAUTHN_RP_NAME=戦国日本史.net
+SESSION_TTL_SECONDS=15552000

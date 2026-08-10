@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sengoku-nihonshi-net",
+  "compatibility_date": "2025-08-03",
+  "main": "./src/index.tsx",
+  "preview_urls": true,
+  "workers_dev": true,
+  "vars": {
+    "WEBAUTHN_RP_NAME": "戦国日本史.net",
+    "WEBAUTHN_RP_ID": "sengoku-nihonshi-net.yy-dec5.workers.dev",
+    "WEBAUTHN_ORIGIN": "https://sengoku-nihonshi-net.yy-dec5.workers.dev",
+    "SESSION_TTL_SECONDS": "15552000"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sengoku-nihonshi",
+      "database_id": "d3135503-e663-4cdb-8322-21a48300dee0",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
