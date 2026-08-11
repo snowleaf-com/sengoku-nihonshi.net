@@ -67,6 +67,7 @@ WEBAUTHN_ORIGIN=http://localhost:5173
 ## 現在のマイルストーン
 
 **Phase 0** … Passkey / session / 認証保護  
-**Phase 1** … 武将作成（名前 + アイコン）・令制国マップ・建国/仕官
+**Phase 1** … 武将作成（名前 + アイコン）・令制国マップ・建国/仕官  
+**Phase 1.5** … 立ち回り選択で能力確定（武勇・知略・統率・徳望）
 
-コマンド予約やターン進行は Phase 2 以降。詳細は [`docs/phase1.md`](./docs/phase1.md)。
+コマンド予約やターン進行は Phase 2 以降。詳細は [`docs/phase1.md`](./docs/phase1.md) / [`docs/phase1.5.md`](./docs/phase1.5.md)。

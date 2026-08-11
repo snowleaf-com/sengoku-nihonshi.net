@@ -14,11 +14,12 @@
 | [session.md](./session.md) | Cookie + D1 セッション、長期ログイン方針 |
 | [database.md](./database.md) | テーブルと責務 |
 | [phase0.md](./phase0.md) | Phase 0 の範囲・完了条件 |
-| [phase1.md](./phase1.md) | Phase 1（武将・マップ・旗揚げ） |
+| [phase1.md](./phase1.md) | Phase 1（武将・マップ・建国/仕官） |
+| [phase1.5.md](./phase1.5.md) | Phase 1.5（立ち回り・能力） |
 
 ## 読む順番（おすすめ）
 
-1. [phase0.md](./phase0.md) / [phase1.md](./phase1.md) — フェーズ範囲
+1. [phase0.md](./phase0.md) / [phase1.md](./phase1.md) / [phase1.5.md](./phase1.5.md) — フェーズ範囲
 2. [architecture.md](./architecture.md) — 全体の置き場所
 3. [passkey.md](./passkey.md) / [session.md](./session.md) — 認証の核
 4. [database.md](./database.md) — 永続化
