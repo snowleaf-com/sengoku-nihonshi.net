@@ -9,7 +9,10 @@ export function normalizeCharacterName(raw: string): string | null {
   const name = raw.replace(/\s+/g, ' ').trim()
   if (!name) return null
   if (name.length > CHARACTER_NAME_MAX_LENGTH) return null
-  // 表示不能な制御文字を弾く
-  if (/[\u0000-\u001f\u007f]/.test(name)) return null
+  // 表示不能な制御文字を弾く（ESLint no-control-regex 回避のためコードポイントで判定）
+  for (let i = 0; i < name.length; i += 1) {
+    const code = name.charCodeAt(i)
+    if (code <= 0x1f || code === 0x7f) return null
+  }
   return name
 }

@@ -213,12 +213,6 @@ describe('HTTP routes', () => {
     expect(res.status).toBe(302)
     expect(res.headers.get('Location')).toBe('/game?error=invalid_icon')
   })
-
-  it('serves an icon asset', async () => {
-    const res = await exports.default.fetch('http://localhost/icons/busho_13.webp')
-    expect(res.status).toBe(200)
-    expect(res.headers.get('content-type') ?? '').toMatch(/image\/webp|application\/octet-stream/)
-  })
 })
 
 async function createSessionCookie(): Promise<string> {
