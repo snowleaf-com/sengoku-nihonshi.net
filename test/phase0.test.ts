@@ -183,6 +183,7 @@ describe('HTTP routes', () => {
     expect(html).toContain('若武者')
     expect(html).toContain('足軽大将')
     expect(html).toContain('忍者')
+    expect(html).toContain('くノ一')
     expect(html).toContain('name="iconId"')
     expect(html).toContain('name="provinceId"')
   })
@@ -200,7 +201,7 @@ describe('HTTP routes', () => {
       },
       body: new URLSearchParams({
         name: '明智光秀',
-        iconId: 'busho_20',
+        iconId: 'busho_17',
         provinceId: start.id,
         houseName: '明智',
       }),
@@ -215,7 +216,7 @@ describe('HTTP routes', () => {
     expect(gameRes.status).toBe(200)
     const html = await gameRes.text()
     expect(html).toContain('明智光秀')
-    expect(html).toContain('/icons/busho_20.webp')
+    expect(html).toContain('/icons/busho_17.webp')
     expect(html).toContain('足軽大将')
   })
 
