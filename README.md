@@ -66,11 +66,7 @@ WEBAUTHN_ORIGIN=http://localhost:5173
 
 ## 現在のマイルストーン
 
-**Phase 0（開発基盤）完了** / **Phase 1 入口（武将作成）着手**
+**Phase 0** … Passkey / session / 認証保護  
+**Phase 1** … 武将作成（名前 + アイコン）・令制国マップ・建国/仕官
 
-- Passkey 登録 / ログイン
-- D1 session（長期・アカウント切替なし）
-- `/game` 認証保護
-- 武将作成（名前 + アイコン選択、`characters`）
-
-ゲーム本体（国・コマンド・ターン）は以降のフェーズ。
+コマンド予約やターン進行は Phase 2 以降。詳細は [`docs/phase1.md`](./docs/phase1.md)。

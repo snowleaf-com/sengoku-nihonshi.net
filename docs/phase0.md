@@ -38,13 +38,8 @@
 
 メール必須フォームもパスワードもない。
 
-## 次（Phase 1 の入口）
+## 次
 
-1. [x] `characters` テーブル（名前 + `icon_id`、1 User = 1 Character）
-2. [x] 武将作成画面（名前入力 + アイコン選択）
-3. [ ] Province master / 全国マップの静的データ
-4. [ ] `/game` を本編入口（コマンド・国取り）に育てる
+→ [phase1.md](./phase1.md)
 
 武将アイコンは `public/icons/busho_01.webp`〜`busho_36.webp`（36枚）。一覧は `src/config/icons.ts`。
-
-詳細なゲーム仕様はリポジトリ直下の開発仕様、および今後の Phase 文書へ。

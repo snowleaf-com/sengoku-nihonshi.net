@@ -40,7 +40,10 @@ authRoutes.post('/register/verify', async (c) => {
       return c.json({ error: 'invalid_body' }, 400)
     }
 
-    const { user } = await finishRegistration(c.env, body)
+    const { user } = await finishRegistration(c.env, {
+      ...body,
+      requestOrigin: c.req.header('Origin'),
+    })
     await createSession(c, user.id)
 
     return c.json({ ok: true, redirectTo: '/game' })
@@ -77,7 +80,10 @@ authRoutes.post('/login/verify', async (c) => {
       return c.json({ error: 'invalid_body' }, 400)
     }
 
-    const { user } = await finishAuthentication(c.env, body)
+    const { user } = await finishAuthentication(c.env, {
+      ...body,
+      requestOrigin: c.req.header('Origin'),
+    })
     await createSession(c, user.id)
 
     return c.json({ ok: true, redirectTo: '/game' })

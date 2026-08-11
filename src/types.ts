@@ -54,6 +54,42 @@ export type Character = {
   userId: string
   name: string
   iconId: string
+  houseId: string | null
+  provinceId: string
+  rank: number
+  merit: number
+  money: number
+  troops: number
   createdAt: number
   updatedAt: number
+}
+
+export type House = {
+  id: string
+  name: string
+  leaderCharacterId: string | null
+  color: string
+  createdAt: number
+  destroyedAt: number | null
+}
+
+export type Province = {
+  id: string
+  name: string
+  houseId: string | null
+  population: number
+  agriculture: number
+  commerce: number
+  defense: number
+  garrison: number
+  createdAt: number
+  updatedAt: number
+}
+
+export type HouseRole = {
+  id: string
+  houseId: string
+  characterId: string
+  role: string
+  createdAt: number
 }

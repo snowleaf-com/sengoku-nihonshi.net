@@ -75,17 +75,14 @@ verify 成功後に削除。期限切れ行は読み時に無効扱い（掃除�
 
 SQL は `src/repositories/*` に閉じる。ルートや Passkey モジュールから D1 の生クエリを散らかさない。
 
-## Phase 1 以降で増える想定
+## Phase 1 で追加
 
-`houses` / `provinces` / `commands` / `turns` / `battle_logs` など。  
-仕様書の DB 案を、そのフェーズの migration で足す。
+`houses` / `provinces` / `characters` / `house_roles`（migration `0002_phase1_world.sql`）。
 
-### characters（Phase 1 入口で追加）
+- `characters.icon_id` は `public/icons/{icon_id}.webp` と対応
+- `provinces` の初期行はマスター（`src/config/provinces.ts`）から実行時シード
+- `characters.user_id` は UNIQUE（MVP で 1 User = 1 Character）
 
-| 列 | 意味 |
-|----|------|
-| id | 主キー |
-| user_id | 所有者（UNIQUE。MVP は 1 User = 1 Character） |
-| name | 武将名 |
-| icon_id | `public/icons/{icon_id}.webp` と対応 |
-| created_at / updated_at | unix 秒 |
+## Phase 2 以降で増える想定
+
+`commands` / `turns` / `battle_logs` など。
