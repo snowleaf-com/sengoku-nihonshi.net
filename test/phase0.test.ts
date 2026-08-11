@@ -1,7 +1,11 @@
 import { env, exports } from 'cloudflare:workers'
 import { describe, expect, it } from 'vitest'
+import { SESSION_COOKIE_NAME } from '../src/config/auth'
+import { CHARACTER_ICON_IDS } from '../src/config/icons'
+import { normalizeCharacterName } from '../src/lib/character-name'
 import { createId, nowSeconds } from '../src/lib/id'
 import { ChallengeRepository } from '../src/repositories/challenges'
+import { CharacterRepository } from '../src/repositories/characters'
 import { PasskeyRepository } from '../src/repositories/passkeys'
 import { SessionRepository } from '../src/repositories/sessions'
 import { UserRepository } from '../src/repositories/users'
@@ -84,6 +88,38 @@ describe('Phase 0 repositories', () => {
   })
 })
 
+describe('Character repository', () => {
+  it('creates one character per user', async () => {
+    const users = new UserRepository(env.DB)
+    const characters = new CharacterRepository(env.DB)
+    const userId = createId()
+    const now = nowSeconds()
+    await users.create(userId, now)
+
+    const created = await characters.create({
+      id: createId(),
+      userId,
+      name: '武田晴信',
+      iconId: CHARACTER_ICON_IDS[0],
+      createdAt: now,
+    })
+
+    const found = await characters.findByUserId(userId)
+    expect(found?.id).toBe(created.id)
+    expect(found?.name).toBe('武田晴信')
+    expect(found?.iconId).toBe(CHARACTER_ICON_IDS[0])
+  })
+})
+
+describe('character name', () => {
+  it('normalizes and rejects invalid names', () => {
+    expect(normalizeCharacterName('  豊臣秀吉  ')).toBe('豊臣秀吉')
+    expect(normalizeCharacterName('')).toBeNull()
+    expect(normalizeCharacterName('   ')).toBeNull()
+    expect(normalizeCharacterName('あ'.repeat(17))).toBeNull()
+  })
+})
+
 describe('HTTP routes', () => {
   it('serves the top page', async () => {
     const res = await exports.default.fetch('http://localhost/')
@@ -120,4 +156,83 @@ describe('HTTP routes', () => {
     expect(body.challengeId).toBeTruthy()
     expect(body.options.challenge).toBeTruthy()
   })
+
+  it('shows character creation form when authenticated without a character', async () => {
+    const cookie = await createSessionCookie()
+    const res = await exports.default.fetch('http://localhost/game', {
+      headers: { Cookie: cookie },
+    })
+    expect(res.status).toBe(200)
+    const html = await res.text()
+    expect(html).toContain('武将を立てる')
+    expect(html).toContain('/icons/busho_13.webp')
+    expect(html).toContain('name="iconId"')
+  })
+
+  it('creates a character and then shows the hub', async () => {
+    const cookie = await createSessionCookie()
+    const createRes = await exports.default.fetch('http://localhost/game/character', {
+      method: 'POST',
+      headers: {
+        Cookie: cookie,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        name: '明智光秀',
+        iconId: 'busho_20',
+      }),
+      redirect: 'manual',
+    })
+    expect(createRes.status).toBe(302)
+    expect(createRes.headers.get('Location')).toBe('/game')
+
+    const gameRes = await exports.default.fetch('http://localhost/game', {
+      headers: { Cookie: cookie },
+    })
+    expect(gameRes.status).toBe(200)
+    const html = await gameRes.text()
+    expect(html).toContain('明智光秀')
+    expect(html).toContain('/icons/busho_20.webp')
+    expect(html).toContain('出陣準備')
+  })
+
+  it('rejects invalid icon ids', async () => {
+    const cookie = await createSessionCookie()
+    const res = await exports.default.fetch('http://localhost/game/character', {
+      method: 'POST',
+      headers: {
+        Cookie: cookie,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        name: '検証武将',
+        iconId: 'busho_99',
+      }),
+      redirect: 'manual',
+    })
+    expect(res.status).toBe(302)
+    expect(res.headers.get('Location')).toBe('/game?error=invalid_icon')
+  })
+
+  it('serves an icon asset', async () => {
+    const res = await exports.default.fetch('http://localhost/icons/busho_13.webp')
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type') ?? '').toMatch(/image\/webp|application\/octet-stream/)
+  })
 })
+
+async function createSessionCookie(): Promise<string> {
+  const users = new UserRepository(env.DB)
+  const sessions = new SessionRepository(env.DB)
+  const userId = createId()
+  const sessionId = createId(32)
+  const now = nowSeconds()
+  await users.create(userId, now)
+  await sessions.create({
+    id: sessionId,
+    userId,
+    expiresAt: now + 3600,
+    createdAt: now,
+  })
+  return `${SESSION_COOKIE_NAME}=${sessionId}`
+}

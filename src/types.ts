@@ -48,3 +48,12 @@ export type ChallengeRecord = {
   expiresAt: number
   createdAt: number
 }
+
+export type Character = {
+  id: string
+  userId: string
+  name: string
+  iconId: string
+  createdAt: number
+  updatedAt: number
+}

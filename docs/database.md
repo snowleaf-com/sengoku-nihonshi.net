@@ -77,5 +77,15 @@ SQL は `src/repositories/*` に閉じる。ルートや Passkey モジュール
 
 ## Phase 1 以降で増える想定
 
-`characters` / `houses` / `provinces` / `commands` / `turns` / `battle_logs` など。  
+`houses` / `provinces` / `commands` / `turns` / `battle_logs` など。  
 仕様書の DB 案を、そのフェーズの migration で足す。
+
+### characters（Phase 1 入口で追加）
+
+| 列 | 意味 |
+|----|------|
+| id | 主キー |
+| user_id | 所有者（UNIQUE。MVP は 1 User = 1 Character） |
+| name | 武将名 |
+| icon_id | `public/icons/{icon_id}.webp` と対応 |
+| created_at / updated_at | unix 秒 |

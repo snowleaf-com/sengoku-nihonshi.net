@@ -40,9 +40,11 @@
 
 ## 次（Phase 1 の入口）
 
-1. `characters` テーブル
-2. 武将名入力画面
-3. 1 User = 1 Character（MVP）で `/game` を本編入口に
-4. Province master / 全国マップの静的データ
+1. [x] `characters` テーブル（名前 + `icon_id`、1 User = 1 Character）
+2. [x] 武将作成画面（名前入力 + アイコン選択）
+3. [ ] Province master / 全国マップの静的データ
+4. [ ] `/game` を本編入口（コマンド・国取り）に育てる
+
+武将アイコンは `public/icons/busho_*.webp`（現状 13〜36）。追加分が来たら `src/config/icons.ts` に足す。
 
 詳細なゲーム仕様はリポジトリ直下の開発仕様、および今後の Phase 文書へ。
