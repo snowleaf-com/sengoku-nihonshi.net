@@ -12,6 +12,7 @@ export const renderer = jsxRenderer(({ children }) => {
         <Link href="/src/style.css" rel="stylesheet" />
         <script src="/htmx.js" defer></script>
         <Script src="/src/client/passkey.ts" />
+        <Script src="/src/client/stat-adjust.ts" />
       </head>
       <body>{children}</body>
     </html>

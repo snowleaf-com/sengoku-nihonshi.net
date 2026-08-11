@@ -83,6 +83,13 @@ SQL は `src/repositories/*` に閉じる。ルートや Passkey モジュール
 - `provinces` の初期行はマスター（`src/config/provinces.ts`）から実行時シード
 - `characters.user_id` は UNIQUE（MVP で 1 User = 1 Character）
 
+## Phase 1.5 で追加
+
+migration `0003_phase1_5_stats.sql`。
+
+- `archetype_id` … 立ち回り（battle / domestic / strategy / command）
+- `buyu` / `chiryaku` / `toso` / `tokubo` … 武勇・知略・統率・徳望（入力は前3つ、各5〜100・合計150。徳望は立ち回り固定）
+
 ## Phase 2 以降で増える想定
 
-`commands` / `turns` / `battle_logs` など。
+`commands` / `turns` / `battle_logs` など。国庫・民忠・個人の兵糧などもここで。

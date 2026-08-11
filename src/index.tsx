@@ -3,6 +3,7 @@ import { requireAuth, redirectIfAuthenticated, sessionMiddleware } from './middl
 import { authRoutes } from './routes/auth'
 import { gameActionRoutes } from './routes/actions/game'
 import { EnterPathPanel } from './components/EnterPathPanel'
+import { StatAdjustPanel } from './components/StatAdjustPanel'
 import { CharacterCreatePage } from './routes/pages/character-create'
 import { GameHubPage } from './routes/pages/game-hub'
 import { HomePage } from './routes/pages/home'
@@ -11,6 +12,10 @@ import { CharacterRepository } from './repositories/characters'
 import { HouseRepository } from './repositories/houses'
 import { ProvinceRepository } from './repositories/provinces'
 import { renderer } from './renderer'
+import {
+  defaultStatsForArchetype,
+  isArchetypeId,
+} from './config/archetypes'
 import { nextHouseColor } from './config/game'
 import { ensureProvincesSeeded } from './services/world'
 import type { AppEnv } from './types'
@@ -58,6 +63,18 @@ app.get('/game/fragments/enter-path', requireAuth, async (c) => {
   return c.html(
     <EnterPathPanel mode="enlist" provinceName={province.name} houseName={house.name} />,
   )
+})
+
+app.get('/game/fragments/stat-adjust', requireAuth, async (c) => {
+  const user = c.get('user')
+  if (!user) return c.body('Unauthorized', 401)
+
+  const archetypeId = c.req.query('archetypeId') ?? 'domestic'
+  if (!isArchetypeId(archetypeId)) {
+    return c.html(<p class="hero-error">立ち回りが不正です</p>)
+  }
+
+  return c.html(<StatAdjustPanel stats={defaultStatsForArchetype(archetypeId)} />)
 })
 
 app.get('/game', requireAuth, async (c) => {

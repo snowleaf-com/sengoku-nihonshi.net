@@ -18,11 +18,25 @@ gameActionRoutes.post('/character', async (c) => {
   const body = await c.req.parseBody()
   const name = typeof body.name === 'string' ? body.name : ''
   const iconId = typeof body.iconId === 'string' ? body.iconId : ''
+  const archetypeId = typeof body.archetypeId === 'string' ? body.archetypeId : ''
+  const buyu = typeof body.buyu === 'string' ? body.buyu : undefined
+  const chiryaku = typeof body.chiryaku === 'string' ? body.chiryaku : undefined
+  const toso = typeof body.toso === 'string' ? body.toso : undefined
   const provinceId = typeof body.provinceId === 'string' ? body.provinceId : ''
   const houseName = typeof body.houseName === 'string' ? body.houseName : ''
 
   try {
-    await enterWorld(c.env.DB, { userId: user.id, name, iconId, provinceId, houseName })
+    await enterWorld(c.env.DB, {
+      userId: user.id,
+      name,
+      iconId,
+      archetypeId,
+      buyu,
+      chiryaku,
+      toso,
+      provinceId,
+      houseName,
+    })
     return c.redirect('/game')
   } catch (error) {
     if (error instanceof DomainError) {

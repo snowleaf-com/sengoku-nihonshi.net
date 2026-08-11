@@ -1,6 +1,8 @@
 import { EnterPathPanel } from '../../components/EnterPathPanel'
 import { ProvinceMap } from '../../components/ProvinceMap'
 import { SiteShell } from '../../components/SiteShell'
+import { StatAdjustPanel } from '../../components/StatAdjustPanel'
+import { ARCHETYPES, defaultStatsForArchetype } from '../../config/archetypes'
 import { CHARACTER_ICONS, iconPublicPath } from '../../config/icons'
 import type { House, Province } from '../../types'
 
@@ -17,13 +19,16 @@ export function CharacterCreatePage({
   houses,
   previewColor,
 }: CharacterCreatePageProps) {
+  const defaultArchetype = ARCHETYPES.find((a) => a.id === 'domestic') ?? ARCHETYPES[0]
+  const defaultStats = defaultStatsForArchetype(defaultArchetype.id)
+
   return (
     <SiteShell title="武将作成 — 戦国日本史.net">
       <form class="create-layout" method="post" action="/actions/character">
         <section class="create-panel create-identity">
           <header class="create-header">
             <h1>武将作成</h1>
-            <p class="panel-lead">名と顔を選び、地図で国を選ぶ。中立は建国、支配国は仕官。</p>
+            <p class="panel-lead">名と顔と立ち回りを選び、能力を整え、地図で国を選ぶ。</p>
           </header>
 
           {error ? <p class="hero-error">{error}</p> : null}
@@ -67,6 +72,35 @@ export function CharacterCreatePage({
               ))}
             </div>
           </fieldset>
+
+          <fieldset class="archetype-picker">
+            <legend class="field-label">立ち回り</legend>
+            <div class="archetype-grid" role="list">
+              {ARCHETYPES.map((archetype) => (
+                <label class="archetype-option" role="listitem">
+                  <input
+                    type="radio"
+                    name="archetypeId"
+                    value={archetype.id}
+                    required
+                    checked={archetype.id === defaultArchetype.id}
+                    hx-get={`/game/fragments/stat-adjust?archetypeId=${archetype.id}`}
+                    hx-target="#stat-adjust-panel"
+                    hx-trigger="change"
+                    hx-swap="innerHTML"
+                  />
+                  <span class="archetype-card">
+                    <span class="archetype-name">{archetype.label}</span>
+                    <span class="archetype-blurb">{archetype.blurb}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <div id="stat-adjust-panel">
+            <StatAdjustPanel stats={defaultStats} />
+          </div>
 
           <div id="enter-path-panel" class="create-path">
             <EnterPathPanel mode="idle" />
