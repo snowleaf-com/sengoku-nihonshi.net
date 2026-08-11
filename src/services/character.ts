@@ -57,9 +57,6 @@ export async function createCharacter(
   if (!start) {
     throw new DomainError('選択した国が見つかりません')
   }
-  if (start.houseId) {
-    throw new DomainError('その国はすでに支配されています。中立国を選んでください')
-  }
 
   const now = nowSeconds()
 

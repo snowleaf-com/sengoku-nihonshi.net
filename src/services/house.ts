@@ -9,7 +9,7 @@ import { CharacterRepository } from '../repositories/characters'
 import { HouseRoleRepository } from '../repositories/house-roles'
 import { HouseRepository } from '../repositories/houses'
 import { ProvinceRepository } from '../repositories/provinces'
-import type { House } from '../types'
+import type { Character, House } from '../types'
 import { DomainError } from './character'
 
 export function normalizeHouseName(raw: string): string {
@@ -80,4 +80,47 @@ export async function raiseHouse(
   })
 
   return { house }
+}
+
+/**
+ * 仕官: 所在が支配国ならその家の家臣になる。
+ */
+export async function enlistInHouse(
+  db: D1Database,
+  input: { userId: string },
+): Promise<{ house: House; character: Character }> {
+  const characters = new CharacterRepository(db)
+  const character = await characters.findByUserId(input.userId)
+  if (!character) throw new DomainError('先に武将を作成してください')
+  if (character.houseId) throw new DomainError('すでに家に属しています')
+
+  const provinces = new ProvinceRepository(db)
+  const province = await provinces.findById(character.provinceId)
+  if (!province) throw new DomainError('所在国が見つかりません')
+  if (!province.houseId) {
+    throw new DomainError('中立国では仕官できません。家名を入れて建国してください')
+  }
+
+  const houses = new HouseRepository(db)
+  const house = await houses.findById(province.houseId)
+  if (!house || house.destroyedAt) {
+    throw new DomainError('仕官先の家が見つかりません')
+  }
+
+  const now = nowSeconds()
+  await characters.assignHouse(character.id, house.id, now)
+
+  const roles = new HouseRoleRepository(db)
+  await roles.create({
+    id: createId(16),
+    houseId: house.id,
+    characterId: character.id,
+    role: HOUSE_ROLES.retainer,
+    createdAt: now,
+  })
+
+  const updated = await characters.findById(character.id)
+  if (!updated) throw new DomainError('仕官処理に失敗しました')
+
+  return { house, character: updated }
 }

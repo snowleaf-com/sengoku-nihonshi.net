@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { requireAuth } from '../../middleware/auth'
-import { createCharacter, DomainError } from '../../services/character'
+import { DomainError } from '../../services/character'
+import { enterWorld } from '../../services/enter-world'
 import { raiseHouse } from '../../services/house'
 import { ensureProvincesSeeded } from '../../services/world'
 import type { AppEnv } from '../../types'
@@ -17,9 +18,10 @@ gameActionRoutes.post('/character', async (c) => {
   const body = await c.req.parseBody()
   const name = typeof body.name === 'string' ? body.name : ''
   const provinceId = typeof body.provinceId === 'string' ? body.provinceId : ''
+  const houseName = typeof body.houseName === 'string' ? body.houseName : ''
 
   try {
-    await createCharacter(c.env.DB, { userId: user.id, name, provinceId })
+    await enterWorld(c.env.DB, { userId: user.id, name, provinceId, houseName })
     return c.redirect('/game')
   } catch (error) {
     if (error instanceof DomainError) {

@@ -2,13 +2,14 @@ import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vitest'
 import { areAdjacent, adjacentCount } from '../src/domain/province/adjacency'
 import { PROVINCES, getProvinceMaster } from '../src/config/provinces'
-import { createCharacter } from '../src/services/character'
-import { raiseHouse } from '../src/services/house'
+import { enterWorld } from '../src/services/enter-world'
 import { ensureProvincesSeeded } from '../src/services/world'
 import { UserRepository } from '../src/repositories/users'
 import { createId, nowSeconds } from '../src/lib/id'
 import { ProvinceRepository } from '../src/repositories/provinces'
 import { CharacterRepository } from '../src/repositories/characters'
+import { HOUSE_ROLES } from '../src/config/game'
+import { HouseRoleRepository } from '../src/repositories/house-roles'
 
 describe('province adjacency', () => {
   it('connects Shinano and Kozuke', () => {
@@ -37,7 +38,7 @@ describe('Phase 1 world flow', () => {
     expect(all.every((p) => p.houseId === null)).toBe(true)
   })
 
-  it('creates a character and raises a house on a neutral province', async () => {
+  it('founds a house when entering on a neutral province', async () => {
     await ensureProvincesSeeded(env.DB)
     const users = new UserRepository(env.DB)
     const userId = createId()
@@ -47,25 +48,57 @@ describe('Phase 1 world flow', () => {
     const start = neutrals[0]
     expect(start).toBeTruthy()
 
-    const character = await createCharacter(env.DB, {
+    const result = await enterWorld(env.DB, {
       userId,
       name: `武将${userId.slice(0, 4)}`,
       provinceId: start.id,
-    })
-    expect(character.provinceId).toBe(start.id)
-    expect(character.houseId).toBeNull()
-
-    const { house } = await raiseHouse(env.DB, {
-      userId,
       houseName: `家${userId.slice(0, 3)}`,
     })
 
-    const characters = new CharacterRepository(env.DB)
-    const updated = await characters.findById(character.id)
-    const province = await new ProvinceRepository(env.DB).findById(character.provinceId)
+    expect(result.path).toBe('found')
+    expect(result.house.leaderCharacterId).toBe(result.character.id)
+    expect(result.character.houseId).toBe(result.house.id)
 
-    expect(house.leaderCharacterId).toBe(character.id)
-    expect(updated?.houseId).toBe(house.id)
-    expect(province?.houseId).toBe(house.id)
+    const province = await new ProvinceRepository(env.DB).findById(start.id)
+    expect(province?.houseId).toBe(result.house.id)
+  })
+
+  it('enlists when entering on an owned province', async () => {
+    await ensureProvincesSeeded(env.DB)
+    const users = new UserRepository(env.DB)
+    const lordId = createId()
+    const retainerId = createId()
+    await users.create(lordId, nowSeconds())
+    await users.create(retainerId, nowSeconds())
+
+    const neutrals = await new ProvinceRepository(env.DB).listNeutral()
+    const start = neutrals[0]
+
+    const founded = await enterWorld(env.DB, {
+      userId: lordId,
+      name: `主${lordId.slice(0, 4)}`,
+      provinceId: start.id,
+      houseName: `家${lordId.slice(0, 3)}`,
+    })
+    expect(founded.path).toBe('found')
+
+    const enlisted = await enterWorld(env.DB, {
+      userId: retainerId,
+      name: `臣${retainerId.slice(0, 4)}`,
+      provinceId: start.id,
+    })
+
+    expect(enlisted.path).toBe('enlist')
+    expect(enlisted.character.houseId).toBe(founded.house.id)
+    expect(enlisted.house.id).toBe(founded.house.id)
+    expect(enlisted.house.leaderCharacterId).toBe(founded.character.id)
+
+    const roles = new HouseRoleRepository(env.DB)
+    const role = await roles.findByCharacterId(enlisted.character.id)
+    expect(role?.role).toBe(HOUSE_ROLES.retainer)
+
+    const characters = new CharacterRepository(env.DB)
+    const lord = await characters.findById(founded.character.id)
+    expect(lord?.houseId).toBe(founded.house.id)
   })
 })
