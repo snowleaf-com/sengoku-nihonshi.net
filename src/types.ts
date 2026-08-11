@@ -54,6 +54,11 @@ export type Character = {
   userId: string
   name: string
   iconId: string
+  archetypeId: string
+  buyu: number
+  chiryaku: number
+  toso: number
+  tokubo: number
   houseId: string | null
   provinceId: string
   rank: number

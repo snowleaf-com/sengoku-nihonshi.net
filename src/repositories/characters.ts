@@ -5,6 +5,11 @@ type CharacterRow = {
   user_id: string
   name: string
   icon_id: string
+  archetype_id: string
+  buyu: number
+  chiryaku: number
+  toso: number
+  tokubo: number
   house_id: string | null
   province_id: string
   rank: number
@@ -15,8 +20,8 @@ type CharacterRow = {
   updated_at: number
 }
 
-const CHARACTER_COLUMNS =
-  'id, user_id, name, icon_id, house_id, province_id, rank, merit, money, troops, created_at, updated_at'
+const CHARACTER_COLUMNS = `id, user_id, name, icon_id, archetype_id, buyu, chiryaku, toso, tokubo,
+  house_id, province_id, rank, merit, money, troops, created_at, updated_at`
 
 function mapCharacter(row: CharacterRow): Character {
   return {
@@ -24,6 +29,11 @@ function mapCharacter(row: CharacterRow): Character {
     userId: row.user_id,
     name: row.name,
     iconId: row.icon_id,
+    archetypeId: row.archetype_id,
+    buyu: row.buyu,
+    chiryaku: row.chiryaku,
+    toso: row.toso,
+    tokubo: row.tokubo,
     houseId: row.house_id,
     provinceId: row.province_id,
     rank: row.rank,
@@ -43,6 +53,11 @@ export class CharacterRepository {
     userId: string
     name: string
     iconId: string
+    archetypeId: string
+    buyu: number
+    chiryaku: number
+    toso: number
+    tokubo: number
     provinceId: string
     rank: number
     merit: number
@@ -53,14 +68,20 @@ export class CharacterRepository {
     await this.db
       .prepare(
         `INSERT INTO characters (
-           id, user_id, name, icon_id, house_id, province_id, rank, merit, money, troops, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)`,
+           id, user_id, name, icon_id, archetype_id, buyu, chiryaku, toso, tokubo,
+           house_id, province_id, rank, merit, money, troops, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         input.id,
         input.userId,
         input.name,
         input.iconId,
+        input.archetypeId,
+        input.buyu,
+        input.chiryaku,
+        input.toso,
+        input.tokubo,
         input.provinceId,
         input.rank,
         input.merit,
@@ -76,6 +97,11 @@ export class CharacterRepository {
       userId: input.userId,
       name: input.name,
       iconId: input.iconId,
+      archetypeId: input.archetypeId,
+      buyu: input.buyu,
+      chiryaku: input.chiryaku,
+      toso: input.toso,
+      tokubo: input.tokubo,
       houseId: null,
       provinceId: input.provinceId,
       rank: input.rank,
