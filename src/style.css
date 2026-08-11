@@ -348,6 +348,136 @@ a {
   box-shadow: 0 0 0 1px rgba(196, 92, 38, 0.4);
 }
 
+.archetype-picker {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.archetype-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+.archetype-option {
+  position: relative;
+  display: block;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.archetype-option input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.archetype-card {
+  display: grid;
+  gap: 0.2rem;
+  min-height: 100%;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.35rem;
+  background: rgba(0, 0, 0, 0.22);
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.archetype-name {
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+}
+
+.archetype-blurb {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.archetype-option:hover .archetype-card {
+  background: rgba(243, 230, 212, 0.05);
+}
+
+.archetype-option:has(input:focus-visible) .archetype-card,
+.archetype-option:has(input:checked) .archetype-card {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(196, 92, 38, 0.35);
+}
+
+.meta-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}
+
+.meta-stats dt {
+  font-size: 0.72rem;
+}
+
+.meta-stats dd {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-adjust {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.stat-adjust-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.stat-field {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+}
+
+.stat-field.is-locked {
+  opacity: 0.9;
+}
+
+.stat-locked-value {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px dashed var(--line);
+  border-radius: 0.2rem;
+  background: rgba(0, 0, 0, 0.18);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-pool {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.stat-pool.is-ok {
+  color: #9ec29a;
+}
+
+.stat-pool.is-bad {
+  color: var(--danger);
+}
+
+@media (max-width: 519px) {
+  .meta-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (min-width: 720px) {
   .icon-grid {
     grid-template-columns: repeat(auto-fill, minmax(4.75rem, 1fr));

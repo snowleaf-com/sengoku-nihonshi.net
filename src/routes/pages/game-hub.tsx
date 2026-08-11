@@ -1,5 +1,6 @@
 import { ProvinceMap } from '../../components/ProvinceMap'
 import { SiteShell } from '../../components/SiteShell'
+import { getArchetype } from '../../config/archetypes'
 import { rankName } from '../../config/game'
 import { getCharacterIcon, iconPublicPath } from '../../config/icons'
 import { getProvinceMaster, PROVINCES } from '../../config/provinces'
@@ -27,6 +28,7 @@ export function GameHubPage({
   const adj = master ? adjacentCount(master, PROVINCES) : 0
   const houseById = Object.fromEntries(houses.map((h) => [h.id, h]))
   const icon = getCharacterIcon(character.iconId)
+  const archetype = getArchetype(character.archetypeId)
 
   return (
     <SiteShell title={`${character.name} — 戦国日本史.net`}>
@@ -43,13 +45,33 @@ export function GameHubPage({
             <div>
               <h1>{character.name}</h1>
               <p class="panel-lead">
-                {icon?.label ?? '武将'} · {rankName(character.rank)} · {province.name}
+                {icon?.label ?? '武将'} · {archetype?.label ?? '均衡'} ·{' '}
+                {rankName(character.rank)} · {province.name}
                 {house ? ` · ${house.name}` : ' · 浪人'}
               </p>
             </div>
           </div>
 
           {error ? <p class="hero-error">{error}</p> : null}
+
+          <dl class="meta meta-stats">
+            <div>
+              <dt>武勇</dt>
+              <dd>{character.buyu}</dd>
+            </div>
+            <div>
+              <dt>知略</dt>
+              <dd>{character.chiryaku}</dd>
+            </div>
+            <div>
+              <dt>統率</dt>
+              <dd>{character.toso}</dd>
+            </div>
+            <div>
+              <dt>徳望</dt>
+              <dd>{character.tokubo}</dd>
+            </div>
+          </dl>
 
           <dl class="meta meta-inline">
             <div>
