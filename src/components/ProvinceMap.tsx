@@ -14,9 +14,13 @@ type ProvinceMapPickProps = {
   mode: 'pick'
   provinces: Province[]
   houses: House[]
-  /** 選択中に塗る家色（プレビュー） */
+  /** 中立選択時に塗る家色（プレビュー） */
   previewColor: string
   inputName?: string
+  /** HTMX: 選択時に差し替えるターゲット */
+  pickSwapTarget?: string
+  /** HTMX: 選択時の fragment URL（?provinceId= を付与） */
+  pickSwapPath?: string
 }
 
 type ProvinceMapProps = ProvinceMapViewProps | ProvinceMapPickProps
@@ -31,6 +35,8 @@ export function ProvinceMap(props: ProvinceMapProps) {
   const pickMode = props.mode === 'pick'
   const previewColor = pickMode ? props.previewColor : null
   const inputName = pickMode ? (props.inputName ?? 'provinceId') : null
+  const pickSwapTarget = pickMode ? props.pickSwapTarget : undefined
+  const pickSwapPath = pickMode ? props.pickSwapPath : undefined
   const focusProvinceId = !pickMode ? props.focusProvinceId : undefined
 
   const cells: Array<{ key: string; province: Province | null }> = []
@@ -57,15 +63,24 @@ export function ProvinceMap(props: ProvinceMapProps) {
 
         const house = cell.province.houseId ? houseById[cell.province.houseId] : null
         const focused = cell.province.id === focusProvinceId
-        const selectable = pickMode && !house
+        const fill = house?.color ?? NEUTRAL_COLOR
 
-        if (selectable && inputName) {
+        if (pickMode && inputName) {
+          const title = house
+            ? `${cell.province.name}（${house.name}・クリックで仕官）`
+            : `${cell.province.name}（中立・クリックで建国）`
+
+          const hxGet =
+            pickSwapPath && pickSwapTarget
+              ? `${pickSwapPath}?provinceId=${encodeURIComponent(cell.province.id)}`
+              : undefined
+
           return (
             <label
-              class="province-cell is-neutral is-selectable"
+              class={`province-cell is-selectable${house ? ' is-owned' : ' is-neutral'}`}
               key={cell.key}
-              style={`background-color:${NEUTRAL_COLOR}`}
-              title={`${cell.province.name}（クリックで選択）`}
+              style={`background-color:${fill}`}
+              title={title}
             >
               <input
                 class="province-pick-input"
@@ -73,17 +88,24 @@ export function ProvinceMap(props: ProvinceMapProps) {
                 name={inputName}
                 value={cell.province.id}
                 required
+                {...(hxGet
+                  ? {
+                      'hx-get': hxGet,
+                      'hx-target': pickSwapTarget,
+                      'hx-trigger': 'change',
+                      'hx-swap': 'innerHTML',
+                    }
+                  : {})}
               />
               <span class="province-name">{cell.province.name}</span>
-              <span class="province-owner">中立</span>
+              <span class="province-owner">{house ? house.name : '中立'}</span>
             </label>
           )
         }
 
-        const fill = house?.color ?? NEUTRAL_COLOR
         return (
           <div
-            class={`province-cell${house ? ' is-owned' : ' is-neutral'}${focused ? ' is-focus' : ''}${pickMode ? ' is-locked' : ''}`}
+            class={`province-cell${house ? ' is-owned' : ' is-neutral'}${focused ? ' is-focus' : ''}`}
             key={cell.key}
             style={`background-color:${fill}`}
             title={

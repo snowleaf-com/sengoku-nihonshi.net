@@ -299,11 +299,6 @@ a {
   cursor: pointer;
 }
 
-.province-map.is-pick .province-cell.is-locked {
-  cursor: not-allowed;
-  opacity: 0.85;
-}
-
 /* ラジオはマップ操作の裏方。画面上には出さない */
 .province-pick-input {
   position: absolute;
@@ -318,13 +313,15 @@ a {
   position: relative;
 }
 
-.province-cell.is-selectable:has(.province-pick-input:checked) {
+/* 中立選択: 次の家色プレビュー */
+.province-cell.is-selectable.is-neutral:has(.province-pick-input:checked) {
   background-color: var(--preview-color) !important;
   box-shadow: inset 0 0 0 2px #f0c27a;
 }
 
-.province-cell.is-selectable:has(.province-pick-input:checked) .province-owner {
-  content: normal;
+/* 支配国選択: 家色はそのまま、枠だけ */
+.province-cell.is-selectable.is-owned:has(.province-pick-input:checked) {
+  box-shadow: inset 0 0 0 2px #f0c27a;
 }
 
 .province-cell.is-selectable:has(.province-pick-input:focus-visible) {

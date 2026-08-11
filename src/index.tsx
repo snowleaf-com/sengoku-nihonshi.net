@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { requireAuth, redirectIfAuthenticated, sessionMiddleware } from './middleware/auth'
 import { authRoutes } from './routes/auth'
 import { gameActionRoutes } from './routes/actions/game'
+import { EnterPathPanel } from './components/EnterPathPanel'
 import { CharacterCreatePage } from './routes/pages/character-create'
 import { GameHubPage } from './routes/pages/game-hub'
 import { HomePage } from './routes/pages/home'
@@ -30,6 +31,35 @@ app.get('/login', redirectIfAuthenticated, (c) => {
   return c.render(<LoginPage />)
 })
 
+app.get('/game/fragments/enter-path', requireAuth, async (c) => {
+  const user = c.get('user')
+  if (!user) return c.body('Unauthorized', 401)
+
+  await ensureProvincesSeeded(c.env.DB)
+  const provinceId = c.req.query('provinceId') ?? ''
+  if (!provinceId) {
+    return c.html(<EnterPathPanel mode="idle" />)
+  }
+
+  const province = await new ProvinceRepository(c.env.DB).findById(provinceId)
+  if (!province) {
+    return c.html(<p class="hero-error">選択した国が見つかりません</p>)
+  }
+
+  if (!province.houseId) {
+    return c.html(<EnterPathPanel mode="found" provinceName={province.name} />)
+  }
+
+  const house = await new HouseRepository(c.env.DB).findById(province.houseId)
+  if (!house || house.destroyedAt) {
+    return c.html(<p class="hero-error">仕官先の家が見つかりません</p>)
+  }
+
+  return c.html(
+    <EnterPathPanel mode="enlist" provinceName={province.name} houseName={house.name} />,
+  )
+})
+
 app.get('/game', requireAuth, async (c) => {
   const user = c.get('user')
   if (!user) {
@@ -50,14 +80,12 @@ app.get('/game', requireAuth, async (c) => {
       provincesRepo.listAll(),
       housesRepo.listActive(),
     ])
-    const hasNeutral = provinces.some((p) => !p.houseId)
     return c.render(
       <CharacterCreatePage
         error={error}
         provinces={provinces}
         houses={houses}
         previewColor={nextHouseColor(houses.length)}
-        hasNeutral={hasNeutral}
       />,
     )
   }
@@ -69,14 +97,12 @@ app.get('/game', requireAuth, async (c) => {
   ])
 
   if (!province) {
-    const hasNeutral = provinces.some((p) => !p.houseId)
     return c.render(
       <CharacterCreatePage
         error="所在国データが壊れています。管理者に連絡してください。"
         provinces={provinces}
         houses={houses}
         previewColor={nextHouseColor(houses.length)}
-        hasNeutral={hasNeutral}
       />,
     )
   }

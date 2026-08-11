@@ -88,9 +88,13 @@ export function GameHubPage({
                 <p class="hint">家名だけで旗揚げできる。家の色は自動で決まり、領土に塗られる。</p>
               )}
             </form>
-          ) : (
+          ) : house.leaderCharacterId === character.id ? (
             <p class="hint">
               {house.name} の当主として {province.name} を治めている。
+            </p>
+          ) : (
+            <p class="hint">
+              {house.name} に仕官し、{province.name} にいる。
             </p>
           )}
 
