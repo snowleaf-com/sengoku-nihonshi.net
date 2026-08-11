@@ -1,4 +1,10 @@
 import {
+  isArchetypeId,
+  parseStatValue,
+  resolveCharacterStats,
+  type ArchetypeId,
+} from '../config/archetypes'
+import {
   CHARACTER_NAME_MAX,
   CHARACTER_NAME_MIN,
   STARTING_MONEY,
@@ -34,7 +40,16 @@ export function validateCharacterName(name: string): string | null {
 
 export async function createCharacter(
   db: D1Database,
-  input: { userId: string; name: string; iconId: string; provinceId: string },
+  input: {
+    userId: string
+    name: string
+    iconId: string
+    archetypeId: string
+    buyu?: string
+    chiryaku?: string
+    toso?: string
+    provinceId: string
+  },
 ): Promise<Character> {
   await ensureProvincesSeeded(db)
 
@@ -46,9 +61,21 @@ export async function createCharacter(
     throw new DomainError('アイコンを選んでください')
   }
 
+  if (!isArchetypeId(input.archetypeId)) {
+    throw new DomainError('立ち回りを選んでください')
+  }
+
   if (!input.provinceId) {
     throw new DomainError('初期位置を選んでください')
   }
+
+  const archetypeId = input.archetypeId as ArchetypeId
+  const resolved = resolveCharacterStats(archetypeId, {
+    buyu: parseStatValue(input.buyu),
+    chiryaku: parseStatValue(input.chiryaku),
+    toso: parseStatValue(input.toso),
+  })
+  if (!resolved.ok) throw new DomainError(resolved.error)
 
   const characters = new CharacterRepository(db)
   const existing = await characters.findByUserId(input.userId)
@@ -64,12 +91,18 @@ export async function createCharacter(
   }
 
   const now = nowSeconds()
+  const { stats } = resolved
 
   return characters.create({
     id: createId(16),
     userId: input.userId,
     name,
     iconId: input.iconId,
+    archetypeId,
+    buyu: stats.buyu,
+    chiryaku: stats.chiryaku,
+    toso: stats.toso,
+    tokubo: stats.tokubo,
     provinceId: start.id,
     rank: 1,
     merit: 0,

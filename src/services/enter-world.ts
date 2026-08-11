@@ -19,6 +19,10 @@ export async function enterWorld(
     userId: string
     name: string
     iconId: string
+    archetypeId: string
+    buyu?: string
+    chiryaku?: string
+    toso?: string
     provinceId: string
     houseName?: string
   },
@@ -35,13 +39,19 @@ export async function enterWorld(
     throw new DomainError('選択した国が見つかりません')
   }
 
+  const characterInput = {
+    userId: input.userId,
+    name: input.name,
+    iconId: input.iconId,
+    archetypeId: input.archetypeId,
+    buyu: input.buyu,
+    chiryaku: input.chiryaku,
+    toso: input.toso,
+    provinceId: start.id,
+  }
+
   if (start.houseId) {
-    await createCharacter(db, {
-      userId: input.userId,
-      name: input.name,
-      iconId: input.iconId,
-      provinceId: start.id,
-    })
+    await createCharacter(db, characterInput)
     const { house, character } = await enlistInHouse(db, { userId: input.userId })
     return { path: 'enlist', character, house }
   }
@@ -51,12 +61,7 @@ export async function enterWorld(
     throw new DomainError('建国するには家名を入力してください')
   }
 
-  await createCharacter(db, {
-    userId: input.userId,
-    name: input.name,
-    iconId: input.iconId,
-    provinceId: start.id,
-  })
+  await createCharacter(db, characterInput)
   const { house } = await raiseHouse(db, { userId: input.userId, houseName })
   const character = await new CharacterRepository(db).findByUserId(input.userId)
   if (!character) throw new DomainError('建国処理に失敗しました')
