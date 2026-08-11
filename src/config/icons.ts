@@ -1,52 +1,59 @@
 /**
  * 武将アイコンのプリセット一覧。
  * ファイルは public/icons/{id}.webp（busho_01〜36）。
+ * label は見た目のアーキタイプ名（同名あり）。
  */
-export const CHARACTER_ICON_IDS = [
-  'busho_01',
-  'busho_02',
-  'busho_03',
-  'busho_04',
-  'busho_05',
-  'busho_06',
-  'busho_07',
-  'busho_08',
-  'busho_09',
-  'busho_10',
-  'busho_11',
-  'busho_12',
-  'busho_13',
-  'busho_14',
-  'busho_15',
-  'busho_16',
-  'busho_17',
-  'busho_18',
-  'busho_19',
-  'busho_20',
-  'busho_21',
-  'busho_22',
-  'busho_23',
-  'busho_24',
-  'busho_25',
-  'busho_26',
-  'busho_27',
-  'busho_28',
-  'busho_29',
-  'busho_30',
-  'busho_31',
-  'busho_32',
-  'busho_33',
-  'busho_34',
-  'busho_35',
-  'busho_36',
+export const CHARACTER_ICONS = [
+  { id: 'busho_01', label: '若武者' },
+  { id: 'busho_02', label: '浪人' },
+  { id: 'busho_03', label: '足軽' },
+  { id: 'busho_04', label: '侍' },
+  { id: 'busho_05', label: '地侍' },
+  { id: 'busho_06', label: '侍大将' },
+  { id: 'busho_07', label: '家老' },
+  { id: 'busho_08', label: '大名' },
+  { id: 'busho_09', label: '老将' },
+  { id: 'busho_10', label: '軍師' },
+  { id: 'busho_11', label: '女武者' },
+  { id: 'busho_12', label: '僧兵' },
+  { id: 'busho_13', label: '若武者' },
+  { id: 'busho_14', label: '侍' },
+  { id: 'busho_15', label: '武将' },
+  { id: 'busho_16', label: '豪傑' },
+  { id: 'busho_17', label: '女武者' },
+  { id: 'busho_18', label: '老将' },
+  { id: 'busho_19', label: '侍大将' },
+  { id: 'busho_20', label: '足軽大将' },
+  { id: 'busho_21', label: '武将' },
+  { id: 'busho_22', label: '大名' },
+  { id: 'busho_23', label: '女武者' },
+  { id: 'busho_24', label: '軍師' },
+  { id: 'busho_25', label: '浪人' },
+  { id: 'busho_26', label: '足軽' },
+  { id: 'busho_27', label: '武将' },
+  { id: 'busho_28', label: '僧兵' },
+  { id: 'busho_29', label: '女武者' },
+  { id: 'busho_30', label: '老将' },
+  { id: 'busho_31', label: '侍' },
+  { id: 'busho_32', label: '武将' },
+  { id: 'busho_33', label: '忍者' },
+  { id: 'busho_34', label: '弓武者' },
+  { id: 'busho_35', label: '女武者' },
+  { id: 'busho_36', label: '軍師' },
 ] as const
 
-export type CharacterIconId = (typeof CHARACTER_ICON_IDS)[number]
+export type CharacterIconId = (typeof CHARACTER_ICONS)[number]['id']
 
-const ICON_ID_SET = new Set<string>(CHARACTER_ICON_IDS)
+export const CHARACTER_ICON_IDS = CHARACTER_ICONS.map((icon) => icon.id) as unknown as CharacterIconId[]
+
+const ICON_BY_ID = new Map(CHARACTER_ICONS.map((icon) => [icon.id, icon]))
 
 export function isCharacterIconId(value: string): value is CharacterIconId {
-  return ICON_ID_SET.has(value)
+  return ICON_BY_ID.has(value as CharacterIconId)
+}
+
+export function getCharacterIcon(iconId: string) {
+  return ICON_BY_ID.get(iconId as CharacterIconId) ?? null
 }
 
 export function iconPublicPath(iconId: CharacterIconId | string): string {

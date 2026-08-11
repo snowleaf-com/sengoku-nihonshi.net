@@ -1,4 +1,4 @@
-import { CHARACTER_ICON_IDS, iconPublicPath } from '../../config/icons'
+import { CHARACTER_ICONS, getCharacterIcon, iconPublicPath } from '../../config/icons'
 import { CHARACTER_NAME_MAX_LENGTH } from '../../lib/character-name'
 import { SiteShell } from '../../components/SiteShell'
 import type { Character, User } from '../../types'
@@ -10,7 +10,7 @@ type GamePageProps = {
 }
 
 /**
- * 武将未作成: 名前 + アイコン選択。
+ * 武将未作成: 名前 + アイコン選択（アーキタイプ名付き）。
  * 武将作成済: 入口プレースホルダ（マップ等は後続フェーズ）。
  */
 export function GamePage({ user, character, error }: GamePageProps) {
@@ -37,24 +37,27 @@ export function GamePage({ user, character, error }: GamePageProps) {
             </label>
 
             <fieldset class="field">
-              <legend class="field-label">アイコン</legend>
+              <legend class="field-label">顔・立ち位置</legend>
               <div class="icon-grid" role="list">
-                {CHARACTER_ICON_IDS.map((iconId, index) => (
+                {CHARACTER_ICONS.map((icon, index) => (
                   <label class="icon-option" role="listitem">
                     <input
                       type="radio"
                       name="iconId"
-                      value={iconId}
+                      value={icon.id}
                       required
                       checked={index === 0}
                     />
-                    <img
-                      src={iconPublicPath(iconId)}
-                      alt={`武将アイコン ${iconId.replace('busho_', '')}`}
-                      width="72"
-                      height="72"
-                      loading="lazy"
-                    />
+                    <span class="icon-option-face">
+                      <img
+                        src={iconPublicPath(icon.id)}
+                        alt=""
+                        width="72"
+                        height="72"
+                        loading="lazy"
+                      />
+                      <span class="icon-option-label">{icon.label}</span>
+                    </span>
                   </label>
                 ))}
               </div>
@@ -75,6 +78,8 @@ export function GamePage({ user, character, error }: GamePageProps) {
     )
   }
 
+  const iconLabel = getCharacterIcon(character.iconId)?.label
+
   return (
     <SiteShell title={`${character.name} — 戦国日本史.net`}>
       <section class="panel">
@@ -85,7 +90,7 @@ export function GamePage({ user, character, error }: GamePageProps) {
           <img
             class="character-portrait"
             src={iconPublicPath(character.iconId)}
-            alt=""
+            alt={iconLabel ?? ''}
             width="96"
             height="96"
           />
@@ -94,6 +99,12 @@ export function GamePage({ user, character, error }: GamePageProps) {
               <dt>武将名</dt>
               <dd>{character.name}</dd>
             </div>
+            {iconLabel ? (
+              <div>
+                <dt>立ち位置</dt>
+                <dd>{iconLabel}</dd>
+              </div>
+            ) : null}
             <div>
               <dt>ユーザー ID</dt>
               <dd>

@@ -167,6 +167,9 @@ describe('HTTP routes', () => {
     expect(html).toContain('武将を立てる')
     expect(html).toContain('/icons/busho_01.webp')
     expect(html).toContain('/icons/busho_36.webp')
+    expect(html).toContain('若武者')
+    expect(html).toContain('足軽大将')
+    expect(html).toContain('忍者')
     expect(html).toContain('name="iconId"')
   })
 
@@ -194,6 +197,7 @@ describe('HTTP routes', () => {
     const html = await gameRes.text()
     expect(html).toContain('明智光秀')
     expect(html).toContain('/icons/busho_20.webp')
+    expect(html).toContain('足軽大将')
     expect(html).toContain('出陣準備')
   })
 

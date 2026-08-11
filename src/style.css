@@ -212,8 +212,8 @@ a {
 
 .icon-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
-  gap: 0.55rem;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  gap: 0.65rem;
 }
 
 .icon-option {
@@ -228,6 +228,12 @@ a {
   opacity: 0;
   margin: 0;
   cursor: pointer;
+}
+
+.icon-option-face {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
 }
 
 .icon-option img {
@@ -246,6 +252,14 @@ a {
     box-shadow 120ms ease;
 }
 
+.icon-option-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-align: center;
+}
+
 .icon-option:hover img {
   transform: translateY(-1px);
 }
@@ -254,6 +268,10 @@ a {
 .icon-option:has(input:checked) img {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px rgba(196, 92, 38, 0.35);
+}
+
+.icon-option:has(input:checked) .icon-option-label {
+  color: var(--ink);
 }
 
 .form-error {
