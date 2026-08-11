@@ -26,7 +26,11 @@ import {
   type PublicKeyCredentialRequestOptionsJSON,
   type RegistrationResponseJSON,
 } from '@simplewebauthn/server'
-import { CHALLENGE_TTL_SECONDS, getWebAuthnConfig } from '../../config/auth'
+import {
+  CHALLENGE_TTL_SECONDS,
+  getWebAuthnConfig,
+  resolveExpectedOrigins,
+} from '../../config/auth'
 import { createId, nowSeconds } from '../../lib/id'
 import { ChallengeRepository } from '../../repositories/challenges'
 import { PasskeyRepository } from '../../repositories/passkeys'
@@ -87,9 +91,11 @@ export async function finishRegistration(
   input: {
     challengeId: string
     response: RegistrationResponseJSON
+    requestOrigin?: string
   },
 ): Promise<{ user: User; passkey: PasskeyRecord }> {
-  const { rpID, origin } = requireWebAuthnConfig(env)
+  const { rpID } = requireWebAuthnConfig(env)
+  const expectedOrigin = resolveExpectedOrigins(env, input.requestOrigin)
   const now = nowSeconds()
   const challenges = new ChallengeRepository(env.DB)
   const users = new UserRepository(env.DB)
@@ -106,7 +112,7 @@ export async function finishRegistration(
   const verification = await verifyRegistrationResponse({
     response: input.response,
     expectedChallenge: challenge.challenge,
-    expectedOrigin: origin,
+    expectedOrigin,
     expectedRPID: rpID,
     requireUserVerification: false,
   })
@@ -167,9 +173,11 @@ export async function finishAuthentication(
   input: {
     challengeId: string
     response: AuthenticationResponseJSON
+    requestOrigin?: string
   },
 ): Promise<{ user: User; passkey: PasskeyRecord }> {
-  const { rpID, origin } = requireWebAuthnConfig(env)
+  const { rpID } = requireWebAuthnConfig(env)
+  const expectedOrigin = resolveExpectedOrigins(env, input.requestOrigin)
   const now = nowSeconds()
   const challenges = new ChallengeRepository(env.DB)
   const passkeys = new PasskeyRepository(env.DB)
@@ -189,7 +197,7 @@ export async function finishAuthentication(
   const verification = await verifyAuthenticationResponse({
     response: input.response,
     expectedChallenge: challenge.challenge,
-    expectedOrigin: origin,
+    expectedOrigin,
     expectedRPID: rpID,
     credential: {
       id: passkey.id,

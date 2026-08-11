@@ -75,7 +75,13 @@ verify 成功後に削除。期限切れ行は読み時に無効扱い（掃除�
 
 SQL は `src/repositories/*` に閉じる。ルートや Passkey モジュールから D1 の生クエリを散らかさない。
 
-## Phase 1 以降で増える想定
+## Phase 1 で追加
 
-`characters` / `houses` / `provinces` / `commands` / `turns` / `battle_logs` など。  
-仕様書の DB 案を、そのフェーズの migration で足す。
+`houses` / `provinces` / `characters` / `house_roles`（migration `0002_phase1_world.sql`）。
+
+- `provinces` の初期行はマスター（`src/config/provinces.ts`）から実行時シード
+- `characters.user_id` は UNIQUE（MVP で 1 User = 1 Character）
+
+## Phase 2 以降で増える想定
+
+`commands` / `turns` / `battle_logs` など。

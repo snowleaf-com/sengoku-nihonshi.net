@@ -73,7 +73,7 @@ Passkey の `WEBAUTHN_RP_ID` は安定 URL 向けなので、**パスキー確�
 | 症状 | 確認 |
 |------|------|
 | Node / wrangler が落ちる | `node -v` が 22 以上か |
-| Passkey が即失敗 | 開いている URL の host と `WEBAUTHN_RP_ID` / `ORIGIN` が一致しているか |
+| Passkey が即失敗 | 開いている URL の host と `WEBAUTHN_RP_ID` が一致しているか。ローカルはポートが 5174 等にずれても可（`Origin` ヘッダで許可） |
 | `/game` に入れない | Cookie が付いているか。別 host / 別ポートだと別サイト扱い |
 | migration 忘れ | `npm run db:migrate:local` |
 | 型エラー（Bindings） | `npm run cf-typegen` |

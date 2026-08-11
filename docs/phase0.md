@@ -38,11 +38,6 @@
 
 メール必須フォームもパスワードもない。
 
-## 次（Phase 1 の入口）
+## 次
 
-1. `characters` テーブル
-2. 武将名入力画面
-3. 1 User = 1 Character（MVP）で `/game` を本編入口に
-4. Province master / 全国マップの静的データ
-
-詳細なゲーム仕様はリポジトリ直下の開発仕様、および今後の Phase 文書へ。
+→ [phase1.md](./phase1.md)

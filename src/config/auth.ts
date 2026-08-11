@@ -21,3 +21,42 @@ export function getWebAuthnConfig(env: AppBindings) {
     origin: env.WEBAUTHN_ORIGIN,
   }
 }
+
+/**
+ * WebAuthn の expectedOrigin を決める。
+ *
+ * Vite は 5173 が埋まっていると 5174 等にずれる。
+ * ローカル（rpID=localhost）ではリクエスト Origin を許可し、ポートずれで落ちないようにする。
+ * 本番では設定された origin のみ。
+ */
+export function resolveExpectedOrigins(
+  env: AppBindings,
+  requestOrigin: string | undefined,
+): string | string[] {
+  const configured = env.WEBAUTHN_ORIGIN
+  const rpID = env.WEBAUTHN_RP_ID
+
+  if (rpID === 'localhost' && requestOrigin && isLocalDevOrigin(requestOrigin)) {
+    if (!configured || configured === requestOrigin) {
+      return requestOrigin
+    }
+    return [configured, requestOrigin]
+  }
+
+  if (!configured) {
+    throw new Error('WEBAUTHN_ORIGIN が設定されていません')
+  }
+  return configured
+}
+
+function isLocalDevOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin)
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      (url.hostname === 'localhost' || url.hostname === '127.0.0.1')
+    )
+  } catch {
+    return false
+  }
+}

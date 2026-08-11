@@ -115,8 +115,8 @@ a {
 }
 
 .btn:disabled {
-  opacity: 0.6;
-  cursor: wait;
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .btn-primary {
@@ -145,6 +145,10 @@ a {
   padding: 1.5rem;
 }
 
+.panel-wide {
+  width: min(40rem, 100%);
+}
+
 .meta {
   margin: 0 0 1.5rem;
   display: grid;
@@ -168,4 +172,163 @@ a {
 .meta code {
   font-size: 0.85rem;
   word-break: break-all;
+}
+
+.stack-form {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+  text-align: left;
+}
+
+.field-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.field-input {
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.2rem;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--ink);
+  font: inherit;
+}
+
+.field-input:focus {
+  outline: 1px solid var(--accent);
+}
+
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.logout-inline {
+  margin-top: 1rem;
+}
+
+.game-layout {
+  width: min(72rem, 100%);
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 900px) {
+  .game-layout {
+    grid-template-columns: minmax(16rem, 22rem) 1fr;
+    align-items: start;
+  }
+}
+
+.game-status,
+.game-map-section {
+  border: 1px solid var(--line);
+  background: rgba(26, 20, 16, 0.55);
+  padding: 1.25rem;
+}
+
+.game-status h1,
+.game-map-section h2 {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+}
+
+.game-status .panel-lead {
+  margin-bottom: 1.25rem;
+}
+
+.meta-inline {
+  grid-template-columns: 1fr 1fr;
+}
+
+.site-main:has(.game-layout) {
+  place-items: stretch;
+  padding: 1rem;
+}
+
+.province-map {
+  display: grid;
+  grid-template-columns: repeat(var(--map-cols), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--map-rows), minmax(2.6rem, auto));
+  gap: 0.2rem;
+  overflow-x: auto;
+}
+
+.province-cell {
+  min-height: 2.6rem;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  padding: 0.25rem;
+  display: grid;
+  align-content: center;
+  gap: 0.1rem;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  color: #f4f4f4;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.55);
+}
+
+.province-cell-empty {
+  border-color: transparent;
+  background: transparent !important;
+  text-shadow: none;
+}
+
+.province-cell.is-focus {
+  box-shadow: inset 0 0 0 2px #f0c27a;
+}
+
+.province-name {
+  font-weight: 700;
+}
+
+.province-owner {
+  font-size: 0.62rem;
+  opacity: 0.9;
+}
+
+.province-map.is-pick .province-cell.is-selectable {
+  cursor: pointer;
+}
+
+/* ラジオはマップ操作の裏方。画面上には出さない */
+.province-pick-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  pointer-events: none;
+}
+
+.province-cell.is-selectable {
+  position: relative;
+}
+
+/* 中立選択: 次の家色プレビュー */
+.province-cell.is-selectable.is-neutral:has(.province-pick-input:checked) {
+  background-color: var(--preview-color) !important;
+  box-shadow: inset 0 0 0 2px #f0c27a;
+}
+
+/* 支配国選択: 家色はそのまま、枠だけ */
+.province-cell.is-selectable.is-owned:has(.province-pick-input:checked) {
+  box-shadow: inset 0 0 0 2px #f0c27a;
+}
+
+.province-cell.is-selectable:has(.province-pick-input:focus-visible) {
+  outline: 2px solid #f0c27a;
+  outline-offset: 1px;
+}
+
+.game-status .field {
+  margin-bottom: 0.75rem;
 }
