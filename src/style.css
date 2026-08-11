@@ -210,16 +210,86 @@ a {
   outline: 1px solid var(--accent);
 }
 
+/* —— 武将作成 —— */
+.create-layout {
+  width: min(78rem, 100%);
+  display: grid;
+  gap: 1rem;
+}
+
+.create-panel {
+  border: 1px solid var(--line);
+  background: rgba(26, 20, 16, 0.55);
+  padding: 1.15rem 1.25rem;
+  min-width: 0;
+}
+
+.create-header h1 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+  font-size: clamp(1.45rem, 3vw, 1.85rem);
+}
+
+.create-header .panel-lead {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+}
+
+.create-identity {
+  display: grid;
+  gap: 0.85rem;
+  align-content: start;
+}
+
+.create-map h2 {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+  font-size: 1.05rem;
+}
+
+.create-path {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.create-path .btn-primary {
+  min-width: 0;
+  width: 100%;
+}
+
+.icon-picker {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.icon-picker > .field-label {
+  padding: 0;
+}
+
 .icon-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
-  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fill, minmax(4.4rem, 1fr));
+  gap: 0.4rem;
+  max-height: min(38vh, 18.5rem);
+  overflow: auto;
+  padding: 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 0.35rem;
+  background: rgba(0, 0, 0, 0.22);
+  scrollbar-gutter: stable;
 }
 
 .icon-option {
   position: relative;
   display: block;
   cursor: pointer;
+  min-width: 0;
 }
 
 .icon-option input {
@@ -231,47 +301,94 @@ a {
 }
 
 .icon-option-face {
-  display: grid;
-  gap: 0.35rem;
-  justify-items: center;
-}
-
-.icon-option img {
+  position: relative;
   display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: 0.25rem;
+  overflow: hidden;
+  border-radius: 0.35rem;
   border: 2px solid transparent;
   background: #f5f0e6;
-  image-rendering: pixelated;
   transition:
     border-color 120ms ease,
     transform 120ms ease,
     box-shadow 120ms ease;
 }
 
-.icon-option-label {
-  color: var(--muted);
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
-  line-height: 1.2;
-  text-align: center;
+.icon-option img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  height: auto;
+  object-fit: cover;
+  image-rendering: pixelated;
 }
 
-.icon-option:hover img {
+.icon-option-label {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  padding: 0.55rem 0.2rem 0.2rem;
+  background: linear-gradient(transparent, rgba(12, 9, 7, 0.88));
+  color: #f6ecdf;
+  font-size: 0.58rem;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.icon-option:hover .icon-option-face {
   transform: translateY(-1px);
 }
 
-.icon-option:has(input:focus-visible) img,
-.icon-option:has(input:checked) img {
+.icon-option:has(input:focus-visible) .icon-option-face,
+.icon-option:has(input:checked) .icon-option-face {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px rgba(196, 92, 38, 0.35);
+  box-shadow: 0 0 0 1px rgba(196, 92, 38, 0.4);
 }
 
-.icon-option:has(input:checked) .icon-option-label {
-  color: var(--ink);
+@media (min-width: 720px) {
+  .icon-grid {
+    grid-template-columns: repeat(auto-fill, minmax(4.75rem, 1fr));
+    max-height: min(42vh, 20rem);
+  }
+}
+
+@media (min-width: 960px) {
+  .create-layout {
+    grid-template-columns: minmax(22rem, 28rem) minmax(0, 1fr);
+    align-items: start;
+    gap: 1.25rem;
+  }
+
+  .create-identity {
+    position: sticky;
+    top: 0.75rem;
+    max-height: calc(100vh - 1.5rem);
+    overflow: auto;
+  }
+
+  .icon-grid {
+    max-height: min(46vh, 22rem);
+  }
+}
+
+@media (max-width: 519px) {
+  .icon-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    max-height: 34vh;
+    gap: 0.35rem;
+    padding: 0.45rem;
+  }
+
+  .icon-option-label {
+    font-size: 0.52rem;
+  }
+
+  .create-panel {
+    padding: 1rem;
+  }
 }
 
 .character-card {
@@ -311,7 +428,12 @@ a {
 }
 
 .logout-inline {
-  margin-top: 1rem;
+  margin-top: 0.25rem;
+}
+
+.logout-inline .btn {
+  min-width: 0;
+  width: auto;
 }
 
 .game-layout {
@@ -349,7 +471,8 @@ a {
   grid-template-columns: 1fr 1fr;
 }
 
-.site-main:has(.game-layout) {
+.site-main:has(.game-layout),
+.site-main:has(.create-layout) {
   place-items: stretch;
   padding: 1rem;
 }
