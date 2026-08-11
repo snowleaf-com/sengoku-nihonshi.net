@@ -52,6 +52,7 @@ describe('Phase 1 world flow', () => {
       userId,
       name: `武将${userId.slice(0, 4)}`,
       iconId: 'busho_01',
+      archetypeId: 'battle',
       provinceId: start.id,
       houseName: `家${userId.slice(0, 3)}`,
     })
@@ -59,6 +60,9 @@ describe('Phase 1 world flow', () => {
     expect(result.path).toBe('found')
     expect(result.house.leaderCharacterId).toBe(result.character.id)
     expect(result.character.houseId).toBe(result.house.id)
+    expect(result.character.archetypeId).toBe('battle')
+    expect(result.character.buyu).toBe(80)
+    expect(result.character.tokubo).toBe(25)
 
     const province = await new ProvinceRepository(env.DB).findById(start.id)
     expect(province?.houseId).toBe(result.house.id)
@@ -79,6 +83,7 @@ describe('Phase 1 world flow', () => {
       userId: lordId,
       name: `主${lordId.slice(0, 4)}`,
       iconId: 'busho_02',
+      archetypeId: 'domestic',
       provinceId: start.id,
       houseName: `家${lordId.slice(0, 3)}`,
     })
@@ -88,6 +93,7 @@ describe('Phase 1 world flow', () => {
       userId: retainerId,
       name: `臣${retainerId.slice(0, 4)}`,
       iconId: 'busho_03',
+      archetypeId: 'command',
       provinceId: start.id,
     })
 

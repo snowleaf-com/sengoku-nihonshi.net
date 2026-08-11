@@ -108,6 +108,11 @@ describe('Character repository', () => {
       userId,
       name: '武田晴信',
       iconId: CHARACTER_ICON_IDS[0],
+      archetypeId: 'battle',
+      buyu: 80,
+      chiryaku: 5,
+      toso: 65,
+      tokubo: 25,
       provinceId: start.id,
       rank: 1,
       merit: 0,
@@ -120,6 +125,8 @@ describe('Character repository', () => {
     expect(found?.id).toBe(created.id)
     expect(found?.name).toBe('武田晴信')
     expect(found?.iconId).toBe(CHARACTER_ICON_IDS[0])
+    expect(found?.archetypeId).toBe('battle')
+    expect(found?.buyu).toBe(80)
     expect(found?.provinceId).toBe(start.id)
   })
 })
@@ -185,6 +192,11 @@ describe('HTTP routes', () => {
     expect(html).toContain('忍者')
     expect(html).toContain('くノ一')
     expect(html).toContain('name="iconId"')
+    expect(html).toContain('name="archetypeId"')
+    expect(html).toContain('合戦向き')
+    expect(html).toContain('統率向き')
+    expect(html).toContain('name="buyu"')
+    expect(html).toContain('徳望')
     expect(html).toContain('name="provinceId"')
   })
 
@@ -202,6 +214,10 @@ describe('HTTP routes', () => {
       body: new URLSearchParams({
         name: '明智光秀',
         iconId: 'busho_17',
+        archetypeId: 'strategy',
+        buyu: '5',
+        chiryaku: '80',
+        toso: '65',
         provinceId: start.id,
         houseName: '明智',
       }),
@@ -218,6 +234,9 @@ describe('HTTP routes', () => {
     expect(html).toContain('明智光秀')
     expect(html).toContain('/icons/busho_17.webp')
     expect(html).toContain('足軽大将')
+    expect(html).toContain('知略向き')
+    expect(html).toContain('武勇')
+    expect(html).toContain('徳望')
   })
 
   it('rejects invalid icon ids', async () => {
@@ -233,6 +252,7 @@ describe('HTTP routes', () => {
       body: new URLSearchParams({
         name: '検証武将',
         iconId: 'busho_99',
+        archetypeId: 'domestic',
         provinceId: start.id,
         houseName: '検証',
       }),
