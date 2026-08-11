@@ -165,7 +165,8 @@ describe('HTTP routes', () => {
     expect(res.status).toBe(200)
     const html = await res.text()
     expect(html).toContain('武将を立てる')
-    expect(html).toContain('/icons/busho_13.webp')
+    expect(html).toContain('/icons/busho_01.webp')
+    expect(html).toContain('/icons/busho_36.webp')
     expect(html).toContain('name="iconId"')
   })
 

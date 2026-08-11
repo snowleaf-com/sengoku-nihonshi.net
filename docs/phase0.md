@@ -45,6 +45,6 @@
 3. [ ] Province master / 全国マップの静的データ
 4. [ ] `/game` を本編入口（コマンド・国取り）に育てる
 
-武将アイコンは `public/icons/busho_*.webp`（現状 13〜36）。追加分が来たら `src/config/icons.ts` に足す。
+武将アイコンは `public/icons/busho_01.webp`〜`busho_36.webp`（36枚）。一覧は `src/config/icons.ts`。
 
 詳細なゲーム仕様はリポジトリ直下の開発仕様、および今後の Phase 文書へ。

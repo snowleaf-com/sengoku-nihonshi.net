@@ -1,10 +1,20 @@
 /**
  * 武将アイコンのプリセット一覧。
- * ファイルは public/icons/{id}.webp。
- *
- * 現時点の ZIP は busho_13〜36（24枚）。01〜12 が届いたらここに足す。
+ * ファイルは public/icons/{id}.webp（busho_01〜36）。
  */
 export const CHARACTER_ICON_IDS = [
+  'busho_01',
+  'busho_02',
+  'busho_03',
+  'busho_04',
+  'busho_05',
+  'busho_06',
+  'busho_07',
+  'busho_08',
+  'busho_09',
+  'busho_10',
+  'busho_11',
+  'busho_12',
   'busho_13',
   'busho_14',
   'busho_15',
