@@ -17,11 +17,12 @@ gameActionRoutes.post('/character', async (c) => {
   await ensureProvincesSeeded(c.env.DB)
   const body = await c.req.parseBody()
   const name = typeof body.name === 'string' ? body.name : ''
+  const iconId = typeof body.iconId === 'string' ? body.iconId : ''
   const provinceId = typeof body.provinceId === 'string' ? body.provinceId : ''
   const houseName = typeof body.houseName === 'string' ? body.houseName : ''
 
   try {
-    await enterWorld(c.env.DB, { userId: user.id, name, provinceId, houseName })
+    await enterWorld(c.env.DB, { userId: user.id, name, iconId, provinceId, houseName })
     return c.redirect('/game')
   } catch (error) {
     if (error instanceof DomainError) {

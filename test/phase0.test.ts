@@ -1,10 +1,16 @@
 import { env, exports } from 'cloudflare:workers'
 import { describe, expect, it } from 'vitest'
+import { SESSION_COOKIE_NAME } from '../src/config/auth'
+import { CHARACTER_ICON_IDS } from '../src/config/icons'
+import { normalizeCharacterName } from '../src/lib/character-name'
 import { createId, nowSeconds } from '../src/lib/id'
 import { ChallengeRepository } from '../src/repositories/challenges'
+import { CharacterRepository } from '../src/repositories/characters'
 import { PasskeyRepository } from '../src/repositories/passkeys'
+import { ProvinceRepository } from '../src/repositories/provinces'
 import { SessionRepository } from '../src/repositories/sessions'
 import { UserRepository } from '../src/repositories/users'
+import { ensureProvincesSeeded } from '../src/services/world'
 
 describe('Phase 0 repositories', () => {
   it('creates and finds a user', async () => {
@@ -84,6 +90,49 @@ describe('Phase 0 repositories', () => {
   })
 })
 
+describe('Character repository', () => {
+  it('creates one character per user', async () => {
+    await ensureProvincesSeeded(env.DB)
+    const users = new UserRepository(env.DB)
+    const characters = new CharacterRepository(env.DB)
+    const provinces = new ProvinceRepository(env.DB)
+    const userId = createId()
+    const now = nowSeconds()
+    await users.create(userId, now)
+
+    const start = (await provinces.listNeutral())[0]
+    expect(start).toBeTruthy()
+
+    const created = await characters.create({
+      id: createId(),
+      userId,
+      name: '武田晴信',
+      iconId: CHARACTER_ICON_IDS[0],
+      provinceId: start.id,
+      rank: 1,
+      merit: 0,
+      money: 1000,
+      troops: 0,
+      createdAt: now,
+    })
+
+    const found = await characters.findByUserId(userId)
+    expect(found?.id).toBe(created.id)
+    expect(found?.name).toBe('武田晴信')
+    expect(found?.iconId).toBe(CHARACTER_ICON_IDS[0])
+    expect(found?.provinceId).toBe(start.id)
+  })
+})
+
+describe('character name', () => {
+  it('normalizes and rejects invalid names', () => {
+    expect(normalizeCharacterName('  豊臣秀吉  ')).toBe('豊臣秀吉')
+    expect(normalizeCharacterName('')).toBeNull()
+    expect(normalizeCharacterName('   ')).toBeNull()
+    expect(normalizeCharacterName('あ'.repeat(17))).toBeNull()
+  })
+})
+
 describe('HTTP routes', () => {
   it('serves the top page', async () => {
     const res = await exports.default.fetch('http://localhost/')
@@ -120,4 +169,93 @@ describe('HTTP routes', () => {
     expect(body.challengeId).toBeTruthy()
     expect(body.options.challenge).toBeTruthy()
   })
+
+  it('shows character creation form when authenticated without a character', async () => {
+    const cookie = await createSessionCookie()
+    const res = await exports.default.fetch('http://localhost/game', {
+      headers: { Cookie: cookie },
+    })
+    expect(res.status).toBe(200)
+    const html = await res.text()
+    expect(html).toContain('武将作成')
+    expect(html).toContain('/icons/busho_01.webp')
+    expect(html).toContain('/icons/busho_36.webp')
+    expect(html).toContain('若武者')
+    expect(html).toContain('足軽大将')
+    expect(html).toContain('忍者')
+    expect(html).toContain('くノ一')
+    expect(html).toContain('name="iconId"')
+    expect(html).toContain('name="provinceId"')
+  })
+
+  it('creates a character and then shows the hub', async () => {
+    await ensureProvincesSeeded(env.DB)
+    const cookie = await createSessionCookie()
+    const start = (await new ProvinceRepository(env.DB).listNeutral())[0]
+
+    const createRes = await exports.default.fetch('http://localhost/actions/character', {
+      method: 'POST',
+      headers: {
+        Cookie: cookie,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        name: '明智光秀',
+        iconId: 'busho_17',
+        provinceId: start.id,
+        houseName: '明智',
+      }),
+      redirect: 'manual',
+    })
+    expect(createRes.status).toBe(302)
+    expect(createRes.headers.get('Location')).toBe('/game')
+
+    const gameRes = await exports.default.fetch('http://localhost/game', {
+      headers: { Cookie: cookie },
+    })
+    expect(gameRes.status).toBe(200)
+    const html = await gameRes.text()
+    expect(html).toContain('明智光秀')
+    expect(html).toContain('/icons/busho_17.webp')
+    expect(html).toContain('足軽大将')
+  })
+
+  it('rejects invalid icon ids', async () => {
+    await ensureProvincesSeeded(env.DB)
+    const cookie = await createSessionCookie()
+    const start = (await new ProvinceRepository(env.DB).listNeutral())[0]
+    const res = await exports.default.fetch('http://localhost/actions/character', {
+      method: 'POST',
+      headers: {
+        Cookie: cookie,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        name: '検証武将',
+        iconId: 'busho_99',
+        provinceId: start.id,
+        houseName: '検証',
+      }),
+      redirect: 'manual',
+    })
+    expect(res.status).toBe(302)
+    expect(res.headers.get('Location')).toContain('/game?error=')
+    expect(decodeURIComponent(res.headers.get('Location') ?? '')).toContain('アイコン')
+  })
 })
+
+async function createSessionCookie(): Promise<string> {
+  const users = new UserRepository(env.DB)
+  const sessions = new SessionRepository(env.DB)
+  const userId = createId()
+  const sessionId = createId(32)
+  const now = nowSeconds()
+  await users.create(userId, now)
+  await sessions.create({
+    id: sessionId,
+    userId,
+    expiresAt: now + 3600,
+    createdAt: now,
+  })
+  return `${SESSION_COOKIE_NAME}=${sessionId}`
+}

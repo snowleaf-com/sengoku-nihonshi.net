@@ -4,6 +4,7 @@ type CharacterRow = {
   id: string
   user_id: string
   name: string
+  icon_id: string
   house_id: string | null
   province_id: string
   rank: number
@@ -14,11 +15,15 @@ type CharacterRow = {
   updated_at: number
 }
 
+const CHARACTER_COLUMNS =
+  'id, user_id, name, icon_id, house_id, province_id, rank, merit, money, troops, created_at, updated_at'
+
 function mapCharacter(row: CharacterRow): Character {
   return {
     id: row.id,
     userId: row.user_id,
     name: row.name,
+    iconId: row.icon_id,
     houseId: row.house_id,
     provinceId: row.province_id,
     rank: row.rank,
@@ -37,6 +42,7 @@ export class CharacterRepository {
     id: string
     userId: string
     name: string
+    iconId: string
     provinceId: string
     rank: number
     merit: number
@@ -47,13 +53,14 @@ export class CharacterRepository {
     await this.db
       .prepare(
         `INSERT INTO characters (
-           id, user_id, name, house_id, province_id, rank, merit, money, troops, created_at, updated_at
-         ) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)`,
+           id, user_id, name, icon_id, house_id, province_id, rank, merit, money, troops, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         input.id,
         input.userId,
         input.name,
+        input.iconId,
         input.provinceId,
         input.rank,
         input.merit,
@@ -68,6 +75,7 @@ export class CharacterRepository {
       id: input.id,
       userId: input.userId,
       name: input.name,
+      iconId: input.iconId,
       houseId: null,
       provinceId: input.provinceId,
       rank: input.rank,
@@ -81,10 +89,7 @@ export class CharacterRepository {
 
   async findByUserId(userId: string): Promise<Character | null> {
     const row = await this.db
-      .prepare(
-        `SELECT id, user_id, name, house_id, province_id, rank, merit, money, troops, created_at, updated_at
-         FROM characters WHERE user_id = ?`,
-      )
+      .prepare(`SELECT ${CHARACTER_COLUMNS} FROM characters WHERE user_id = ?`)
       .bind(userId)
       .first<CharacterRow>()
     return row ? mapCharacter(row) : null
@@ -92,10 +97,7 @@ export class CharacterRepository {
 
   async findById(id: string): Promise<Character | null> {
     const row = await this.db
-      .prepare(
-        `SELECT id, user_id, name, house_id, province_id, rank, merit, money, troops, created_at, updated_at
-         FROM characters WHERE id = ?`,
-      )
+      .prepare(`SELECT ${CHARACTER_COLUMNS} FROM characters WHERE id = ?`)
       .bind(id)
       .first<CharacterRow>()
     return row ? mapCharacter(row) : null
@@ -103,10 +105,7 @@ export class CharacterRepository {
 
   async findByName(name: string): Promise<Character | null> {
     const row = await this.db
-      .prepare(
-        `SELECT id, user_id, name, house_id, province_id, rank, merit, money, troops, created_at, updated_at
-         FROM characters WHERE name = ?`,
-      )
+      .prepare(`SELECT ${CHARACTER_COLUMNS} FROM characters WHERE name = ?`)
       .bind(name)
       .first<CharacterRow>()
     return row ? mapCharacter(row) : null

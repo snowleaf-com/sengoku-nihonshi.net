@@ -4,6 +4,7 @@ import {
   STARTING_MONEY,
   STARTING_TROOPS,
 } from '../config/game'
+import { isCharacterIconId } from '../config/icons'
 import { createId, nowSeconds } from '../lib/id'
 import { CharacterRepository } from '../repositories/characters'
 import { ProvinceRepository } from '../repositories/provinces'
@@ -33,13 +34,17 @@ export function validateCharacterName(name: string): string | null {
 
 export async function createCharacter(
   db: D1Database,
-  input: { userId: string; name: string; provinceId: string },
+  input: { userId: string; name: string; iconId: string; provinceId: string },
 ): Promise<Character> {
   await ensureProvincesSeeded(db)
 
   const name = normalizeCharacterName(input.name)
   const nameError = validateCharacterName(name)
   if (nameError) throw new DomainError(nameError)
+
+  if (!isCharacterIconId(input.iconId)) {
+    throw new DomainError('アイコンを選んでください')
+  }
 
   if (!input.provinceId) {
     throw new DomainError('初期位置を選んでください')
@@ -64,6 +69,7 @@ export async function createCharacter(
     id: createId(16),
     userId: input.userId,
     name,
+    iconId: input.iconId,
     provinceId: start.id,
     rank: 1,
     merit: 0,

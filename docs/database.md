@@ -79,6 +79,7 @@ SQL は `src/repositories/*` に閉じる。ルートや Passkey モジュール
 
 `houses` / `provinces` / `characters` / `house_roles`（migration `0002_phase1_world.sql`）。
 
+- `characters.icon_id` は `public/icons/{icon_id}.webp` と対応
 - `provinces` の初期行はマスター（`src/config/provinces.ts`）から実行時シード
 - `characters.user_id` は UNIQUE（MVP で 1 User = 1 Character）
 

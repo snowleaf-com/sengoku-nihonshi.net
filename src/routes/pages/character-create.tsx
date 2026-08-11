@@ -1,6 +1,7 @@
 import { EnterPathPanel } from '../../components/EnterPathPanel'
 import { ProvinceMap } from '../../components/ProvinceMap'
 import { SiteShell } from '../../components/SiteShell'
+import { CHARACTER_ICONS, iconPublicPath } from '../../config/icons'
 import type { House, Province } from '../../types'
 
 type CharacterCreatePageProps = {
@@ -18,10 +19,12 @@ export function CharacterCreatePage({
 }: CharacterCreatePageProps) {
   return (
     <SiteShell title="武将作成 — 戦国日本史.net">
-      <form class="game-layout" method="post" action="/actions/character">
-        <section class="game-status">
-          <h1>武将作成</h1>
-          <p class="panel-lead">名を入れ、地図で国を選ぶ。中立は建国、支配国は仕官。</p>
+      <form class="create-layout" method="post" action="/actions/character">
+        <section class="create-panel create-identity">
+          <header class="create-header">
+            <h1>武将作成</h1>
+            <p class="panel-lead">名と顔を選び、地図で国を選ぶ。中立は建国、支配国は仕官。</p>
+          </header>
 
           {error ? <p class="hero-error">{error}</p> : null}
 
@@ -38,7 +41,34 @@ export function CharacterCreatePage({
             />
           </label>
 
-          <div id="enter-path-panel">
+          <fieldset class="icon-picker">
+            <legend class="field-label">顔・立ち位置</legend>
+            <div class="icon-grid" role="list">
+              {CHARACTER_ICONS.map((icon, index) => (
+                <label class="icon-option" role="listitem" title={icon.label}>
+                  <input
+                    type="radio"
+                    name="iconId"
+                    value={icon.id}
+                    required
+                    checked={index === 0}
+                  />
+                  <span class="icon-option-face">
+                    <img
+                      src={iconPublicPath(icon.id)}
+                      alt={icon.label}
+                      width="64"
+                      height="64"
+                      loading="lazy"
+                    />
+                    <span class="icon-option-label">{icon.label}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <div id="enter-path-panel" class="create-path">
             <EnterPathPanel mode="idle" />
           </div>
 
@@ -49,7 +79,7 @@ export function CharacterCreatePage({
           </div>
         </section>
 
-        <section class="game-map-section">
+        <section class="create-panel create-map">
           <h2>初期位置</h2>
           <ProvinceMap
             mode="pick"

@@ -15,7 +15,13 @@ export type EnterWorldResult =
  */
 export async function enterWorld(
   db: D1Database,
-  input: { userId: string; name: string; provinceId: string; houseName?: string },
+  input: {
+    userId: string
+    name: string
+    iconId: string
+    provinceId: string
+    houseName?: string
+  },
 ): Promise<EnterWorldResult> {
   await ensureProvincesSeeded(db)
 
@@ -33,6 +39,7 @@ export async function enterWorld(
     await createCharacter(db, {
       userId: input.userId,
       name: input.name,
+      iconId: input.iconId,
       provinceId: start.id,
     })
     const { house, character } = await enlistInHouse(db, { userId: input.userId })
@@ -47,6 +54,7 @@ export async function enterWorld(
   await createCharacter(db, {
     userId: input.userId,
     name: input.name,
+    iconId: input.iconId,
     provinceId: start.id,
   })
   const { house } = await raiseHouse(db, { userId: input.userId, houseName })

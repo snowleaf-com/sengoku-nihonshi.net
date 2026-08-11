@@ -51,6 +51,7 @@ describe('Phase 1 world flow', () => {
     const result = await enterWorld(env.DB, {
       userId,
       name: `武将${userId.slice(0, 4)}`,
+      iconId: 'busho_01',
       provinceId: start.id,
       houseName: `家${userId.slice(0, 3)}`,
     })
@@ -77,6 +78,7 @@ describe('Phase 1 world flow', () => {
     const founded = await enterWorld(env.DB, {
       userId: lordId,
       name: `主${lordId.slice(0, 4)}`,
+      iconId: 'busho_02',
       provinceId: start.id,
       houseName: `家${lordId.slice(0, 3)}`,
     })
@@ -85,6 +87,7 @@ describe('Phase 1 world flow', () => {
     const enlisted = await enterWorld(env.DB, {
       userId: retainerId,
       name: `臣${retainerId.slice(0, 4)}`,
+      iconId: 'busho_03',
       provinceId: start.id,
     })
 

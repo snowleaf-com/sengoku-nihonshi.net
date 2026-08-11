@@ -53,6 +53,7 @@ export type Character = {
   id: string
   userId: string
   name: string
+  iconId: string
   houseId: string | null
   provinceId: string
   rank: number

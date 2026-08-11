@@ -41,3 +41,5 @@
 ## 次
 
 → [phase1.md](./phase1.md)
+
+武将アイコンは `public/icons/busho_01.webp`〜`busho_36.webp`（36枚）。一覧は `src/config/icons.ts`。

@@ -1,6 +1,7 @@
 import { ProvinceMap } from '../../components/ProvinceMap'
 import { SiteShell } from '../../components/SiteShell'
 import { rankName } from '../../config/game'
+import { getCharacterIcon, iconPublicPath } from '../../config/icons'
 import { getProvinceMaster, PROVINCES } from '../../config/provinces'
 import { adjacentCount } from '../../domain/province/adjacency'
 import type { Character, House, Province } from '../../types'
@@ -25,16 +26,28 @@ export function GameHubPage({
   const master = getProvinceMaster(province.id)
   const adj = master ? adjacentCount(master, PROVINCES) : 0
   const houseById = Object.fromEntries(houses.map((h) => [h.id, h]))
+  const icon = getCharacterIcon(character.iconId)
 
   return (
     <SiteShell title={`${character.name} — 戦国日本史.net`}>
       <div class="game-layout">
         <section class="game-status">
-          <h1>{character.name}</h1>
-          <p class="panel-lead">
-            {rankName(character.rank)} · {province.name}
-            {house ? ` · ${house.name}` : ' · 浪人'}
-          </p>
+          <div class="character-card">
+            <img
+              class="character-portrait"
+              src={iconPublicPath(character.iconId)}
+              alt=""
+              width="96"
+              height="96"
+            />
+            <div>
+              <h1>{character.name}</h1>
+              <p class="panel-lead">
+                {icon?.label ?? '武将'} · {rankName(character.rank)} · {province.name}
+                {house ? ` · ${house.name}` : ' · 浪人'}
+              </p>
+            </div>
+          </div>
 
           {error ? <p class="hero-error">{error}</p> : null}
 

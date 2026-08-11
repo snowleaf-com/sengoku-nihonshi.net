@@ -1,4 +1,5 @@
 -- Phase 1: 武将・家・令制国（中立）
+-- icon_id は public/icons/{icon_id}.webp と対応する
 
 CREATE TABLE houses (
   id TEXT PRIMARY KEY NOT NULL,
@@ -28,6 +29,7 @@ CREATE TABLE characters (
   id TEXT PRIMARY KEY NOT NULL,
   user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  icon_id TEXT NOT NULL,
   house_id TEXT REFERENCES houses(id),
   province_id TEXT NOT NULL REFERENCES provinces(id),
   rank INTEGER NOT NULL DEFAULT 1,
