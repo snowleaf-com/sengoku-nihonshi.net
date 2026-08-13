@@ -11,6 +11,8 @@ import { HouseRepository } from '../repositories/houses'
 import { ProvinceRepository } from '../repositories/provinces'
 import type { Character, House } from '../types'
 import { DomainError } from './character'
+import { recordWorldEvent } from './events'
+import { ensureGameState } from './turns'
 
 export function normalizeHouseName(raw: string): string {
   return raw.trim().replace(/\s+/g, '')
@@ -79,6 +81,19 @@ export async function raiseHouse(
     createdAt: now,
   })
 
+  const gameState = await ensureGameState(db)
+  await recordWorldEvent(db, {
+    year: gameState.year,
+    month: gameState.month,
+    channel: 'news',
+    kind: 'social',
+    message: `${character.name}が${province.name}で${house.name}を旗揚げした。`,
+    provinceId: province.id,
+    characterId: character.id,
+    houseId: house.id,
+    createdAt: now,
+  })
+
   return { house }
 }
 
@@ -121,6 +136,19 @@ export async function enlistInHouse(
 
   const updated = await characters.findById(character.id)
   if (!updated) throw new DomainError('仕官処理に失敗しました')
+
+  const gameState = await ensureGameState(db)
+  await recordWorldEvent(db, {
+    year: gameState.year,
+    month: gameState.month,
+    channel: 'news',
+    kind: 'social',
+    message: `${updated.name}が${house.name}に仕官した。`,
+    provinceId: province.id,
+    characterId: updated.id,
+    houseId: house.id,
+    createdAt: now,
+  })
 
   return { house, character: updated }
 }

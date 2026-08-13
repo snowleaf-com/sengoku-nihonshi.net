@@ -13,6 +13,7 @@ export const renderer = jsxRenderer(({ children }) => {
         <script src="/htmx.js" defer></script>
         <Script src="/src/client/passkey.ts" />
         <Script src="/src/client/stat-adjust.ts" />
+        <Script src="/src/client/command-queue.ts" />
       </head>
       <body>{children}</body>
     </html>

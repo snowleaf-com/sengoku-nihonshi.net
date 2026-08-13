@@ -56,4 +56,18 @@ export const HOUSE_NAME_MIN = 1
 export const HOUSE_NAME_MAX = 8
 
 export const STARTING_MONEY = 1000
+export const STARTING_RICE = 1000
 export const STARTING_TROOPS = 0
+export const STARTING_LOYALTY = 50
+
+const amountFormatter = new Intl.NumberFormat('ja-JP')
+
+/** 所持金の表示（単位: 両） */
+export function formatMoney(amount: number): string {
+  return `${amountFormatter.format(amount)} 両`
+}
+
+/** 所持米の表示（単位: 石） */
+export function formatRice(amount: number): string {
+  return `${amountFormatter.format(amount)} 石`
+}

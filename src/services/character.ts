@@ -8,6 +8,7 @@ import {
   CHARACTER_NAME_MAX,
   CHARACTER_NAME_MIN,
   STARTING_MONEY,
+  STARTING_RICE,
   STARTING_TROOPS,
 } from '../config/game'
 import { isCharacterIconId } from '../config/icons'
@@ -107,6 +108,7 @@ export async function createCharacter(
     rank: 1,
     merit: 0,
     money: STARTING_MONEY,
+    rice: STARTING_RICE,
     troops: STARTING_TROOPS,
     createdAt: now,
   })

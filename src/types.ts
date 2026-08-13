@@ -59,11 +59,16 @@ export type Character = {
   chiryaku: number
   toso: number
   tokubo: number
+  buyuEx: number
+  chiryakuEx: number
+  tosoEx: number
+  tokuboEx: number
   houseId: string | null
   provinceId: string
   rank: number
   merit: number
   money: number
+  rice: number
   troops: number
   createdAt: number
   updatedAt: number
@@ -87,6 +92,7 @@ export type Province = {
   commerce: number
   defense: number
   garrison: number
+  loyalty: number
   createdAt: number
   updatedAt: number
 }
@@ -96,5 +102,47 @@ export type HouseRole = {
   houseId: string
   characterId: string
   role: string
+  createdAt: number
+}
+
+export type GameState = {
+  year: number
+  month: number
+  turnIndex: number
+  nextTurnAt: number
+  updatedAt: number
+}
+
+export type CharacterCommand = {
+  id: string
+  characterId: string
+  commandId: string
+  position: number
+  createdAt: number
+}
+
+/** 実行結果 / 全国の出来事 */
+export type WorldEventChannel = 'result' | 'news'
+
+/** 全国の知らせ。war / disaster / riot は今後本格化 */
+export type WorldEventKind =
+  | 'command'
+  | 'income'
+  | 'war'
+  | 'disaster'
+  | 'riot'
+  | 'social'
+  | 'system'
+
+export type WorldEvent = {
+  id: string
+  year: number
+  month: number
+  channel: WorldEventChannel
+  kind: WorldEventKind
+  message: string
+  provinceId: string | null
+  characterId: string | null
+  houseId: string | null
   createdAt: number
 }

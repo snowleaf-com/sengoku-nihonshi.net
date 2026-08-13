@@ -10,18 +10,24 @@ type CharacterRow = {
   chiryaku: number
   toso: number
   tokubo: number
+  buyu_ex: number
+  chiryaku_ex: number
+  toso_ex: number
+  tokubo_ex: number
   house_id: string | null
   province_id: string
   rank: number
   merit: number
   money: number
+  rice: number
   troops: number
   created_at: number
   updated_at: number
 }
 
 const CHARACTER_COLUMNS = `id, user_id, name, icon_id, archetype_id, buyu, chiryaku, toso, tokubo,
-  house_id, province_id, rank, merit, money, troops, created_at, updated_at`
+  buyu_ex, chiryaku_ex, toso_ex, tokubo_ex,
+  house_id, province_id, rank, merit, money, rice, troops, created_at, updated_at`
 
 function mapCharacter(row: CharacterRow): Character {
   return {
@@ -34,11 +40,16 @@ function mapCharacter(row: CharacterRow): Character {
     chiryaku: row.chiryaku,
     toso: row.toso,
     tokubo: row.tokubo,
+    buyuEx: row.buyu_ex,
+    chiryakuEx: row.chiryaku_ex,
+    tosoEx: row.toso_ex,
+    tokuboEx: row.tokubo_ex,
     houseId: row.house_id,
     provinceId: row.province_id,
     rank: row.rank,
     merit: row.merit,
     money: row.money,
+    rice: row.rice,
     troops: row.troops,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -62,6 +73,7 @@ export class CharacterRepository {
     rank: number
     merit: number
     money: number
+    rice: number
     troops: number
     createdAt: number
   }): Promise<Character> {
@@ -69,8 +81,9 @@ export class CharacterRepository {
       .prepare(
         `INSERT INTO characters (
            id, user_id, name, icon_id, archetype_id, buyu, chiryaku, toso, tokubo,
-           house_id, province_id, rank, merit, money, troops, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)`,
+           buyu_ex, chiryaku_ex, toso_ex, tokubo_ex,
+           house_id, province_id, rank, merit, money, rice, troops, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, NULL, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         input.id,
@@ -86,6 +99,7 @@ export class CharacterRepository {
         input.rank,
         input.merit,
         input.money,
+        input.rice,
         input.troops,
         input.createdAt,
         input.createdAt,
@@ -102,11 +116,16 @@ export class CharacterRepository {
       chiryaku: input.chiryaku,
       toso: input.toso,
       tokubo: input.tokubo,
+      buyuEx: 0,
+      chiryakuEx: 0,
+      tosoEx: 0,
+      tokuboEx: 0,
       houseId: null,
       provinceId: input.provinceId,
       rank: input.rank,
       merit: input.merit,
       money: input.money,
+      rice: input.rice,
       troops: input.troops,
       createdAt: input.createdAt,
       updatedAt: input.createdAt,
@@ -137,6 +156,13 @@ export class CharacterRepository {
     return row ? mapCharacter(row) : null
   }
 
+  async listAll(): Promise<Character[]> {
+    const result = await this.db
+      .prepare(`SELECT ${CHARACTER_COLUMNS} FROM characters`)
+      .all<CharacterRow>()
+    return (result.results ?? []).map(mapCharacter)
+  }
+
   async assignHouse(characterId: string, houseId: string, updatedAt: number): Promise<void> {
     await this.db
       .prepare(
@@ -145,6 +171,55 @@ export class CharacterRepository {
          WHERE id = ?`,
       )
       .bind(houseId, updatedAt, characterId)
+      .run()
+  }
+
+  async updateResources(
+    characterId: string,
+    patch: {
+      money?: number
+      rice?: number
+      troops?: number
+      merit?: number
+      buyu?: number
+      chiryaku?: number
+      toso?: number
+      tokubo?: number
+      buyuEx?: number
+      chiryakuEx?: number
+      tosoEx?: number
+      tokuboEx?: number
+      updatedAt: number
+    },
+  ): Promise<void> {
+    const current = await this.findById(characterId)
+    if (!current) return
+
+    await this.db
+      .prepare(
+        `UPDATE characters SET
+           money = ?, rice = ?, troops = ?, merit = ?,
+           buyu = ?, chiryaku = ?, toso = ?, tokubo = ?,
+           buyu_ex = ?, chiryaku_ex = ?, toso_ex = ?, tokubo_ex = ?,
+           updated_at = ?
+         WHERE id = ?`,
+      )
+      .bind(
+        patch.money ?? current.money,
+        patch.rice ?? current.rice,
+        patch.troops ?? current.troops,
+        patch.merit ?? current.merit,
+        patch.buyu ?? current.buyu,
+        patch.chiryaku ?? current.chiryaku,
+        patch.toso ?? current.toso,
+        patch.tokubo ?? current.tokubo,
+        patch.buyuEx ?? current.buyuEx,
+        patch.chiryakuEx ?? current.chiryakuEx,
+        patch.tosoEx ?? current.tosoEx,
+        patch.tokuboEx ?? current.tokuboEx,
+        patch.updatedAt,
+        characterId,
+      )
       .run()
   }
 }

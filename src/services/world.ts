@@ -1,3 +1,4 @@
+import { STARTING_LOYALTY } from '../config/game'
 import {
   initialStats,
   NEUTRAL_GARRISON,
@@ -24,6 +25,7 @@ export async function ensureProvincesSeeded(db: D1Database): Promise<void> {
         commerce: stats.commerce,
         defense: stats.defense,
         garrison: NEUTRAL_GARRISON,
+        loyalty: STARTING_LOYALTY,
         createdAt,
       }
     }),

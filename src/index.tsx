@@ -8,6 +8,7 @@ import { CharacterCreatePage } from './routes/pages/character-create'
 import { GameHubPage } from './routes/pages/game-hub'
 import { HomePage } from './routes/pages/home'
 import { LoginPage } from './routes/pages/login'
+import { CharacterCommandRepository } from './repositories/character-commands'
 import { CharacterRepository } from './repositories/characters'
 import { HouseRepository } from './repositories/houses'
 import { ProvinceRepository } from './repositories/provinces'
@@ -18,6 +19,8 @@ import {
 } from './config/archetypes'
 import { nextHouseColor } from './config/game'
 import { ensureProvincesSeeded } from './services/world'
+import { listActionResults, listWorldNews } from './services/events'
+import { advanceDueTurns, ensureGameState } from './services/turns'
 import type { AppEnv } from './types'
 
 const app = new Hono<AppEnv>()
@@ -84,8 +87,11 @@ app.get('/game', requireAuth, async (c) => {
   }
 
   await ensureProvincesSeeded(c.env.DB)
+  await advanceDueTurns(c.env.DB)
+  const gameState = await ensureGameState(c.env.DB)
 
   const error = c.req.query('error') ?? null
+  const cmdError = c.req.query('cmdError') ?? null
   const characters = new CharacterRepository(c.env.DB)
   const character = await characters.findByUserId(user.id)
 
@@ -107,10 +113,13 @@ app.get('/game', requireAuth, async (c) => {
     )
   }
 
-  const [province, provinces, houses] = await Promise.all([
+  const [province, provinces, houses, queue, news, results] = await Promise.all([
     provincesRepo.findById(character.provinceId),
     provincesRepo.listAll(),
     housesRepo.listActive(),
+    new CharacterCommandRepository(c.env.DB).listByCharacter(character.id),
+    listWorldNews(c.env.DB),
+    listActionResults(c.env.DB, character.id),
   ])
 
   if (!province) {
@@ -133,9 +142,25 @@ app.get('/game', requireAuth, async (c) => {
       house={house}
       provinces={provinces}
       houses={houses}
+      gameState={gameState}
+      queue={queue}
+      news={news}
+      results={results}
+      commandError={cmdError}
       error={error}
     />,
   )
 })
 
-export default app
+const worker = {
+  fetch: app.fetch,
+  async scheduled(
+    _controller: ScheduledController,
+    env: AppEnv['Bindings'],
+    ctx: ExecutionContext,
+  ) {
+    ctx.waitUntil(advanceDueTurns(env.DB))
+  },
+}
+
+export default worker
