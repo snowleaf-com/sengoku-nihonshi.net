@@ -1,8 +1,10 @@
 import { Hono } from 'hono'
 import { requireAuth } from '../../middleware/auth'
 import { DomainError } from '../../services/character'
+import { cancelQueuedCommand, enqueueCommand } from '../../services/commands'
 import { enterWorld } from '../../services/enter-world'
 import { raiseHouse } from '../../services/house'
+import { advanceDueTurns } from '../../services/turns'
 import { ensureProvincesSeeded } from '../../services/world'
 import type { AppEnv } from '../../types'
 
@@ -63,5 +65,56 @@ gameActionRoutes.post('/raise-house', async (c) => {
     }
     console.error(error)
     return c.redirect(`/game?error=${encodeURIComponent('旗揚げに失敗しました')}`)
+  }
+})
+
+gameActionRoutes.post('/enqueue-command', async (c) => {
+  const user = c.get('user')
+  if (!user) return c.redirect('/')
+
+  const body = await c.req.parseBody()
+  const commandId = typeof body.commandId === 'string' ? body.commandId : ''
+
+  try {
+    await enqueueCommand(c.env.DB, { userId: user.id, commandId })
+    return c.redirect('/game')
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return c.redirect(`/game?error=${encodeURIComponent(error.message)}`)
+    }
+    console.error(error)
+    return c.redirect(`/game?error=${encodeURIComponent('コマンド予約に失敗しました')}`)
+  }
+})
+
+gameActionRoutes.post('/cancel-command', async (c) => {
+  const user = c.get('user')
+  if (!user) return c.redirect('/')
+
+  const body = await c.req.parseBody()
+  const queueId = typeof body.queueId === 'string' ? body.queueId : ''
+
+  try {
+    await cancelQueuedCommand(c.env.DB, { userId: user.id, queueId })
+    return c.redirect('/game')
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return c.redirect(`/game?error=${encodeURIComponent(error.message)}`)
+    }
+    console.error(error)
+    return c.redirect(`/game?error=${encodeURIComponent('コマンド取消に失敗しました')}`)
+  }
+})
+
+gameActionRoutes.post('/advance-turn', async (c) => {
+  const user = c.get('user')
+  if (!user) return c.redirect('/')
+
+  try {
+    await advanceDueTurns(c.env.DB, { force: true })
+    return c.redirect('/game')
+  } catch (error) {
+    console.error(error)
+    return c.redirect(`/game?error=${encodeURIComponent('ターン進行に失敗しました')}`)
   }
 })
