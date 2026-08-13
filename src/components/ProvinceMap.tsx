@@ -8,6 +8,8 @@ type ProvinceMapViewProps = {
   provinces: Province[]
   houses: House[]
   focusProvinceId?: string
+  /** Hub向け: 都市名と色だけ・小さめ表示 */
+  compact?: boolean
 }
 
 type ProvinceMapPickProps = {
@@ -38,6 +40,7 @@ export function ProvinceMap(props: ProvinceMapProps) {
   const pickSwapTarget = pickMode ? props.pickSwapTarget : undefined
   const pickSwapPath = pickMode ? props.pickSwapPath : undefined
   const focusProvinceId = !pickMode ? props.focusProvinceId : undefined
+  const compact = !pickMode && props.compact === true
 
   const cells: Array<{ key: string; province: Province | null }> = []
   for (let y = 0; y < height; y++) {
@@ -52,7 +55,7 @@ export function ProvinceMap(props: ProvinceMapProps) {
 
   return (
     <div
-      class={`province-map${pickMode ? ' is-pick' : ''}`}
+      class={`province-map${pickMode ? ' is-pick' : ''}${compact ? ' is-compact' : ''}`}
       style={`--map-cols:${width};--map-rows:${height};--preview-color:${previewColor ?? NEUTRAL_COLOR}`}
       aria-label={pickMode ? '初期位置を選ぶ全国マップ' : '令制国マップ'}
     >
@@ -115,7 +118,9 @@ export function ProvinceMap(props: ProvinceMapProps) {
             }
           >
             <span class="province-name">{cell.province.name}</span>
-            <span class="province-owner">{house ? house.name : '中立'}</span>
+            {compact ? null : (
+              <span class="province-owner">{house ? house.name : '中立'}</span>
+            )}
           </div>
         )
       })}

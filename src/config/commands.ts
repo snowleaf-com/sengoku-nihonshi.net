@@ -3,9 +3,10 @@
  * UI は gains / costs をアイコン＋数値で表示する。
  */
 
-export const COMMAND_QUEUE_MAX = 48
-/** 能力+1 に必要な EX。コマンド1〜2回で届くくらい */
-export const STAT_EX_PER_LEVEL = 100
+/** 予約上限。古典NET並みにまとめて積めるようにする */
+export const COMMAND_QUEUE_MAX = 100
+/** 能力+1 に必要な EX。内政×20 / 稽古×10 で1上がる */
+export const STAT_EX_PER_LEVEL = 20
 
 export type EffectTarget =
   | 'buyu'
@@ -65,7 +66,7 @@ export function isCostEffect(magnitude: EffectMagnitude): boolean {
   return magnitude === 'down' || magnitude === 'down2'
 }
 
-/** 表示用の増減テキスト（例: +8 / -50 両 / +80 EX） */
+/** 表示用の増減テキスト（例: +8 / -50 両 / +2 EX） */
 export function formatEffectAmount(effect: CommandEffect): string {
   const sign = isCostEffect(effect.magnitude) ? '-' : '+'
   if (isExEffect(effect.target)) {
@@ -95,7 +96,7 @@ export const COMMANDS: GameCommand[] = [
     category: 'domestic',
     effects: [
       { target: 'agriculture', magnitude: 'up2', amount: 8 },
-      { target: 'chiryaku', magnitude: 'up', amount: 50 },
+      { target: 'chiryaku', magnitude: 'up', amount: 1 },
       { target: 'money', magnitude: 'down', amount: 50 },
     ],
   },
@@ -106,7 +107,7 @@ export const COMMANDS: GameCommand[] = [
     category: 'domestic',
     effects: [
       { target: 'commerce', magnitude: 'up2', amount: 8 },
-      { target: 'chiryaku', magnitude: 'up', amount: 50 },
+      { target: 'chiryaku', magnitude: 'up', amount: 1 },
       { target: 'money', magnitude: 'down', amount: 50 },
     ],
   },
@@ -116,7 +117,7 @@ export const COMMANDS: GameCommand[] = [
     blurb: '武芸を磨く',
     category: 'domestic',
     effects: [
-      { target: 'buyu', magnitude: 'up2', amount: 80 },
+      { target: 'buyu', magnitude: 'up2', amount: 2 },
       { target: 'money', magnitude: 'down', amount: 50 },
     ],
   },
@@ -126,7 +127,7 @@ export const COMMANDS: GameCommand[] = [
     blurb: '政を練って知略を磨く',
     category: 'domestic',
     effects: [
-      { target: 'chiryaku', magnitude: 'up2', amount: 80 },
+      { target: 'chiryaku', magnitude: 'up2', amount: 1 },
       { target: 'money', magnitude: 'down', amount: 50 },
     ],
   },
@@ -137,7 +138,7 @@ export const COMMANDS: GameCommand[] = [
     category: 'domestic',
     effects: [
       { target: 'loyalty', magnitude: 'up2', amount: 5 },
-      { target: 'tokubo', magnitude: 'up', amount: 50 },
+      { target: 'tokubo', magnitude: 'up', amount: 1 },
       { target: 'rice', magnitude: 'down', amount: 50 },
     ],
   },
@@ -153,4 +154,28 @@ export function isCommandId(value: string): value is CommandId {
 
 export function getCommand(id: string): GameCommand | null {
   return COMMAND_BY_ID.get(id as CommandId) ?? null
+}
+
+/** 固定枠 0..MAX-1。空きは null（UIでは「無し」） */
+export function buildCommandSlots<T extends { position: number }>(
+  queue: T[],
+): Array<T | null> {
+  const slots: Array<T | null> = Array.from({ length: COMMAND_QUEUE_MAX }, () => null)
+  for (const row of queue) {
+    if (row.position >= 0 && row.position < COMMAND_QUEUE_MAX) {
+      slots[row.position] = row
+    }
+  }
+  return slots
+}
+
+export function parseSlotPositions(raw: string[]): number[] {
+  const positions = new Set<number>()
+  for (const value of raw) {
+    const n = Number.parseInt(value, 10)
+    if (!Number.isFinite(n)) continue
+    if (n < 0 || n >= COMMAND_QUEUE_MAX) continue
+    positions.add(n)
+  }
+  return [...positions].sort((a, b) => a - b)
 }

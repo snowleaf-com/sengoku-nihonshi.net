@@ -19,6 +19,7 @@ import {
 } from './config/archetypes'
 import { nextHouseColor } from './config/game'
 import { ensureProvincesSeeded } from './services/world'
+import { listActionResults, listWorldNews } from './services/events'
 import { advanceDueTurns, ensureGameState } from './services/turns'
 import type { AppEnv } from './types'
 
@@ -90,6 +91,7 @@ app.get('/game', requireAuth, async (c) => {
   const gameState = await ensureGameState(c.env.DB)
 
   const error = c.req.query('error') ?? null
+  const cmdError = c.req.query('cmdError') ?? null
   const characters = new CharacterRepository(c.env.DB)
   const character = await characters.findByUserId(user.id)
 
@@ -111,11 +113,13 @@ app.get('/game', requireAuth, async (c) => {
     )
   }
 
-  const [province, provinces, houses, queue] = await Promise.all([
+  const [province, provinces, houses, queue, news, results] = await Promise.all([
     provincesRepo.findById(character.provinceId),
     provincesRepo.listAll(),
     housesRepo.listActive(),
     new CharacterCommandRepository(c.env.DB).listByCharacter(character.id),
+    listWorldNews(c.env.DB),
+    listActionResults(c.env.DB, character.id),
   ])
 
   if (!province) {
@@ -140,6 +144,9 @@ app.get('/game', requireAuth, async (c) => {
       houses={houses}
       gameState={gameState}
       queue={queue}
+      news={news}
+      results={results}
+      commandError={cmdError}
       error={error}
     />,
   )

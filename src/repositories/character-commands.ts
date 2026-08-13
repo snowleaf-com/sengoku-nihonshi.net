@@ -49,14 +49,7 @@ export class CharacterCommandRepository {
     position: number
     createdAt: number
   }): Promise<CharacterCommand> {
-    await this.db
-      .prepare(
-        `INSERT INTO character_commands (id, character_id, command_id, position, created_at)
-         VALUES (?, ?, ?, ?, ?)`,
-      )
-      .bind(input.id, input.characterId, input.commandId, input.position, input.createdAt)
-      .run()
-
+    await this.enqueueMany([input])
     return {
       id: input.id,
       characterId: input.characterId,
@@ -66,8 +59,47 @@ export class CharacterCommandRepository {
     }
   }
 
+  async enqueueMany(
+    inputs: Array<{
+      id: string
+      characterId: string
+      commandId: string
+      position: number
+      createdAt: number
+    }>,
+  ): Promise<void> {
+    if (inputs.length === 0) return
+    const stmts = inputs.map((input) =>
+      this.db
+        .prepare(
+          `INSERT INTO character_commands (id, character_id, command_id, position, created_at)
+           VALUES (?, ?, ?, ?, ?)`,
+        )
+        .bind(input.id, input.characterId, input.commandId, input.position, input.createdAt),
+    )
+    await this.db.batch(stmts)
+  }
+
   async delete(id: string): Promise<void> {
-    await this.db.prepare(`DELETE FROM character_commands WHERE id = ?`).bind(id).run()
+    await this.deleteMany([id])
+  }
+
+  async deleteMany(ids: string[]): Promise<void> {
+    if (ids.length === 0) return
+    const stmts = ids.map((id) =>
+      this.db.prepare(`DELETE FROM character_commands WHERE id = ?`).bind(id),
+    )
+    await this.db.batch(stmts)
+  }
+
+  async updateCommandIds(updates: Array<{ id: string; commandId: string }>): Promise<void> {
+    if (updates.length === 0) return
+    const stmts = updates.map((row) =>
+      this.db
+        .prepare(`UPDATE character_commands SET command_id = ? WHERE id = ?`)
+        .bind(row.commandId, row.id),
+    )
+    await this.db.batch(stmts)
   }
 
   async listFirstPerCharacter(): Promise<CharacterCommand[]> {
@@ -83,6 +115,18 @@ export class CharacterCommandRepository {
       )
       .all<CommandRow>()
     return (result.results ?? []).map(mapCommand)
+  }
+
+  /** 実行後など、欠けた枠より後ろを1つ前へずらす */
+  async shiftDownAfter(characterId: string, position: number): Promise<void> {
+    await this.db
+      .prepare(
+        `UPDATE character_commands
+         SET position = position - 1
+         WHERE character_id = ? AND position > ?`,
+      )
+      .bind(characterId, position)
+      .run()
   }
 
   async resequence(characterId: string): Promise<void> {

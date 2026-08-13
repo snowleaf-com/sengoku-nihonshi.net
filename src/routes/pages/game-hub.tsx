@@ -1,16 +1,24 @@
 import { CommandPanel } from '../../components/CommandPanel'
+import { EventFeed } from '../../components/EventFeed'
 import { ExGauge } from '../../components/ExGauge'
 import { ProvinceMap } from '../../components/ProvinceMap'
 import { SiteShell } from '../../components/SiteShell'
 import { StatGauge } from '../../components/StatGauge'
 import { StatIcon } from '../../components/StatIcon'
 import { getArchetype } from '../../config/archetypes'
-import { formatGameDate } from '../../config/calendar'
+import { formatGameDate, seasonLabel, seasonOfMonth } from '../../config/calendar'
 import { formatMoney, formatRice, rankName } from '../../config/game'
 import { getCharacterIcon, iconPublicPath } from '../../config/icons'
 import { getProvinceMaster, PROVINCES } from '../../config/provinces'
 import { adjacentCount } from '../../domain/province/adjacency'
-import type { Character, CharacterCommand, GameState, House, Province } from '../../types'
+import type {
+  Character,
+  CharacterCommand,
+  GameState,
+  House,
+  Province,
+  WorldEvent,
+} from '../../types'
 
 type GameHubPageProps = {
   character: Character
@@ -20,6 +28,9 @@ type GameHubPageProps = {
   houses: House[]
   gameState: GameState
   queue: CharacterCommand[]
+  news: WorldEvent[]
+  results: WorldEvent[]
+  commandError?: string | null
   error?: string | null
 }
 
@@ -35,6 +46,9 @@ export function GameHubPage({
   houses,
   gameState,
   queue,
+  news,
+  results,
+  commandError = null,
   error,
 }: GameHubPageProps) {
   const master = getProvinceMaster(province.id)
@@ -42,7 +56,18 @@ export function GameHubPage({
   const houseById = Object.fromEntries(houses.map((h) => [h.id, h]))
   const icon = getCharacterIcon(character.iconId)
   const archetype = getArchetype(character.archetypeId)
-  const nextTurnLabel = new Date(gameState.nextTurnAt * 1000).toLocaleString('ja-JP')
+  const timeFmt: Intl.DateTimeFormatOptions = {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }
+  const nextTurnLabel = new Date(gameState.nextTurnAt * 1000).toLocaleString('ja-JP', timeFmt)
+  const nowLabel = new Date().toLocaleString('ja-JP', timeFmt)
   const locationLabel = province.houseId
     ? `${province.name}（${houseById[province.houseId]?.name ?? '他家'}）`
     : `${province.name}（中立）`
@@ -54,48 +79,34 @@ export function GameHubPage({
   const ownedProvinces = house
     ? provinces.filter((p) => p.houseId === house.id).length
     : 0
+  const season = seasonOfMonth(gameState.month)
 
   return (
     <SiteShell title={`${character.name} — 戦国日本史.net`}>
-      <div class="game-layout">
+      <div class="game-layout" data-season={season}>
         <header class="game-top">
-          <div class="character-card game-top-identity">
-            <img
-              class="character-portrait"
-              src={iconPublicPath(character.iconId)}
-              alt=""
-              width="72"
-              height="72"
-            />
-            <div>
-              <h1>{character.name}</h1>
-              <p class="panel-lead">
-                {icon?.label ?? '武将'} · {archetype?.label ?? '均衡'} ·{' '}
-                {rankName(character.rank)} · {houseLine}
-              </p>
-            </div>
-          </div>
-
           <dl class="meta meta-inline game-top-meta">
             <div>
               <dt>年月</dt>
-              <dd>{formatGameDate(gameState)}</dd>
+              <dd>
+                {formatGameDate(gameState)}
+                <span class="season-chip">{seasonLabel(season)}</span>
+              </dd>
             </div>
             <div>
               <dt>次ターン</dt>
               <dd>{nextTurnLabel}</dd>
             </div>
             <div>
-              <dt>所在</dt>
-              <dd>{locationLabel}</dd>
-            </div>
-            <div>
-              <dt>隣接</dt>
-              <dd>{adj} か国</dd>
+              <dt>現在</dt>
+              <dd>{nowLabel}</dd>
             </div>
           </dl>
 
           <div class="game-top-actions">
+            <a class="btn btn-ghost btn-small" href="/game">
+              更新
+            </a>
             <form method="post" action="/actions/advance-turn">
               <button type="submit" class="btn btn-ghost btn-small">
                 ターン進行
@@ -114,7 +125,35 @@ export function GameHubPage({
         <div class="game-board">
           <div class="game-info-stack">
             <section class="game-panel game-card game-card-self">
-              <h2 class="card-title">自身</h2>
+              <div class="self-identity">
+                <img
+                  class="character-portrait"
+                  src={iconPublicPath(character.iconId)}
+                  alt=""
+                  width="64"
+                  height="64"
+                />
+                <div>
+                  <h2 class="card-title self-name">{character.name}</h2>
+                  <p class="self-meta">
+                    {icon?.label ?? '武将'} · {archetype?.label ?? '均衡'} ·{' '}
+                    {rankName(character.rank)}
+                  </p>
+                  <p class="self-meta">{houseLine}</p>
+                </div>
+              </div>
+
+              <dl class="meta meta-inline card-meta">
+                <div>
+                  <dt>所在</dt>
+                  <dd>{locationLabel}</dd>
+                </div>
+                <div>
+                  <dt>隣接</dt>
+                  <dd>{adj} か国</dd>
+                </div>
+              </dl>
+
               <dl class="ability-list">
                 <div>
                   <dt>
@@ -256,14 +295,22 @@ export function GameHubPage({
           <section class="game-panel game-map-section">
             <h2>全国</h2>
             <ProvinceMap
+              compact
               provinces={provinces}
               houses={houses}
               focusProvinceId={character.provinceId}
             />
+            <EventFeed title="出来事" events={news} empty="まだ知らせはない" />
           </section>
 
           <section class="game-panel game-commands">
-            <CommandPanel queue={queue} />
+            <CommandPanel
+              queue={queue}
+              currentYear={gameState.year}
+              currentMonth={gameState.month}
+              results={results}
+              error={commandError}
+            />
           </section>
         </div>
       </div>
