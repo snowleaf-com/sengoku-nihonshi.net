@@ -117,6 +117,7 @@ describe('Character repository', () => {
       rank: 1,
       merit: 0,
       money: 1000,
+      rice: 1000,
       troops: 0,
       createdAt: now,
     })

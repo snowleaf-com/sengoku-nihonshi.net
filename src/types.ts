@@ -59,11 +59,16 @@ export type Character = {
   chiryaku: number
   toso: number
   tokubo: number
+  buyuEx: number
+  chiryakuEx: number
+  tosoEx: number
+  tokuboEx: number
   houseId: string | null
   provinceId: string
   rank: number
   merit: number
   money: number
+  rice: number
   troops: number
   createdAt: number
   updatedAt: number
@@ -87,6 +92,7 @@ export type Province = {
   commerce: number
   defense: number
   garrison: number
+  loyalty: number
   createdAt: number
   updatedAt: number
 }
@@ -96,5 +102,21 @@ export type HouseRole = {
   houseId: string
   characterId: string
   role: string
+  createdAt: number
+}
+
+export type GameState = {
+  year: number
+  month: number
+  turnIndex: number
+  nextTurnAt: number
+  updatedAt: number
+}
+
+export type CharacterCommand = {
+  id: string
+  characterId: string
+  commandId: string
+  position: number
   createdAt: number
 }
