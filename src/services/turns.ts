@@ -3,10 +3,12 @@ import {
   START_YEAR,
   TURN_INTERVAL_SECONDS,
   advanceMonth,
+  formatGameDate,
   isTaxMonth,
   isTributeMonth,
   type GameDate,
 } from '../config/calendar'
+import { getCommand } from '../config/commands'
 import { nowSeconds } from '../lib/id'
 import { CharacterCommandRepository } from '../repositories/character-commands'
 import { CharacterRepository } from '../repositories/characters'
@@ -18,6 +20,7 @@ import {
   previewTaxAmount,
   previewTributeAmount,
 } from './commands'
+import { recordWorldEvents } from './events'
 
 export async function ensureGameState(db: D1Database): Promise<GameState> {
   const repo = new GameStateRepository(db)
@@ -61,6 +64,17 @@ async function advanceOneTurn(
   const characters = new CharacterRepository(db)
   const commands = new CharacterCommandRepository(db)
   const provinces = new ProvinceRepository(db)
+  const eventBatch: Array<{
+    year: number
+    month: number
+    channel: 'result' | 'news'
+    kind: 'command' | 'income' | 'system'
+    message: string
+    provinceId?: string | null
+    characterId?: string | null
+    houseId?: string | null
+    createdAt: number
+  }> = []
 
   const queued = await commands.listFirstPerCharacter()
   for (const item of queued) {
@@ -69,7 +83,22 @@ async function advanceOneTurn(
       await commands.delete(item.id)
       continue
     }
-    await executeCharacterCommand(db, character, item)
+    const province = await provinces.findById(character.provinceId)
+    const definition = getCommand(item.commandId)
+    const result = await executeCharacterCommand(db, character, item)
+    if (result.ok && definition && province) {
+      eventBatch.push({
+        year: state.year,
+        month: state.month,
+        channel: 'result',
+        kind: 'command',
+        message: `${province.name}で${definition.label}を行った。`,
+        provinceId: province.id,
+        characterId: character.id,
+        houseId: character.houseId,
+        createdAt: wallClock,
+      })
+    }
   }
 
   const nextDate: GameDate = advanceMonth({ year: state.year, month: state.month })
@@ -77,6 +106,8 @@ async function advanceOneTurn(
   // 進んだ先の月で税金・年貢（その月の始めに入るイメージ）
   if (isTaxMonth(nextDate.month) || isTributeMonth(nextDate.month)) {
     const allCharacters = await characters.listAll()
+    let taxed = 0
+    let tributed = 0
     for (const listed of allCharacters) {
       const character = await characters.findById(listed.id)
       if (!character) continue
@@ -89,6 +120,7 @@ async function advanceOneTurn(
           merit: character.merit + 10,
           updatedAt: wallClock,
         })
+        taxed += 1
       }
       if (isTributeMonth(nextDate.month)) {
         const amount = previewTributeAmount(province)
@@ -97,9 +129,41 @@ async function advanceOneTurn(
           merit: character.merit + 10,
           updatedAt: wallClock,
         })
+        tributed += 1
       }
     }
+    if (taxed > 0) {
+      eventBatch.push({
+        year: nextDate.year,
+        month: nextDate.month,
+        channel: 'news',
+        kind: 'income',
+        message: `${formatGameDate(nextDate)}、各国で税収があった。`,
+        createdAt: wallClock,
+      })
+    }
+    if (tributed > 0) {
+      eventBatch.push({
+        year: nextDate.year,
+        month: nextDate.month,
+        channel: 'news',
+        kind: 'income',
+        message: `${formatGameDate(nextDate)}、各国で年貢が入った。`,
+        createdAt: wallClock,
+      })
+    }
   }
+
+  eventBatch.push({
+    year: nextDate.year,
+    month: nextDate.month,
+    channel: 'news',
+    kind: 'system',
+    message: `${formatGameDate(nextDate)}になった。`,
+    createdAt: wallClock,
+  })
+
+  await recordWorldEvents(db, eventBatch)
 
   const nextTurnAt =
     state.nextTurnAt > 0

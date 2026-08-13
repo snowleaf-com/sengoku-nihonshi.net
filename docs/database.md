@@ -99,6 +99,12 @@ migration `0004_phase2_turns.sql`。
 - `characters.rice` / `*_ex` … 米と能力経験値
 - `character_commands` … コマンド予約キュー
 
+migration `0005_world_events.sql`。
+
+- `world_events` … 全国の出来事 / 実行結果ログ
+  - `channel=news` … 仕官・旗揚げ・税収・戦・災など（地図下）
+  - `channel=result` … 自分のコマンド実行結果（コマンド欄下）
+
 ## Phase 2 以降で増える想定
 
-`battle_logs` など。技術・城壁の本格運用、徴兵・戦争もここで。
+技術・城壁の本格運用、徴兵・戦争。戦争・飢饉・一揆は `world_events` に流す。

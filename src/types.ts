@@ -120,3 +120,29 @@ export type CharacterCommand = {
   position: number
   createdAt: number
 }
+
+/** 実行結果 / 全国の出来事 */
+export type WorldEventChannel = 'result' | 'news'
+
+/** 全国の知らせ。war / disaster / riot は今後本格化 */
+export type WorldEventKind =
+  | 'command'
+  | 'income'
+  | 'war'
+  | 'disaster'
+  | 'riot'
+  | 'social'
+  | 'system'
+
+export type WorldEvent = {
+  id: string
+  year: number
+  month: number
+  channel: WorldEventChannel
+  kind: WorldEventKind
+  message: string
+  provinceId: string | null
+  characterId: string | null
+  houseId: string | null
+  createdAt: number
+}
