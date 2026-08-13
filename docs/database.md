@@ -90,6 +90,15 @@ migration `0003_phase1_5_stats.sql`。
 - `archetype_id` … 立ち回り（battle / domestic / strategy / command）
 - `buyu` / `chiryaku` / `toso` / `tokubo` … 武勇・知略・統率・徳望（入力は前3つ、各5〜100・合計150。徳望は立ち回り固定）
 
+## Phase 2 で追加
+
+migration `0004_phase2_turns.sql`。
+
+- `game_state` … 年月・ターン番号・次ターン時刻
+- `provinces.loyalty` … 民忠
+- `characters.rice` / `*_ex` … 米と能力経験値
+- `character_commands` … コマンド予約キュー
+
 ## Phase 2 以降で増える想定
 
-`commands` / `turns` / `battle_logs` など。国庫・民忠・個人の兵糧などもここで。
+`battle_logs` など。技術・城壁の本格運用、徴兵・戦争もここで。
