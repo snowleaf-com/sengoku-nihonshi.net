@@ -67,7 +67,7 @@ WebAuthn は「本人確認の儀式」コストが高い。
 |------|-------|--------|
 | local | `localhost` | `http://localhost:5173` |
 | staging | `sengoku-nihonshi-net-staging.….workers.dev` | `https://同ホスト` |
-| production | `sengoku-nihonshi-net.….workers.dev` | `https://同ホスト` |
+| production | `sengoku.snow-leaf.com` | `https://sengoku.snow-leaf.com` |
 
 ズレると verify が必ず失敗する。独自ドメインを張ったら vars を合わせて再デプロイする。
 
