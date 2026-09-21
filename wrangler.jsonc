@@ -8,10 +8,17 @@
   // Top-level = production（手動デプロイ）
   "vars": {
     "WEBAUTHN_RP_NAME": "戦国日本史.net",
-    "WEBAUTHN_RP_ID": "sengoku-nihonshi-net.yy-dec5.workers.dev",
-    "WEBAUTHN_ORIGIN": "https://sengoku-nihonshi-net.yy-dec5.workers.dev",
+    "WEBAUTHN_RP_ID": "sengoku.snow-leaf.com",
+    "WEBAUTHN_ORIGIN": "https://sengoku.snow-leaf.com",
     "SESSION_TTL_SECONDS": "15552000"
   },
+  // Cloudflare ダッシュボードで付けた本番ホストを構成としても固定する
+  "routes": [
+    {
+      "pattern": "sengoku.snow-leaf.com",
+      "custom_domain": true
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",

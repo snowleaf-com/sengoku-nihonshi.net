@@ -12,7 +12,7 @@
 |------|------------|-----|----------------|
 | local | http://localhost:5173/ | ローカル D1（`.wrangler/state`） | `npm run dev` で即時 |
 | **staging** | https://sengoku-nihonshi-net-staging.yy-dec5.workers.dev | D1 `sengoku-nihonshi-staging` | `main` へ push / マージ後に CI が自動 |
-| production | https://sengoku-nihonshi-net.yy-dec5.workers.dev | D1 `sengoku-nihonshi` | **手動** `npm run deploy:production` |
+| production | https://sengoku.snow-leaf.com | D1 `sengoku-nihonshi` | **手動** `npm run deploy:production` |
 
 staging と production の DB は別物。デプロイで中身は消さない（未適用 migration だけ適用）。
 
@@ -40,7 +40,7 @@ npm run dev
 | 名前 | 役割 | local | staging / production |
 |------|------|-------|----------------------|
 | `WEBAUTHN_RP_ID` | Relying Party ID | `.dev.vars` → `localhost` | `wrangler.jsonc` の各 env `vars` |
-| `WEBAUTHN_ORIGIN` | 期待 origin | `http://localhost:5173` | 各 workers.dev の https |
+| `WEBAUTHN_ORIGIN` | 期待 origin | `http://localhost:5173` | staging=workers.dev / production=`https://sengoku.snow-leaf.com` |
 | `WEBAUTHN_RP_NAME` | 認証 UI に出る名前 | 共通 | staging は名前に `(staging)` |
 | `SESSION_TTL_SECONDS` | セッション寿命（秒） | 既定 180 日 | 同 |
 | `ADMIN_SECRET` | `/admin` 用 | `.dev.vars` | `wrangler secret put`（env ごと） |
@@ -100,7 +100,8 @@ npm run preview:upload
 ```
 
 注意: versioned preview URL はホスト名が安定 URL と違う。  
-Passkey 確認は **staging / production の安定な workers.dev** で行う。
+Passkey 確認は **staging の workers.dev** か **production の `sengoku.snow-leaf.com`** で行う（RP ID とホストが一致していること）。  
+production の `*.workers.dev` は残っていても、Passkey はカスタムドメイン向け設定のためそちらでは失敗する。
 
 ## トラブルシュート
 
