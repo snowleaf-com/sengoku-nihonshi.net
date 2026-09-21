@@ -6,8 +6,11 @@ import { EnterPathPanel } from './components/EnterPathPanel'
 import { StatAdjustPanel } from './components/StatAdjustPanel'
 import { CharacterCreatePage } from './routes/pages/character-create'
 import { GameHubPage } from './routes/pages/game-hub'
+import { HouseCouncilPage } from './routes/pages/house-council'
 import { HomePage } from './routes/pages/home'
+import { LettersPage } from './routes/pages/letters'
 import { LoginPage } from './routes/pages/login'
+import { RankingPage } from './routes/pages/ranking'
 import { CharacterCommandRepository } from './repositories/character-commands'
 import { CharacterRepository } from './repositories/characters'
 import { HouseRepository } from './repositories/houses'
@@ -18,6 +21,15 @@ import {
   isArchetypeId,
 } from './config/archetypes'
 import { nextHouseColor } from './config/game'
+import { DomainError } from './services/character'
+import {
+  listHouseMessages,
+  listInbox,
+  listRanking,
+  postHouseMessage,
+  sendLetter,
+  updateHouseLaw,
+} from './services/social'
 import { ensureProvincesSeeded } from './services/world'
 import { listActionResults, listWorldNews } from './services/events'
 import { advanceDueTurns, ensureGameState } from './services/turns'
@@ -150,6 +162,130 @@ app.get('/game', requireAuth, async (c) => {
       error={error}
     />,
   )
+})
+
+function parseBodyString(body: Record<string, unknown>, key: string): string {
+  const value = body[key]
+  return typeof value === 'string' ? value : ''
+}
+
+app.get('/game/house', requireAuth, async (c) => {
+  const user = c.get('user')
+  if (!user) return c.redirect('/')
+
+  const error = c.req.query('error') ?? null
+  const notice = c.req.query('notice') ?? null
+
+  try {
+    const { house, character, messages } = await listHouseMessages(c.env.DB, {
+      userId: user.id,
+    })
+    return c.render(
+      <HouseCouncilPage
+        character={character}
+        house={house}
+        messages={messages}
+        error={error}
+        notice={notice}
+      />,
+    )
+  } catch (err) {
+    if (err instanceof DomainError) {
+      return c.redirect(`/game?error=${encodeURIComponent(err.message)}`)
+    }
+    throw err
+  }
+})
+
+app.post('/game/house', requireAuth, async (c) => {
+  const user = c.get('user')
+  if (!user) return c.redirect('/')
+
+  const body = await c.req.parseBody()
+  const intent = parseBodyString(body, 'intent')
+
+  try {
+    if (intent === 'law') {
+      await updateHouseLaw(c.env.DB, {
+        userId: user.id,
+        lawText: parseBodyString(body, 'lawText'),
+      })
+      return c.redirect(`/game/house?notice=${encodeURIComponent('国法を更新した')}`)
+    }
+    await postHouseMessage(c.env.DB, {
+      userId: user.id,
+      body: parseBodyString(body, 'body'),
+    })
+    return c.redirect(`/game/house?notice=${encodeURIComponent('会議室に投稿した')}`)
+  } catch (err) {
+    if (err instanceof DomainError) {
+      return c.redirect(`/game/house?error=${encodeURIComponent(err.message)}`)
+    }
+    throw err
+  }
+})
+
+app.get('/game/letters', requireAuth, async (c) => {
+  const user = c.get('user')
+  if (!user) return c.redirect('/')
+
+  const error = c.req.query('error') ?? null
+  const notice = c.req.query('notice') ?? null
+  const characters = new CharacterRepository(c.env.DB)
+  const character = await characters.findByUserId(user.id)
+  if (!character) {
+    return c.redirect(`/game?error=${encodeURIComponent('先に武将を作成してください')}`)
+  }
+
+  const [{ letters }, all] = await Promise.all([
+    listInbox(c.env.DB, { userId: user.id }),
+    characters.listAll(),
+  ])
+  const recipients = all.filter((row) => row.id !== character.id)
+
+  return c.render(
+    <LettersPage
+      character={character}
+      letters={letters}
+      recipients={recipients}
+      error={error}
+      notice={notice}
+    />,
+  )
+})
+
+app.post('/game/letters', requireAuth, async (c) => {
+  const user = c.get('user')
+  if (!user) return c.redirect('/')
+
+  const body = await c.req.parseBody()
+  try {
+    await sendLetter(c.env.DB, {
+      userId: user.id,
+      toCharacterId: parseBodyString(body, 'toCharacterId') || undefined,
+      toName: parseBodyString(body, 'toName') || undefined,
+      body: parseBodyString(body, 'body'),
+    })
+    return c.redirect(`/game/letters?notice=${encodeURIComponent('手紙を送った')}`)
+  } catch (err) {
+    if (err instanceof DomainError) {
+      return c.redirect(`/game/letters?error=${encodeURIComponent(err.message)}`)
+    }
+    throw err
+  }
+})
+
+app.get('/game/ranking', requireAuth, async (c) => {
+  const user = c.get('user')
+  if (!user) return c.redirect('/')
+
+  const character = await new CharacterRepository(c.env.DB).findByUserId(user.id)
+  if (!character) {
+    return c.redirect(`/game?error=${encodeURIComponent('先に武将を作成してください')}`)
+  }
+
+  const rows = await listRanking(c.env.DB)
+  return c.render(<RankingPage rows={rows} />)
 })
 
 const worker = {
