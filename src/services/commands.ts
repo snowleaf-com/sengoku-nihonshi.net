@@ -5,6 +5,7 @@ import {
   type CommandPayload,
   type RecruitPayload,
   type TradePayload,
+  type WarPayload,
 } from '../config/command-payload'
 import {
   COMMAND_QUEUE_MAX,
@@ -33,6 +34,8 @@ import {
   TRADE_MAX,
   TRAIN_CONTRIBUTION,
   TRAINING_MAX,
+  WAR_CONTRIBUTION,
+  isHouseWarReady,
   netStatGain,
   netTrainGain,
 } from '../config/net'
@@ -41,12 +44,15 @@ import { areAdjacent } from '../domain/province/adjacency'
 import { createId, nowSeconds } from '../lib/id'
 import { CharacterCommandRepository } from '../repositories/character-commands'
 import { CharacterRepository } from '../repositories/characters'
+import { GameStateRepository } from '../repositories/game-state'
 import { HouseRoleRepository } from '../repositories/house-roles'
 import { HouseRepository } from '../repositories/houses'
 import { ProvinceRepository } from '../repositories/provinces'
 import { HOUSE_ROLES } from '../config/game'
 import type { Character, CharacterCommand, Province } from '../types'
+import { resolveBattle, wallDefender } from './battle'
 import { DomainError } from './character'
+import { recordWorldEvent } from './events'
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -112,6 +118,13 @@ export function buildRecruitPayload(input: { amount: number }): RecruitPayload {
   return { kind: 'recruit', amount }
 }
 
+export function buildWarPayload(input: { provinceId: string }): WarPayload {
+  if (!input.provinceId || !getProvinceMaster(input.provinceId)) {
+    throw new DomainError('攻撃先を選んでください')
+  }
+  return { kind: 'war', provinceId: input.provinceId }
+}
+
 function resolvePayloadForApply(
   commandId: string,
   raw: CommandPayload | null | undefined,
@@ -130,6 +143,10 @@ function resolvePayloadForApply(
   if (def.needsPayload === 'recruit') {
     if (!raw || raw.kind !== 'recruit') throw new DomainError('徴兵する人数を入力してください')
     return serializeCommandPayload(buildRecruitPayload({ amount: raw.amount }))
+  }
+  if (def.needsPayload === 'war') {
+    if (!raw || raw.kind !== 'war') throw new DomainError('攻撃先を選んでください')
+    return serializeCommandPayload(buildWarPayload({ provinceId: raw.provinceId }))
   }
   return null
 }
@@ -689,6 +706,145 @@ export async function executeCharacterCommand(
     })
     await consumeQueuedCommand(db, character.id, queued)
     return { ok: true, message: `${province.name}の守備についた。` }
+  }
+
+  if (commandId === 'sensou') {
+    if (!payload || payload.kind !== 'war') {
+      return { ok: false, reason: '攻撃先が指定されていません' }
+    }
+    if (!character.houseId) {
+      return { ok: false, reason: '無所属では戦争できません' }
+    }
+    if (personal.troops <= 0) {
+      return { ok: false, reason: '兵がいません' }
+    }
+
+    const fromMaster = getProvinceMaster(character.provinceId)
+    const toMaster = getProvinceMaster(payload.provinceId)
+    if (!fromMaster || !toMaster) {
+      return { ok: false, reason: '攻撃先が不正です' }
+    }
+    if (!areAdjacent(fromMaster, toMaster)) {
+      return { ok: false, reason: `${toMaster.name}へは隣接していません` }
+    }
+
+    const target = await provinces.findById(payload.provinceId)
+    if (!target) return { ok: false, reason: '攻撃先がありません' }
+    if (target.houseId === character.houseId) {
+      return { ok: false, reason: '自国を攻撃できません' }
+    }
+
+    const gameState = await new GameStateRepository(db).get()
+    const houses = new HouseRepository(db)
+    const attackerHouse = await houses.findById(character.houseId)
+    if (!attackerHouse) return { ok: false, reason: '所属の家がありません' }
+    if (!isHouseWarReady(gameState.turnIndex, attackerHouse.foundedTurn)) {
+      return { ok: false, reason: '建国から36ヶ月経過するまで戦争できません' }
+    }
+    if (target.houseId) {
+      const defenderHouse = await houses.findById(target.houseId)
+      if (defenderHouse && !isHouseWarReady(gameState.turnIndex, defenderHouse.foundedTurn)) {
+        return { ok: false, reason: '相手の家はまだ戦争解禁前です' }
+      }
+    }
+
+    const characters = new CharacterRepository(db)
+    const defenderChar =
+      target.houseId != null
+        ? await characters.findDefender(target.id, target.houseId)
+        : null
+
+    const attackerSide = {
+      troops: personal.troops,
+      buyu: personal.buyu,
+      training: personal.training,
+    }
+    const defenderSide = defenderChar
+      ? {
+          troops: defenderChar.troops,
+          buyu: defenderChar.buyu,
+          training: defenderChar.training,
+        }
+      : wallDefender(target.defense)
+
+    const battle = resolveBattle(attackerSide, defenderSide)
+    const now = nowSeconds()
+
+    personal.troops = battle.attackerTroops
+    personal.merit += WAR_CONTRIBUTION
+    gainBuyuEx(personal)
+
+    if (battle.winner === 'attacker') {
+      if (defenderChar) {
+        await characters.updateResources(defenderChar.id, {
+          troops: 0,
+          defending: 0,
+          updatedAt: now,
+        })
+      } else {
+        await provinces.updateStats(target.id, { defense: 0, updatedAt: now })
+      }
+      await provinces.updateOwner(target.id, character.houseId, now)
+      await characters.clearDefendingInProvince(target.id, null, now)
+
+      await characters.updateResources(character.id, {
+        ...personal,
+        updatedAt: now,
+      })
+      await consumeQueuedCommand(db, character.id, queued)
+
+      const vsLabel = defenderChar ? `${defenderChar.name}` : `${target.name}の城壁`
+      const newsMessage = `${character.name}が${target.name}を攻略した（対${vsLabel}）。`
+      await recordWorldEvent(db, {
+        year: gameState.year,
+        month: gameState.month,
+        channel: 'news',
+        kind: 'war',
+        message: newsMessage,
+        provinceId: target.id,
+        characterId: character.id,
+        houseId: character.houseId,
+        createdAt: now,
+      })
+      return {
+        ok: true,
+        message: `${target.name}を占領した（残兵${personal.troops}）。`,
+      }
+    }
+
+    if (defenderChar) {
+      await characters.updateResources(defenderChar.id, {
+        troops: battle.defenderTroops,
+        updatedAt: now,
+      })
+    } else {
+      await provinces.updateStats(target.id, {
+        defense: battle.defenderTroops,
+        updatedAt: now,
+      })
+    }
+
+    await characters.updateResources(character.id, {
+      ...personal,
+      updatedAt: now,
+    })
+    await consumeQueuedCommand(db, character.id, queued)
+
+    await recordWorldEvent(db, {
+      year: gameState.year,
+      month: gameState.month,
+      channel: 'news',
+      kind: 'war',
+      message: `${character.name}が${target.name}への侵攻に失敗した。`,
+      provinceId: target.id,
+      characterId: character.id,
+      houseId: character.houseId,
+      createdAt: now,
+    })
+    return {
+      ok: true,
+      message: `${target.name}への侵攻に失敗した（残兵${personal.troops}）。`,
+    }
   }
 
   return { ok: false, reason: '未対応のコマンド' }

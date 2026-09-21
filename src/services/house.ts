@@ -57,6 +57,7 @@ export async function raiseHouse(
   }
 
   const now = nowSeconds()
+  const gameState = await ensureGameState(db)
   const active = await houses.listActive()
   const houseId = createId(16)
   const characterId = character.id
@@ -66,6 +67,7 @@ export async function raiseHouse(
     name: houseName,
     leaderCharacterId: characterId,
     color: nextHouseColor(active.length),
+    foundedTurn: gameState.turnIndex,
     createdAt: now,
   })
 
@@ -81,7 +83,6 @@ export async function raiseHouse(
     createdAt: now,
   })
 
-  const gameState = await ensureGameState(db)
   await recordWorldEvent(db, {
     year: gameState.year,
     month: gameState.month,

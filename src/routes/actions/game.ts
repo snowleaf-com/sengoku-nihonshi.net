@@ -5,6 +5,7 @@ import {
   applyCommandsToPositions,
   buildRecruitPayload,
   buildTradePayload,
+  buildWarPayload,
   clearCommandPositions,
   repeatSelectedCommands,
 } from '../../services/commands'
@@ -114,6 +115,7 @@ gameActionRoutes.post('/apply-commands', async (c) => {
       | { kind: 'move'; provinceId: string }
       | { kind: 'trade'; side: 'sell_rice' | 'sell_gold'; amount: number; marketRate: number }
       | { kind: 'recruit'; amount: number }
+      | { kind: 'war'; provinceId: string }
       | null
 
     if (commandId === 'idou') {
@@ -135,6 +137,9 @@ gameActionRoutes.post('/apply-commands', async (c) => {
     } else if (commandId === 'chouhei') {
       const amount = Number.parseInt(parseBodyString(body, 'recruitAmount'), 10)
       payload = buildRecruitPayload({ amount })
+    } else if (commandId === 'sensou') {
+      const provinceId = parseBodyString(body, 'warProvinceId')
+      payload = buildWarPayload({ provinceId })
     }
 
     await applyCommandsToPositions(c.env.DB, {

@@ -126,6 +126,12 @@ migration `0009_n3_military.sql`。
 - `characters.training` … 訓練度（0〜100）
 - `characters.defending` … 城の守備中なら 1
 
-## Phase N4 以降で増える想定
+## Phase N4 で追加
 
-戦争・占領。会議室・手紙は N5。
+migration `0010_n4_war.sql`。
+
+- `houses.founded_turn` … 建国時の `game_state.turn_index`（戦争解禁の基準）
+
+## Phase N5 以降で増える想定
+
+会議室・手紙。

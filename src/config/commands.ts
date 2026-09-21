@@ -12,6 +12,7 @@ import {
   RICE_GIVE_COST,
   STAT_EX_PER_LEVEL,
   TRAIN_CONTRIBUTION,
+  WAR_CONTRIBUTION,
 } from './net'
 
 export { COMMAND_QUEUE_MAX, STAT_EX_PER_LEVEL }
@@ -52,7 +53,7 @@ export type GameCommand = {
   /** 自国以外でも実行できる（NET: 移動・仕官） */
   foreignOk?: boolean
   /** UI で追加パラメータが必要 */
-  needsPayload?: 'move' | 'trade' | 'recruit'
+  needsPayload?: 'move' | 'trade' | 'recruit' | 'war'
   effects: CommandEffect[]
 }
 
@@ -248,6 +249,17 @@ export const COMMANDS: GameCommand[] = [
     effects: [
       { target: 'toso', magnitude: 'up', amount: 1 },
       { target: 'merit', magnitude: 'up', amount: DEFEND_CONTRIBUTION },
+    ],
+  },
+  {
+    id: 'sensou',
+    label: '戦争',
+    blurb: '隣接する敵・中立国を攻める',
+    category: 'military',
+    needsPayload: 'war',
+    effects: [
+      { target: 'buyu', magnitude: 'up', amount: 1 },
+      { target: 'merit', magnitude: 'up', amount: WAR_CONTRIBUTION },
     ],
   },
 ]
