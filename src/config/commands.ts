@@ -5,9 +5,13 @@
 
 import {
   COMMAND_QUEUE_MAX,
+  DEFEND_CONTRIBUTION,
   DOMESTIC_GOLD_COST,
+  RECRUIT_CONTRIBUTION,
+  RECRUIT_GOLD_PER,
   RICE_GIVE_COST,
   STAT_EX_PER_LEVEL,
+  TRAIN_CONTRIBUTION,
 } from './net'
 
 export { COMMAND_QUEUE_MAX, STAT_EX_PER_LEVEL }
@@ -27,6 +31,7 @@ export type EffectTarget =
   | 'troops'
   | 'population'
   | 'merit'
+  | 'training'
 
 export type EffectMagnitude = 'up2' | 'up' | 'down' | 'down2'
 
@@ -43,11 +48,11 @@ export type GameCommand = {
   id: string
   label: string
   blurb: string
-  category: 'domestic' | 'move' | 'trade' | 'social'
+  category: 'domestic' | 'move' | 'trade' | 'social' | 'military'
   /** 自国以外でも実行できる（NET: 移動・仕官） */
   foreignOk?: boolean
   /** UI で追加パラメータが必要 */
-  needsPayload?: 'move' | 'trade'
+  needsPayload?: 'move' | 'trade' | 'recruit'
   effects: CommandEffect[]
 }
 
@@ -66,6 +71,7 @@ const EFFECT_LABELS: Record<EffectTarget, string> = {
   troops: '兵',
   population: '農民',
   merit: '貢献',
+  training: '訓練',
 }
 
 const EX_TARGETS: EffectTarget[] = ['buyu', 'chiryaku', 'toso', 'tokubo']
@@ -87,6 +93,8 @@ export function formatEffectAmount(effect: CommandEffect): string {
   if (effect.variable) {
     if (effect.target === 'loyalty') return '徳望依存'
     if (effect.target === 'money' || effect.target === 'rice') return '相場依存'
+    if (effect.target === 'training') return '統率依存'
+    if (effect.target === 'troops' || effect.target === 'population') return '人数依存'
     return '知略依存'
   }
   const sign = isCostEffect(effect.magnitude) ? '-' : '+'
@@ -204,6 +212,43 @@ export const COMMANDS: GameCommand[] = [
     category: 'social',
     foreignOk: true,
     effects: [],
+  },
+  {
+    id: 'chouhei',
+    label: '徴兵',
+    blurb: '雑兵を雇う（統率上限・金と農民）',
+    category: 'military',
+    needsPayload: 'recruit',
+    effects: [
+      { target: 'troops', magnitude: 'up2', amount: 0, variable: true },
+      { target: 'buyu', magnitude: 'up', amount: 1 },
+      { target: 'merit', magnitude: 'up', amount: RECRUIT_CONTRIBUTION },
+      { target: 'money', magnitude: 'down', amount: RECRUIT_GOLD_PER, variable: true },
+      { target: 'population', magnitude: 'down', amount: 5, variable: true },
+      { target: 'loyalty', magnitude: 'down', amount: 1, variable: true },
+      { target: 'training', magnitude: 'down', amount: 0, variable: true },
+    ],
+  },
+  {
+    id: 'kunren',
+    label: '訓練',
+    blurb: '兵を鍛え訓練度を上げる',
+    category: 'military',
+    effects: [
+      { target: 'training', magnitude: 'up2', amount: 5, variable: true },
+      { target: 'toso', magnitude: 'up', amount: 1 },
+      { target: 'merit', magnitude: 'up', amount: TRAIN_CONTRIBUTION },
+    ],
+  },
+  {
+    id: 'shubi',
+    label: '守備',
+    blurb: '所在の城を守る（兵が必要）',
+    category: 'military',
+    effects: [
+      { target: 'toso', magnitude: 'up', amount: 1 },
+      { target: 'merit', magnitude: 'up', amount: DEFEND_CONTRIBUTION },
+    ],
   },
 ]
 

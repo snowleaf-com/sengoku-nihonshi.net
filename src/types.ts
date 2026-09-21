@@ -73,6 +73,10 @@ export type Character = {
   money: number
   rice: number
   troops: number
+  /** 訓練度 0〜100 */
+  training: number
+  /** 城の守備中なら 1 */
+  defending: number
   createdAt: number
   updatedAt: number
 }

@@ -1,0 +1,4 @@
+-- N3: 訓練度・守備・兵糧
+
+ALTER TABLE characters ADD COLUMN training INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE characters ADD COLUMN defending INTEGER NOT NULL DEFAULT 0;

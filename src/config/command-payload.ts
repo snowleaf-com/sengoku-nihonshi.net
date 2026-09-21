@@ -1,5 +1,5 @@
 /**
- * コマンド payload（移動先・売買量など）。
+ * コマンド payload（移動先・売買量・徴兵人数など）。
  * character_commands.payload に JSON で保存する。
  */
 
@@ -17,7 +17,12 @@ export type TradePayload = {
   marketRate: number
 }
 
-export type CommandPayload = MovePayload | TradePayload
+export type RecruitPayload = {
+  kind: 'recruit'
+  amount: number
+}
+
+export type CommandPayload = MovePayload | TradePayload | RecruitPayload
 
 export function parseCommandPayload(raw: string | null | undefined): CommandPayload | null {
   if (!raw) return null
@@ -32,6 +37,7 @@ export function parseCommandPayload(raw: string | null | undefined): CommandPayl
     ) {
       return data
     }
+    if (data?.kind === 'recruit' && typeof data.amount === 'number') return data
   } catch {
     return null
   }
@@ -56,6 +62,9 @@ export function formatQueueLabel(
   if (payload?.kind === 'trade') {
     if (payload.side === 'sell_rice') return `米${payload.amount}売`
     return `金${payload.amount}売`
+  }
+  if (payload?.kind === 'recruit') {
+    return `徴兵${payload.amount}人`
   }
   return commandLabel || commandId
 }

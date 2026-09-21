@@ -3,6 +3,7 @@ import { requireAuth } from '../../middleware/auth'
 import { DomainError } from '../../services/character'
 import {
   applyCommandsToPositions,
+  buildRecruitPayload,
   buildTradePayload,
   clearCommandPositions,
   repeatSelectedCommands,
@@ -112,6 +113,7 @@ gameActionRoutes.post('/apply-commands', async (c) => {
     let payload = null as
       | { kind: 'move'; provinceId: string }
       | { kind: 'trade'; side: 'sell_rice' | 'sell_gold'; amount: number; marketRate: number }
+      | { kind: 'recruit'; amount: number }
       | null
 
     if (commandId === 'idou') {
@@ -130,6 +132,9 @@ gameActionRoutes.post('/apply-commands', async (c) => {
         amount,
         marketRate: province.marketRate,
       })
+    } else if (commandId === 'chouhei') {
+      const amount = Number.parseInt(parseBodyString(body, 'recruitAmount'), 10)
+      payload = buildRecruitPayload({ amount })
     }
 
     await applyCommandsToPositions(c.env.DB, {

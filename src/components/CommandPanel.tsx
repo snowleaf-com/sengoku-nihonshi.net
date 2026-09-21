@@ -31,6 +31,7 @@ type CommandPanelProps = {
   adjacentProvinces: AdjacentOption[]
   marketRate: number
   provinceNameById: Record<string, string>
+  troopCap: number
 }
 
 function EffectChips({ command }: { command: GameCommand }) {
@@ -78,6 +79,7 @@ export function CommandPanel({
   adjacentProvinces,
   marketRate,
   provinceNameById,
+  troopCap,
 }: CommandPanelProps) {
   const slots = buildCommandSlots(queue)
   const filled = slots.filter(Boolean).length
@@ -287,6 +289,34 @@ export function CommandPanel({
                     data-needs-selection
                   >
                     売買を入力
+                  </button>
+                </div>
+              ) : null}
+
+              {inHomeLand ? (
+                <div class="command-param-block">
+                  <strong class="command-card-label">徴兵</strong>
+                  <p class="hint">雑兵・金10/人・農民×5・民忠（人数/10）。上限は統率{troopCap}</p>
+                  <label class="field field-inline">
+                    <span class="field-label">人数</span>
+                    <input
+                      class="field-input"
+                      type="number"
+                      name="recruitAmount"
+                      min={1}
+                      max={Math.max(1, troopCap)}
+                      value={Math.min(10, Math.max(1, troopCap))}
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    class="btn btn-primary btn-small"
+                    formaction="/actions/apply-commands"
+                    name="commandId"
+                    value="chouhei"
+                    data-needs-selection
+                  >
+                    徴兵を入力
                   </button>
                 </div>
               ) : null}

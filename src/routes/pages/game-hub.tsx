@@ -230,7 +230,17 @@ export function GameHubPage({
                   tone="toso"
                   icon={<StatIcon target="troops" />}
                 />
+                <StatGauge
+                  label="訓練"
+                  value={character.training}
+                  max={100}
+                  tone="buyu"
+                  icon={<StatIcon target="training" />}
+                />
               </div>
+              {character.defending ? (
+                <p class="status-badge status-defending">守備中</p>
+              ) : null}
             </section>
 
             <section class="game-panel game-card game-card-city">
@@ -350,6 +360,7 @@ export function GameHubPage({
               adjacentProvinces={adjacentProvinces}
               marketRate={province.marketRate}
               provinceNameById={provinceNameById}
+              troopCap={character.toso}
             />
           </section>
         </div>
