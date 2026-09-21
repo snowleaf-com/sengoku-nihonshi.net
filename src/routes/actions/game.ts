@@ -3,15 +3,18 @@ import { requireAuth } from '../../middleware/auth'
 import { DomainError } from '../../services/character'
 import {
   applyCommandsToPositions,
+  buildRecruitOfficerPayload,
   buildRecruitPayload,
   buildTradePayload,
+  buildTrainStatPayload,
   buildWarPayload,
   clearCommandPositions,
   repeatSelectedCommands,
 } from '../../services/commands'
 import { enterWorld } from '../../services/enter-world'
 import { raiseHouse } from '../../services/house'
-import { advanceDueTurns } from '../../services/turns'
+import { advanceDueTurns, ensureGameState } from '../../services/turns'
+import { createUnit, joinUnit, leaveUnit } from '../../services/units'
 import { ensureProvincesSeeded } from '../../services/world'
 import { CharacterRepository } from '../../repositories/characters'
 import { ProvinceRepository } from '../../repositories/provinces'
@@ -106,6 +109,11 @@ gameActionRoutes.post('/apply-commands', async (c) => {
   const user = c.get('user')
   if (!user) return c.redirect('/')
 
+  const gameState = await ensureGameState(c.env.DB)
+  if (gameState.maintenance) {
+    return c.redirect(`/game?cmdError=${encodeURIComponent('メンテナンス中のためコマンドを入力できません')}`)
+  }
+
   const body = await c.req.parseBody({ all: true })
   const commandId = parseBodyString(body, 'commandId')
   const positions = parseBodyIds(body, 'positions')
@@ -116,6 +124,8 @@ gameActionRoutes.post('/apply-commands', async (c) => {
       | { kind: 'trade'; side: 'sell_rice' | 'sell_gold'; amount: number; marketRate: number }
       | { kind: 'recruit'; amount: number }
       | { kind: 'war'; provinceId: string }
+      | { kind: 'train_stat'; stat: 'buyu' | 'chiryaku' | 'toso' }
+      | { kind: 'recruit_officer'; targetCharacterId: string }
       | null
 
     if (commandId === 'idou') {
@@ -140,6 +150,12 @@ gameActionRoutes.post('/apply-commands', async (c) => {
     } else if (commandId === 'sensou') {
       const provinceId = parseBodyString(body, 'warProvinceId')
       payload = buildWarPayload({ provinceId })
+    } else if (commandId === 'tanren') {
+      const stat = parseBodyString(body, 'trainStat')
+      payload = buildTrainStatPayload({ stat })
+    } else if (commandId === 'touyou') {
+      const targetCharacterId = parseBodyString(body, 'recruitOfficerId')
+      payload = buildRecruitOfficerPayload({ targetCharacterId })
     }
 
     await applyCommandsToPositions(c.env.DB, {
@@ -162,6 +178,11 @@ gameActionRoutes.post('/clear-commands', async (c) => {
   const user = c.get('user')
   if (!user) return c.redirect('/')
 
+  const gameState = await ensureGameState(c.env.DB)
+  if (gameState.maintenance) {
+    return c.redirect(`/game?cmdError=${encodeURIComponent('メンテナンス中です')}`)
+  }
+
   const { positions } = await parseCommandForm(c)
 
   try {
@@ -179,6 +200,11 @@ gameActionRoutes.post('/clear-commands', async (c) => {
 gameActionRoutes.post('/repeat-commands', async (c) => {
   const user = c.get('user')
   if (!user) return c.redirect('/')
+
+  const gameState = await ensureGameState(c.env.DB)
+  if (gameState.maintenance) {
+    return c.redirect(`/game?cmdError=${encodeURIComponent('メンテナンス中です')}`)
+  }
 
   const { positions } = await parseCommandForm(c)
 
@@ -204,5 +230,58 @@ gameActionRoutes.post('/advance-turn', async (c) => {
   } catch (error) {
     console.error(error)
     return c.redirect(`/game?error=${encodeURIComponent('ターン進行に失敗しました')}`)
+  }
+})
+
+gameActionRoutes.post('/unit-create', async (c) => {
+  const user = c.get('user')
+  if (!user) return c.redirect('/')
+  const body = await c.req.parseBody()
+  try {
+    await createUnit(c.env.DB, {
+      userId: user.id,
+      name: parseBodyString(body, 'unitName'),
+    })
+    return c.redirect(`/game?notice=${encodeURIComponent('部隊を編成した')}`)
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return c.redirect(`/game?error=${encodeURIComponent(error.message)}`)
+    }
+    console.error(error)
+    return c.redirect(`/game?error=${encodeURIComponent('部隊作成に失敗しました')}`)
+  }
+})
+
+gameActionRoutes.post('/unit-join', async (c) => {
+  const user = c.get('user')
+  if (!user) return c.redirect('/')
+  const body = await c.req.parseBody()
+  try {
+    await joinUnit(c.env.DB, {
+      userId: user.id,
+      unitId: parseBodyString(body, 'unitId'),
+    })
+    return c.redirect(`/game?notice=${encodeURIComponent('部隊に参加した')}`)
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return c.redirect(`/game?error=${encodeURIComponent(error.message)}`)
+    }
+    console.error(error)
+    return c.redirect(`/game?error=${encodeURIComponent('部隊参加に失敗しました')}`)
+  }
+})
+
+gameActionRoutes.post('/unit-leave', async (c) => {
+  const user = c.get('user')
+  if (!user) return c.redirect('/')
+  try {
+    await leaveUnit(c.env.DB, { userId: user.id })
+    return c.redirect(`/game?notice=${encodeURIComponent('部隊を離脱した')}`)
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return c.redirect(`/game?error=${encodeURIComponent(error.message)}`)
+    }
+    console.error(error)
+    return c.redirect(`/game?error=${encodeURIComponent('部隊離脱に失敗しました')}`)
   }
 })

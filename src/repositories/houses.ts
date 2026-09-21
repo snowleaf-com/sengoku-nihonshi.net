@@ -96,4 +96,15 @@ export class HouseRepository {
       .bind(lawText, houseId)
       .run()
   }
+
+  async destroy(houseId: string, destroyedAt: number): Promise<void> {
+    await this.db
+      .prepare(
+        `UPDATE houses
+         SET destroyed_at = ?, leader_character_id = NULL
+         WHERE id = ?`,
+      )
+      .bind(destroyedAt, houseId)
+      .run()
+  }
 }

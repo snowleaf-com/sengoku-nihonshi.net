@@ -7,6 +7,7 @@ interface __BaseEnv_CloudflareBindings {
 	WEBAUTHN_ORIGIN: string;
 	WEBAUTHN_RP_NAME: string;
 	SESSION_TTL_SECONDS: string;
+	ADMIN_SECRET?: string;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {

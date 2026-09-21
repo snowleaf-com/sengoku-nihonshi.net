@@ -9,9 +9,12 @@ import {
   DOMESTIC_GOLD_COST,
   RECRUIT_CONTRIBUTION,
   RECRUIT_GOLD_PER,
+  RECRUIT_OFFICER_GOLD_COST,
   RICE_GIVE_COST,
   STAT_EX_PER_LEVEL,
   TRAIN_CONTRIBUTION,
+  TRAIN_STAT_CONTRIBUTION,
+  TRAIN_STAT_GOLD_COST,
   WAR_CONTRIBUTION,
 } from './net'
 
@@ -53,7 +56,7 @@ export type GameCommand = {
   /** 自国以外でも実行できる（NET: 移動・仕官） */
   foreignOk?: boolean
   /** UI で追加パラメータが必要 */
-  needsPayload?: 'move' | 'trade' | 'recruit' | 'war'
+  needsPayload?: 'move' | 'trade' | 'recruit' | 'war' | 'train_stat' | 'recruit_officer'
   effects: CommandEffect[]
 }
 
@@ -261,6 +264,44 @@ export const COMMANDS: GameCommand[] = [
       { target: 'buyu', magnitude: 'up', amount: 1 },
       { target: 'merit', magnitude: 'up', amount: WAR_CONTRIBUTION },
     ],
+  },
+  {
+    id: 'tanren',
+    label: '鍛錬',
+    blurb: '武勇・知略・統率のいずれかを鍛える',
+    category: 'domestic',
+    needsPayload: 'train_stat',
+    effects: [
+      { target: 'buyu', magnitude: 'up', amount: 2 },
+      { target: 'merit', magnitude: 'up', amount: TRAIN_STAT_CONTRIBUTION },
+      { target: 'money', magnitude: 'down', amount: TRAIN_STAT_GOLD_COST },
+    ],
+  },
+  {
+    id: 'touyou',
+    label: '登用',
+    blurb: '同国の他家・浪人を引き抜く',
+    category: 'social',
+    needsPayload: 'recruit_officer',
+    effects: [
+      { target: 'money', magnitude: 'down', amount: RECRUIT_OFFICER_GOLD_COST },
+    ],
+  },
+  {
+    id: 'syuugou',
+    label: '集合',
+    blurb: '部隊長のもとへ隊員を集める',
+    category: 'military',
+    foreignOk: true,
+    effects: [],
+  },
+  {
+    id: 'nashi',
+    label: '何もしない',
+    blurb: '待機する（連続60で削除）',
+    category: 'social',
+    foreignOk: true,
+    effects: [],
   },
 ]
 

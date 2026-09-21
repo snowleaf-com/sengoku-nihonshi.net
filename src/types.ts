@@ -77,6 +77,10 @@ export type Character = {
   training: number
   /** 城の守備中なら 1 */
   defending: number
+  /** 何もしない連続回数（60 で自動削除） */
+  idleStreak: number
+  /** 武将の国への忠誠（都市の民忠とは別） */
+  loyalty: number
   createdAt: number
   updatedAt: number
 }
@@ -158,6 +162,8 @@ export type GameState = {
   month: number
   turnIndex: number
   nextTurnAt: number
+  /** メンテ中なら 1（コマンド投稿を止める） */
+  maintenance: number
   updatedAt: number
 }
 

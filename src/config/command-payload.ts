@@ -27,7 +27,23 @@ export type WarPayload = {
   provinceId: string
 }
 
-export type CommandPayload = MovePayload | TradePayload | RecruitPayload | WarPayload
+export type TrainStatPayload = {
+  kind: 'train_stat'
+  stat: 'buyu' | 'chiryaku' | 'toso'
+}
+
+export type RecruitOfficerPayload = {
+  kind: 'recruit_officer'
+  targetCharacterId: string
+}
+
+export type CommandPayload =
+  | MovePayload
+  | TradePayload
+  | RecruitPayload
+  | WarPayload
+  | TrainStatPayload
+  | RecruitOfficerPayload
 
 export function parseCommandPayload(raw: string | null | undefined): CommandPayload | null {
   if (!raw) return null
@@ -44,6 +60,15 @@ export function parseCommandPayload(raw: string | null | undefined): CommandPayl
     }
     if (data?.kind === 'recruit' && typeof data.amount === 'number') return data
     if (data?.kind === 'war' && typeof data.provinceId === 'string') return data
+    if (
+      data?.kind === 'train_stat' &&
+      (data.stat === 'buyu' || data.stat === 'chiryaku' || data.stat === 'toso')
+    ) {
+      return data
+    }
+    if (data?.kind === 'recruit_officer' && typeof data.targetCharacterId === 'string') {
+      return data
+    }
   } catch {
     return null
   }
@@ -54,11 +79,18 @@ export function serializeCommandPayload(payload: CommandPayload): string {
   return JSON.stringify(payload)
 }
 
+const STAT_LABELS: Record<TrainStatPayload['stat'], string> = {
+  buyu: '武勇',
+  chiryaku: '知略',
+  toso: '統率',
+}
+
 export function formatQueueLabel(
   commandId: string,
   payloadRaw: string | null,
   commandLabel: string,
   provinceNameById: (id: string) => string | null,
+  characterNameById?: (id: string) => string | null,
 ): string {
   const payload = parseCommandPayload(payloadRaw)
   if (payload?.kind === 'move') {
@@ -75,6 +107,14 @@ export function formatQueueLabel(
   if (payload?.kind === 'war') {
     const name = provinceNameById(payload.provinceId) ?? payload.provinceId
     return `${name}へ戦争`
+  }
+  if (payload?.kind === 'train_stat') {
+    return `${STAT_LABELS[payload.stat]}を鍛錬`
+  }
+  if (payload?.kind === 'recruit_officer') {
+    const name =
+      characterNameById?.(payload.targetCharacterId) ?? payload.targetCharacterId
+    return `${name}を登用`
   }
   return commandLabel || commandId
 }

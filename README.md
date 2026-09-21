@@ -66,9 +66,6 @@ WEBAUTHN_ORIGIN=http://localhost:5173
 
 ## 現在のマイルストーン
 
-**Phase 0〜2** … 認証・武将・地図・ターン基盤（main 済）  
-**N1〜N4** … NET内政・移動・商人・軍事・戦争（済）  
-**N5（実装中）** … 会議室・手紙・国法・一覧  
-**次** … N6 部隊・登用など
+**Phase 0〜2 / N1〜N6 完了** … 認証〜NET内政・軍事・戦争・社会・仕上げまで。
 
 全体計画: [`docs/roadmap.md`](./docs/roadmap.md)

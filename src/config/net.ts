@@ -69,6 +69,27 @@ export const WAR_CONTRIBUTION = 20
 /** 訓練度上限 */
 export const TRAINING_MAX = 100
 
+/** 鍛錬: 金コスト */
+export const TRAIN_STAT_GOLD_COST = 50
+
+/** 鍛錬: 貢献 */
+export const TRAIN_STAT_CONTRIBUTION = 10
+
+/** 鍛錬: EX 加算（+1 を2回） */
+export const TRAIN_STAT_EX_GAIN = 2
+
+/** 登用: 金コスト */
+export const RECRUIT_OFFICER_GOLD_COST = 100
+
+/** 登用: 乱数成功閾値 */
+export const RECRUIT_OFFICER_RANDOM_CHANCE = 0.4
+
+/** 登用: 貢献がこれ未満なら成功扱い */
+export const RECRUIT_OFFICER_MERIT_SOFT = 50
+
+/** 登用: 忠誠がこれ未満なら成功扱い */
+export const RECRUIT_OFFICER_LOYALTY_SOFT = 50
+
 /** 攻防双方の家が戦争可能か（中立都市に防衛家はない） */
 export function isHouseWarReady(turnIndex: number, foundedTurn: number): boolean {
   return turnIndex - foundedTurn >= BATTLE_STOP_MONTHS

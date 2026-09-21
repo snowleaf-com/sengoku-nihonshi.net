@@ -139,3 +139,12 @@ migration `0011_n5_social.sql`。
 - `house_messages` … 国会議室（家メンバーのみ）
 - `personal_letters` … 個人宛て手紙
 - `houses.law_text` … 国法（当主が編集）
+
+## Phase N6 で追加
+
+migration `0012_n6_finish.sql`。
+
+- `units` / `unit_members` … 部隊（家単位。隊長＋隊員）
+- `characters.idle_streak` … 「何もしない」連続回数（60 で削除）
+- `characters.loyalty` … 武将の国への忠誠（都市の民忠とは別。既定 100）
+- `game_state.maintenance` … メンテ中フラグ（コマンド投稿を止める）

@@ -22,6 +22,8 @@ type AdjacentOption = { id: string; name: string }
 
 type WarTargetOption = { id: string; name: string; ownerLabel: string }
 
+type RecruitTargetOption = { id: string; name: string; houseLabel: string }
+
 type CommandPanelProps = {
   queue: CharacterCommand[]
   currentYear: number
@@ -32,9 +34,12 @@ type CommandPanelProps = {
   canShikan: boolean
   adjacentProvinces: AdjacentOption[]
   warTargets: WarTargetOption[]
+  recruitTargets: RecruitTargetOption[]
   marketRate: number
   provinceNameById: Record<string, string>
+  characterNameById: Record<string, string>
   troopCap: number
+  maintenance?: boolean
 }
 
 function EffectChips({ command }: { command: GameCommand }) {
@@ -81,9 +86,12 @@ export function CommandPanel({
   canShikan,
   adjacentProvinces,
   warTargets,
+  recruitTargets,
   marketRate,
   provinceNameById,
+  characterNameById,
   troopCap,
+  maintenance = false,
 }: CommandPanelProps) {
   const slots = buildCommandSlots(queue)
   const filled = slots.filter(Boolean).length
@@ -110,9 +118,13 @@ export function CommandPanel({
             </span>
           </div>
 
-          {!inHomeLand ? (
+          {maintenance ? (
+            <p class="hint command-foreign-hint">メンテナンス中のためコマンドを入力できません。</p>
+          ) : null}
+
+          {!inHomeLand && !maintenance ? (
             <p class="hint command-foreign-hint">
-              ここは自国ではありません。移動と仕官のみできます。
+              ここは自国ではありません。移動・仕官・集合・何もしないのみできます。
             </p>
           ) : null}
 
@@ -187,6 +199,7 @@ export function CommandPanel({
                       item.payload,
                       getCommand(item.commandId)?.label ?? item.commandId,
                       (id) => provinceNameById[id] ?? null,
+                      (id) => characterNameById[id] ?? null,
                     )
                 const slotDate = dateAtQueueOffset(currentDate, index)
                 const slotMonth = slotDate.month
@@ -254,13 +267,13 @@ export function CommandPanel({
                   name="commandId"
                   value="idou"
                   data-needs-selection
-                  disabled={adjacentProvinces.length === 0}
+                  disabled={maintenance || adjacentProvinces.length === 0}
                 >
                   移動を入力
                 </button>
               </div>
 
-              {inHomeLand ? (
+              {inHomeLand && !maintenance ? (
                 <div class="command-param-block">
                   <strong class="command-card-label">米売買</strong>
                   <p class="hint">
@@ -297,7 +310,7 @@ export function CommandPanel({
                 </div>
               ) : null}
 
-              {inHomeLand ? (
+              {inHomeLand && !maintenance ? (
                 <div class="command-param-block">
                   <strong class="command-card-label">徴兵</strong>
                   <p class="hint">雑兵・金10/人・農民×5・民忠（人数/10）。上限は統率{troopCap}</p>
@@ -325,7 +338,7 @@ export function CommandPanel({
                 </div>
               ) : null}
 
-              {inHomeLand ? (
+              {inHomeLand && !maintenance ? (
                 <div class="command-param-block">
                   <strong class="command-card-label">戦争</strong>
                   <p class="hint">隣接する敵国・中立国のみ。建国後36ヶ月で解禁</p>
@@ -354,24 +367,80 @@ export function CommandPanel({
                 </div>
               ) : null}
 
-              {COMMANDS.filter(
-                (command) =>
-                  !command.needsPayload && commandAvailable(command, inHomeLand, canShikan),
-              ).map((command) => (
-                <button
-                  type="submit"
-                  class="command-card"
-                  formaction="/actions/apply-commands"
-                  name="commandId"
-                  value={command.id}
-                  key={command.id}
-                  data-needs-selection
-                >
-                  <strong class="command-card-label">{command.label}</strong>
-                  <span class="command-card-hint">{command.blurb}</span>
-                  <EffectChips command={command} />
-                </button>
-              ))}
+              {inHomeLand && !maintenance ? (
+                <div class="command-param-block">
+                  <strong class="command-card-label">鍛錬</strong>
+                  <p class="hint">金50・選んだ能力のEX+2・貢献+10</p>
+                  <label class="field field-inline">
+                    <span class="field-label">能力</span>
+                    <select class="field-input" name="trainStat">
+                      <option value="buyu">武勇</option>
+                      <option value="chiryaku">知略</option>
+                      <option value="toso">統率</option>
+                    </select>
+                  </label>
+                  <button
+                    type="submit"
+                    class="btn btn-primary btn-small"
+                    formaction="/actions/apply-commands"
+                    name="commandId"
+                    value="tanren"
+                    data-needs-selection
+                  >
+                    鍛錬を入力
+                  </button>
+                </div>
+              ) : null}
+
+              {inHomeLand && !maintenance ? (
+                <div class="command-param-block">
+                  <strong class="command-card-label">登用</strong>
+                  <p class="hint">金100・同国の他家／浪人。成功率は乱数・貢献・忠誠</p>
+                  <label class="field field-inline">
+                    <span class="field-label">対象</span>
+                    <select class="field-input" name="recruitOfficerId" required={false}>
+                      <option value="">武将を選ぶ</option>
+                      {recruitTargets.map((t) => (
+                        <option value={t.id} key={t.id}>
+                          {t.name}（{t.houseLabel}）
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="submit"
+                    class="btn btn-primary btn-small"
+                    formaction="/actions/apply-commands"
+                    name="commandId"
+                    value="touyou"
+                    data-needs-selection
+                    disabled={recruitTargets.length === 0}
+                  >
+                    登用を入力
+                  </button>
+                </div>
+              ) : null}
+
+              {!maintenance
+                ? COMMANDS.filter(
+                    (command) =>
+                      !command.needsPayload && commandAvailable(command, inHomeLand, canShikan),
+                  ).map((command) => (
+                    <button
+                      type="submit"
+                      class="command-card"
+                      formaction="/actions/apply-commands"
+                      name="commandId"
+                      value={command.id}
+                      key={command.id}
+                      data-needs-selection
+                    >
+                      <strong class="command-card-label">{command.label}</strong>
+                      <span class="command-card-hint">{command.blurb}</span>
+                      <EffectChips command={command} />
+                    </button>
+                  ))
+                : null}
             </div>
           </div>
         </div>

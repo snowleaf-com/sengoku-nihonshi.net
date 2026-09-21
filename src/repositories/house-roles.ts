@@ -55,4 +55,15 @@ export class HouseRoleRepository {
       .first<HouseRoleRow>()
     return row ? mapHouseRole(row) : null
   }
+
+  async deleteByCharacterId(characterId: string): Promise<void> {
+    await this.db
+      .prepare(`DELETE FROM house_roles WHERE character_id = ?`)
+      .bind(characterId)
+      .run()
+  }
+
+  async deleteByHouseId(houseId: string): Promise<void> {
+    await this.db.prepare(`DELETE FROM house_roles WHERE house_id = ?`).bind(houseId).run()
+  }
 }
