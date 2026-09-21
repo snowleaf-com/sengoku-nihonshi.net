@@ -4,8 +4,11 @@ Cloudflare D1（SQLite）。migration は `migrations/`。
 
 ```bash
 npm run db:migrate:local
-npm run db:migrate:remote
+npm run db:migrate:staging
+npm run db:migrate:production
 ```
+
+local / staging / production は **別 D1**。デプロイでは未適用 migration だけ当て、データは消さない。
 
 ## ER 概略
 

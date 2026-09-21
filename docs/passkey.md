@@ -66,7 +66,8 @@ WebAuthn は「本人確認の儀式」コストが高い。
 | 環境 | RP ID | Origin |
 |------|-------|--------|
 | local | `localhost` | `http://localhost:5173` |
-| workers.dev | `sengoku-nihonshi-net.….workers.dev` | `https://同ホスト` |
+| staging | `sengoku-nihonshi-net-staging.….workers.dev` | `https://同ホスト` |
+| production | `sengoku-nihonshi-net.….workers.dev` | `https://同ホスト` |
 
 ズレると verify が必ず失敗する。独自ドメインを張ったら vars を合わせて再デプロイする。
 

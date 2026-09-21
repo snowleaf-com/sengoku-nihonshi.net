@@ -41,16 +41,18 @@ WEBAUTHN_ORIGIN=http://localhost:5173
 |----------|------|
 | `npm run dev` | ローカル開発（Vite + Workers runtime） |
 | `npm run db:migrate:local` | ローカル D1 に migration 適用 |
-| `npm run db:migrate:remote` | リモート D1 に migration 適用 |
+| `npm run db:migrate:staging` | staging D1 に migration 適用 |
+| `npm run db:migrate:production` | production D1 に migration 適用 |
 | `npm run test` | Vitest（`@cloudflare/vitest-pool-workers` / workerd） |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run build` | 本番ビルド |
-| `npm run deploy` | ビルドして Workers にデプロイ |
+| `npm run deploy:staging` | staging へ migrate + デプロイ（`main` CI もこれ） |
+| `npm run deploy:production` | production へ migrate + デプロイ（手動） |
 | `npm run preview:upload` | 本番トラフィックに載せない version preview |
 | `npm run cf-typegen` | `worker-configuration.d.ts` 再生成 |
 
-PR / `main` では GitHub Actions が typecheck / lint / test を実行する（Workers ランタイムと同じ pool）。
+PR では typecheck / lint / test。`main` へマージすると staging へ自動デプロイする。詳細は [`docs/development.md`](./docs/development.md)。
 
 ## ドキュメント
 
