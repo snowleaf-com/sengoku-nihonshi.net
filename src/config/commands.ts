@@ -43,7 +43,11 @@ export type GameCommand = {
   id: string
   label: string
   blurb: string
-  category: 'domestic'
+  category: 'domestic' | 'move' | 'trade' | 'social'
+  /** 自国以外でも実行できる（NET: 移動・仕官） */
+  foreignOk?: boolean
+  /** UI で追加パラメータが必要 */
+  needsPayload?: 'move' | 'trade'
   effects: CommandEffect[]
 }
 
@@ -82,6 +86,7 @@ export function isCostEffect(magnitude: EffectMagnitude): boolean {
 export function formatEffectAmount(effect: CommandEffect): string {
   if (effect.variable) {
     if (effect.target === 'loyalty') return '徳望依存'
+    if (effect.target === 'money' || effect.target === 'rice') return '相場依存'
     return '知略依存'
   }
   const sign = isCostEffect(effect.magnitude) ? '-' : '+'
@@ -167,6 +172,38 @@ export const COMMANDS: GameCommand[] = [
       { target: 'merit', magnitude: 'up', amount: 30 },
       { target: 'rice', magnitude: 'down', amount: RICE_GIVE_COST },
     ],
+  },
+  {
+    id: 'idou',
+    label: '移動',
+    blurb: '隣接する国へ移る',
+    category: 'move',
+    foreignOk: true,
+    needsPayload: 'move',
+    effects: [
+      { target: 'toso', magnitude: 'up', amount: 1 },
+      { target: 'merit', magnitude: 'up', amount: 20 },
+    ],
+  },
+  {
+    id: 'beibai',
+    label: '米売買',
+    blurb: '相場で米と金を換える（自国のみ）',
+    category: 'trade',
+    needsPayload: 'trade',
+    effects: [
+      { target: 'chiryaku', magnitude: 'up', amount: 1 },
+      { target: 'money', magnitude: 'up', amount: 0, variable: true },
+      { target: 'rice', magnitude: 'up', amount: 0, variable: true },
+    ],
+  },
+  {
+    id: 'shikan',
+    label: '仕官',
+    blurb: '浪人が所在国の家へ仕える',
+    category: 'social',
+    foreignOk: true,
+    effects: [],
   },
 ]
 

@@ -18,6 +18,7 @@
 | [phase1.5.md](./phase1.5.md) | Phase 1.5（立ち回り・能力） |
 | [phase2.md](./phase2.md) | Phase 2（ターン基盤・暫定内政）※N1 で置換 |
 | [phase-n1.md](./phase-n1.md) | Phase N1（NET内政・式合わせ） |
+| [phase-n2.md](./phase-n2.md) | Phase N2（移動・仕官・米売買） |
 | [net-spec.md](./net-spec.md) | 三国志.NET 式の要約 |
 | [roadmap.md](./roadmap.md) | **全体計画**（NETルール + 令制国、N1〜N6） |
 

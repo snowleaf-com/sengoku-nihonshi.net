@@ -113,6 +113,12 @@ migration `0007_n1_net_domestic.sql`。
 - `tech` / `market_rate`（相場は N2 で本使用）
 - `characters.class_points` … 階級値（貢献は `merit` のまま・季節でリセット）
 
-## Phase N2 以降で増える想定
+## Phase N2 で追加
 
-移動・米売買、徴兵・戦争。会議室・手紙は N5。
+migration `0008_n2_command_payload.sql`。
+
+- `character_commands.payload` … 移動先・売買量の JSON
+
+## Phase N3 以降で増える想定
+
+徴兵・訓練・守備、戦争。会議室・手紙は N5。

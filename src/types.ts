@@ -128,6 +128,8 @@ export type CharacterCommand = {
   characterId: string
   commandId: string
   position: number
+  /** JSON。移動先・売買量など。docs/net-spec.md */
+  payload: string | null
   createdAt: number
 }
 

@@ -10,7 +10,8 @@ import { formatGameDate, seasonLabel, seasonOfMonth } from '../../config/calenda
 import { formatMoney, formatRice, rankName } from '../../config/game'
 import { getCharacterIcon, iconPublicPath } from '../../config/icons'
 import { getProvinceMaster, PROVINCES } from '../../config/provinces'
-import { adjacentCount } from '../../domain/province/adjacency'
+import { adjacentCount, listAdjacentIds } from '../../domain/province/adjacency'
+import { isInHomeLand } from '../../services/commands'
 import type {
   Character,
   CharacterCommand,
@@ -80,6 +81,15 @@ export function GameHubPage({
     ? provinces.filter((p) => p.houseId === house.id).length
     : 0
   const season = seasonOfMonth(gameState.month)
+  const inHomeLand = isInHomeLand(character, province)
+  const canShikan = !character.houseId && Boolean(province.houseId)
+  const adjacentProvinces = master
+    ? listAdjacentIds(master, PROVINCES).map((id) => {
+        const m = getProvinceMaster(id)!
+        return { id: m.id, name: m.name }
+      })
+    : []
+  const provinceNameById = Object.fromEntries(provinces.map((p) => [p.id, p.name]))
 
   return (
     <SiteShell title={`${character.name} — 戦国日本史.net`}>
@@ -269,6 +279,10 @@ export function GameHubPage({
                   icon={<StatIcon target="tech" />}
                 />
               </div>
+              <p class="hint">
+                相場 米100→金{Math.floor(province.marketRate * 100)} / 金100→米
+                {Math.floor((2 - province.marketRate) * 100)}
+              </p>
             </section>
 
             <section class="game-panel game-card game-card-nation">
@@ -331,6 +345,11 @@ export function GameHubPage({
               currentMonth={gameState.month}
               results={results}
               error={commandError}
+              inHomeLand={inHomeLand}
+              canShikan={canShikan}
+              adjacentProvinces={adjacentProvinces}
+              marketRate={province.marketRate}
+              provinceNameById={provinceNameById}
             />
           </section>
         </div>

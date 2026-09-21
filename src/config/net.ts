@@ -35,6 +35,16 @@ export const SALARY_RANK_MAX = 20
 /** 初期相場 */
 export const DEFAULT_MARKET_RATE = 1.0
 
+/** 米売買の1回上限（原本） */
+export const TRADE_MAX = 3000
+
+/** 移動成功時の貢献（所属ありのみ） */
+export const MOVE_CONTRIBUTION = 20
+
+/** 相場の上下限 */
+export const MARKET_RATE_MIN = 0.8
+export const MARKET_RATE_MAX = 1.2
+
 /**
  * NET 開発系の上昇量。
  * int(stat/20 + rand(stat)/40) ※書籍補正は当面 0

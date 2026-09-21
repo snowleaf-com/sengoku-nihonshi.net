@@ -185,6 +185,17 @@ export class CharacterRepository {
       .run()
   }
 
+  async updateProvince(characterId: string, provinceId: string, updatedAt: number): Promise<void> {
+    await this.db
+      .prepare(
+        `UPDATE characters
+         SET province_id = ?, updated_at = ?
+         WHERE id = ?`,
+      )
+      .bind(provinceId, updatedAt, characterId)
+      .run()
+  }
+
   async updateResources(
     characterId: string,
     patch: {
