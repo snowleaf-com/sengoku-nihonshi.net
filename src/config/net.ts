@@ -45,6 +45,27 @@ export const MOVE_CONTRIBUTION = 20
 export const MARKET_RATE_MIN = 0.8
 export const MARKET_RATE_MAX = 1.2
 
+/** 徴兵: 雑兵の雇用金（原本 $SOL_PRICE[0]） */
+export const RECRUIT_GOLD_PER = 10
+
+/** 徴兵: 農民減少 = 人数 × この値 */
+export const RECRUIT_POP_PER = 5
+
+/** 訓練貢献 */
+export const TRAIN_CONTRIBUTION = 15
+
+/** 守備貢献 */
+export const DEFEND_CONTRIBUTION = 25
+
+/** 徴兵貢献 */
+export const RECRUIT_CONTRIBUTION = 10
+
+/** 建国後の戦争禁止ターン数（原本 $BATTLE_STOP） */
+export const BATTLE_STOP_MONTHS = 36
+
+/** 訓練度上限 */
+export const TRAINING_MAX = 100
+
 /**
  * NET 開発系の上昇量。
  * int(stat/20 + rand(stat)/40) ※書籍補正は当面 0
@@ -65,4 +86,20 @@ export function netStatGainWithRandom(
   if (base <= 0) return 0
   const r = Math.min(1, Math.max(0, random01)) * base
   return Math.floor(base / 20 + r / 40)
+}
+
+/**
+ * 訓練上昇: int(統率/6 + rand * 統率/6)
+ */
+export function netTrainGain(toso: number): number {
+  const base = Math.max(0, toso)
+  if (base <= 0) return 0
+  return Math.floor(base / 6 + (Math.random() * base) / 6)
+}
+
+export function netTrainGainWithRandom(toso: number, random01: number): number {
+  const base = Math.max(0, toso)
+  if (base <= 0) return 0
+  const r = Math.min(1, Math.max(0, random01))
+  return Math.floor(base / 6 + (r * base) / 6)
 }

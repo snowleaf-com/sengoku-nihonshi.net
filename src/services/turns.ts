@@ -166,6 +166,54 @@ async function applySeasonalPopulation(db: D1Database, wallClock: number): Promi
   }
 }
 
+/** 毎月: 兵1人につき米1。不足時は脱走 */
+export async function applyTroopUpkeep(
+  db: D1Database,
+  wallClock: number,
+): Promise<Array<{ characterId: string; deserted: number; message: string }>> {
+  const characters = new CharacterRepository(db)
+  const all = await characters.listAll()
+  const reports: Array<{ characterId: string; deserted: number; message: string }> = []
+
+  for (const listed of all) {
+    if (listed.troops <= 0) continue
+    const character = await characters.findById(listed.id)
+    if (!character || character.troops <= 0) continue
+
+    let rice = character.rice - character.troops
+    let troops = character.troops
+    let defending = character.defending
+    let deserted = 0
+
+    if (rice < 0) {
+      deserted = Math.min(troops, -rice)
+      troops -= deserted
+      rice = 0
+      if (troops <= 0) {
+        troops = 0
+        defending = 0
+      }
+    }
+
+    await characters.updateResources(character.id, {
+      rice,
+      troops,
+      defending,
+      updatedAt: wallClock,
+    })
+
+    if (deserted > 0) {
+      reports.push({
+        characterId: character.id,
+        deserted,
+        message: `兵糧が足りず兵が${deserted}人脱走した。`,
+      })
+    }
+  }
+
+  return reports
+}
+
 async function advanceOneTurn(
   db: D1Database,
   state: GameState,
@@ -224,6 +272,22 @@ async function advanceOneTurn(
       await commands.delete(item.id)
       await commands.shiftDownAfter(character.id, item.position)
     }
+  }
+
+  const upkeepReports = await applyTroopUpkeep(db, wallClock)
+  for (const report of upkeepReports) {
+    const character = await characters.findById(report.characterId)
+    eventBatch.push({
+      year: state.year,
+      month: state.month,
+      channel: 'result',
+      kind: 'command',
+      message: report.message,
+      provinceId: character?.provinceId ?? null,
+      characterId: report.characterId,
+      houseId: character?.houseId ?? null,
+      createdAt: wallClock,
+    })
   }
 
   const nextDate: GameDate = advanceMonth({ year: state.year, month: state.month })

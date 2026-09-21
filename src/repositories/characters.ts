@@ -22,13 +22,16 @@ type CharacterRow = {
   money: number
   rice: number
   troops: number
+  training: number
+  defending: number
   created_at: number
   updated_at: number
 }
 
 const CHARACTER_COLUMNS = `id, user_id, name, icon_id, archetype_id, buyu, chiryaku, toso, tokubo,
   buyu_ex, chiryaku_ex, toso_ex, tokubo_ex,
-  house_id, province_id, rank, merit, class_points, money, rice, troops, created_at, updated_at`
+  house_id, province_id, rank, merit, class_points, money, rice, troops, training, defending,
+  created_at, updated_at`
 
 function mapCharacter(row: CharacterRow): Character {
   return {
@@ -53,6 +56,8 @@ function mapCharacter(row: CharacterRow): Character {
     money: row.money,
     rice: row.rice,
     troops: row.troops,
+    training: row.training,
+    defending: row.defending,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -84,8 +89,9 @@ export class CharacterRepository {
         `INSERT INTO characters (
            id, user_id, name, icon_id, archetype_id, buyu, chiryaku, toso, tokubo,
            buyu_ex, chiryaku_ex, toso_ex, tokubo_ex,
-           house_id, province_id, rank, merit, class_points, money, rice, troops, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, NULL, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
+           house_id, province_id, rank, merit, class_points, money, rice, troops,
+           training, defending, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, NULL, ?, ?, ?, 0, ?, ?, ?, 0, 0, ?, ?)`,
       )
       .bind(
         input.id,
@@ -130,6 +136,8 @@ export class CharacterRepository {
       money: input.money,
       rice: input.rice,
       troops: input.troops,
+      training: 0,
+      defending: 0,
       createdAt: input.createdAt,
       updatedAt: input.createdAt,
     }
@@ -174,6 +182,14 @@ export class CharacterRepository {
     return (result.results ?? []).map(mapCharacter)
   }
 
+  async listByProvinceId(provinceId: string): Promise<Character[]> {
+    const result = await this.db
+      .prepare(`SELECT ${CHARACTER_COLUMNS} FROM characters WHERE province_id = ?`)
+      .bind(provinceId)
+      .all<CharacterRow>()
+    return (result.results ?? []).map(mapCharacter)
+  }
+
   async assignHouse(characterId: string, houseId: string, updatedAt: number): Promise<void> {
     await this.db
       .prepare(
@@ -196,12 +212,40 @@ export class CharacterRepository {
       .run()
   }
 
+  async clearDefendingInProvince(
+    provinceId: string,
+    exceptCharacterId: string | null,
+    updatedAt: number,
+  ): Promise<void> {
+    if (exceptCharacterId) {
+      await this.db
+        .prepare(
+          `UPDATE characters
+           SET defending = 0, updated_at = ?
+           WHERE province_id = ? AND id != ? AND defending != 0`,
+        )
+        .bind(updatedAt, provinceId, exceptCharacterId)
+        .run()
+      return
+    }
+    await this.db
+      .prepare(
+        `UPDATE characters
+         SET defending = 0, updated_at = ?
+         WHERE province_id = ? AND defending != 0`,
+      )
+      .bind(updatedAt, provinceId)
+      .run()
+  }
+
   async updateResources(
     characterId: string,
     patch: {
       money?: number
       rice?: number
       troops?: number
+      training?: number
+      defending?: number
       merit?: number
       classPoints?: number
       rank?: number
@@ -222,7 +266,8 @@ export class CharacterRepository {
     await this.db
       .prepare(
         `UPDATE characters SET
-           money = ?, rice = ?, troops = ?, merit = ?, class_points = ?, rank = ?,
+           money = ?, rice = ?, troops = ?, training = ?, defending = ?,
+           merit = ?, class_points = ?, rank = ?,
            buyu = ?, chiryaku = ?, toso = ?, tokubo = ?,
            buyu_ex = ?, chiryaku_ex = ?, toso_ex = ?, tokubo_ex = ?,
            updated_at = ?
@@ -232,6 +277,8 @@ export class CharacterRepository {
         patch.money ?? current.money,
         patch.rice ?? current.rice,
         patch.troops ?? current.troops,
+        patch.training ?? current.training,
+        patch.defending ?? current.defending,
         patch.merit ?? current.merit,
         patch.classPoints ?? current.classPoints,
         patch.rank ?? current.rank,

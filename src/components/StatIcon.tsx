@@ -49,6 +49,8 @@ export function StatIcon({ target, class: className = 'stat-icon', size = 14 }: 
       return <IconUsersRound class={className} size={size} />
     case 'troops':
       return <IconUsers class={className} size={size} />
+    case 'training':
+      return <IconSword class={className} size={size} />
     default:
       return null
   }

@@ -3,6 +3,7 @@ import {
   parseCommandPayload,
   serializeCommandPayload,
   type CommandPayload,
+  type RecruitPayload,
   type TradePayload,
 } from '../config/command-payload'
 import {
@@ -15,10 +16,14 @@ import {
 import {
   CLASS_PER_RANK,
   COMMAND_CONTRIBUTION,
+  DEFEND_CONTRIBUTION,
   DOMESTIC_GOLD_COST,
   MARKET_RATE_MAX,
   MARKET_RATE_MIN,
   MOVE_CONTRIBUTION,
+  RECRUIT_CONTRIBUTION,
+  RECRUIT_GOLD_PER,
+  RECRUIT_POP_PER,
   RICE_GIVE_COST,
   SALARY_BASE_CAP,
   SALARY_CAP_PER_RANK,
@@ -26,7 +31,10 @@ import {
   STAT_EX_PER_LEVEL,
   TECH_MAX,
   TRADE_MAX,
+  TRAIN_CONTRIBUTION,
+  TRAINING_MAX,
   netStatGain,
+  netTrainGain,
 } from '../config/net'
 import { getProvinceMaster } from '../config/provinces'
 import { areAdjacent } from '../domain/province/adjacency'
@@ -96,6 +104,14 @@ export function buildTradePayload(input: {
   }
 }
 
+export function buildRecruitPayload(input: { amount: number }): RecruitPayload {
+  const amount = Math.floor(input.amount)
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new DomainError('徴兵する人数を入力してください')
+  }
+  return { kind: 'recruit', amount }
+}
+
 function resolvePayloadForApply(
   commandId: string,
   raw: CommandPayload | null | undefined,
@@ -110,6 +126,10 @@ function resolvePayloadForApply(
   if (def.needsPayload === 'trade') {
     if (!raw || raw.kind !== 'trade') throw new DomainError('売買の内容を指定してください')
     return serializeCommandPayload(raw)
+  }
+  if (def.needsPayload === 'recruit') {
+    if (!raw || raw.kind !== 'recruit') throw new DomainError('徴兵する人数を入力してください')
+    return serializeCommandPayload(buildRecruitPayload({ amount: raw.amount }))
   }
   return null
 }
@@ -318,6 +338,8 @@ type MutableCharacter = {
   money: number
   rice: number
   troops: number
+  training: number
+  defending: number
   merit: number
   buyu: number
   chiryaku: number
@@ -362,6 +384,18 @@ function gainTokuboEx(state: MutableCharacter): void {
   const next = applyStatEx(state.tokubo, state.tokuboEx, 1)
   state.tokubo = Math.max(STAT_MIN, next.value)
   state.tokuboEx = next.ex
+}
+
+function gainBuyuEx(state: MutableCharacter): void {
+  const next = applyStatEx(state.buyu, state.buyuEx, 1)
+  state.buyu = next.value
+  state.buyuEx = next.ex
+}
+
+function gainTosoEx(state: MutableCharacter): void {
+  const next = applyStatEx(state.toso, state.tosoEx, 1)
+  state.toso = next.value
+  state.tosoEx = next.ex
 }
 
 async function consumeQueuedCommand(
@@ -425,6 +459,8 @@ export async function executeCharacterCommand(
     money: character.money,
     rice: character.rice,
     troops: character.troops,
+    training: character.training,
+    defending: character.defending,
     merit: character.merit,
     buyu: character.buyu,
     chiryaku: character.chiryaku,
@@ -466,10 +502,9 @@ export async function executeCharacterCommand(
     const dest = await provinces.findById(payload.provinceId)
     if (!dest) return { ok: false, reason: '移動先がありません' }
 
-    const tosoNext = applyStatEx(personal.toso, personal.tosoEx, 1)
-    personal.toso = tosoNext.value
-    personal.tosoEx = tosoNext.ex
+    gainTosoEx(personal)
     if (character.houseId) personal.merit += MOVE_CONTRIBUTION
+    personal.defending = 0
 
     const now = nowSeconds()
     const characters = new CharacterRepository(db)
@@ -478,6 +513,7 @@ export async function executeCharacterCommand(
       merit: personal.merit,
       toso: personal.toso,
       tosoEx: personal.tosoEx,
+      defending: 0,
       updatedAt: now,
     })
     await consumeQueuedCommand(db, character.id, queued)
@@ -587,6 +623,72 @@ export async function executeCharacterCommand(
     gainTokuboEx(personal)
     await finishCommand(db, character, queued, personal, local)
     return { ok: true, message: `${province.name}の民忠が+${gain}上がった。` }
+  }
+
+  if (commandId === 'chouhei') {
+    if (!payload || payload.kind !== 'recruit') {
+      return { ok: false, reason: '徴兵人数がありません' }
+    }
+    const amount = Math.floor(payload.amount)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return { ok: false, reason: '徴兵する人数を入力してください' }
+    }
+    const room = Math.max(0, personal.toso - personal.troops)
+    if (amount > room) {
+      return { ok: false, reason: `統率の上限（あと${room}人）を超えます` }
+    }
+    const goldCost = amount * RECRUIT_GOLD_PER
+    const popCost = amount * RECRUIT_POP_PER
+    const loyaltyCost = Math.floor(amount / 10)
+    if (personal.money < goldCost) return { ok: false, reason: '金が足りません' }
+    if (local.population < popCost) return { ok: false, reason: '農民が足りません' }
+    if (local.loyalty < loyaltyCost) return { ok: false, reason: '民忠が足りません' }
+
+    personal.money -= goldCost
+    personal.troops += amount
+    personal.training = Math.max(0, personal.training - amount)
+    personal.merit += RECRUIT_CONTRIBUTION
+    local.population -= popCost
+    local.loyalty = Math.max(0, local.loyalty - loyaltyCost)
+    gainBuyuEx(personal)
+
+    await finishCommand(db, character, queued, personal, local)
+    return {
+      ok: true,
+      message: `雑兵を${amount}人徴兵した（金-${goldCost}、農民-${popCost}、民忠-${loyaltyCost}）。`,
+    }
+  }
+
+  if (commandId === 'kunren') {
+    const gain = netTrainGain(personal.toso)
+    personal.training = clamp(personal.training + gain, 0, TRAINING_MAX)
+    personal.merit += TRAIN_CONTRIBUTION
+    gainTosoEx(personal)
+    const now = nowSeconds()
+    await new CharacterRepository(db).updateResources(character.id, {
+      ...personal,
+      updatedAt: now,
+    })
+    await consumeQueuedCommand(db, character.id, queued)
+    return { ok: true, message: `訓練度が+${gain}上がった（現在${personal.training}）。` }
+  }
+
+  if (commandId === 'shubi') {
+    if (personal.troops <= 0) {
+      return { ok: false, reason: '兵がいません' }
+    }
+    const now = nowSeconds()
+    const characters = new CharacterRepository(db)
+    await characters.clearDefendingInProvince(character.provinceId, character.id, now)
+    personal.defending = 1
+    personal.merit += DEFEND_CONTRIBUTION
+    gainTosoEx(personal)
+    await characters.updateResources(character.id, {
+      ...personal,
+      updatedAt: now,
+    })
+    await consumeQueuedCommand(db, character.id, queued)
+    return { ok: true, message: `${province.name}の守備についた。` }
   }
 
   return { ok: false, reason: '未対応のコマンド' }

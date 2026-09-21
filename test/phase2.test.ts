@@ -76,6 +76,9 @@ describe('phase N1 NET domestic', () => {
       'idou',
       'beibai',
       'shikan',
+      'chouhei',
+      'kunren',
+      'shubi',
     ])
     expect(COMMAND_QUEUE_MAX).toBe(24)
     expect(STAT_EX_PER_LEVEL).toBe(10)

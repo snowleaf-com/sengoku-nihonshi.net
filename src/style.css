@@ -726,6 +726,20 @@ a {
   margin-top: 0.85rem;
 }
 
+.status-badge {
+  display: inline-block;
+  margin-top: 0.65rem;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--line);
+}
+
+.status-defending {
+  color: var(--ink);
+  background: rgba(120, 90, 50, 0.35);
+}
+
 .resource-list {
   display: grid;
   grid-template-columns: 1fr 1fr;

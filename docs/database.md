@@ -119,6 +119,13 @@ migration `0008_n2_command_payload.sql`。
 
 - `character_commands.payload` … 移動先・売買量の JSON
 
-## Phase N3 以降で増える想定
+## Phase N3 で追加
 
-徴兵・訓練・守備、戦争。会議室・手紙は N5。
+migration `0009_n3_military.sql`。
+
+- `characters.training` … 訓練度（0〜100）
+- `characters.defending` … 城の守備中なら 1
+
+## Phase N4 以降で増える想定
+
+戦争・占領。会議室・手紙は N5。
