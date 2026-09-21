@@ -86,6 +86,8 @@ export type House = {
   name: string
   leaderCharacterId: string | null
   color: string
+  /** 建国時の game_state.turn_index（戦争解禁の基準） */
+  foundedTurn: number
   createdAt: number
   destroyedAt: number | null
 }

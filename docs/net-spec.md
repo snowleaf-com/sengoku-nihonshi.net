@@ -143,3 +143,33 @@ gain = int(統率/6 + rand * 統率/6)
 米 < 0 なら: 脱走 = min(兵, -米)、米 = 0、兵 -= 脱走
 兵が 0 になったら守備解除
 ```
+
+## 戦争（N4）
+
+- コマンド `sensou`。payload: `{ kind: 'war', provinceId }`
+- 攻撃者: 家所属・兵 > 0・所在が攻撃先に隣接・自国以外
+- 建国後 `$BATTLE_STOP`（36）ヶ月未満の家は攻防とも不可（中立都市は常に攻撃可）
+
+### 攻防式（battle.cgi）
+
+```
+katt = int((kstr + katt_add - eatt_def - int(egat/2.5))/8)
+eatt = int((estr + eatt_add - katt_def - int(kgat/2.5))/8)
+```
+
+装備補正（*_add / *_def）は当面 0。
+
+### 防衛側
+
+1. 攻撃先に `defending=1` かつ支配家所属の武将がいればその武将と戦闘
+2. いなければ城壁: 兵数=城壁、武力=30、訓練=60
+
+### ラウンド（最大 50）
+
+```
+kdmg = max(1, rand(0..katt)); 防衛兵 -= kdmg
+edmg = max(1, rand(0..eatt)); 攻撃兵 -= edmg
+```
+
+どちらかが 0 以下で終了。攻撃側勝利で占領（`house_id` 移譲）。城壁戦なら城壁も 0。  
+勝敗どちらも貢献 +20・武勇 EX +1。

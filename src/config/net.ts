@@ -63,8 +63,16 @@ export const RECRUIT_CONTRIBUTION = 10
 /** 建国後の戦争禁止ターン数（原本 $BATTLE_STOP） */
 export const BATTLE_STOP_MONTHS = 36
 
+/** 戦争成功・失敗時の貢献 */
+export const WAR_CONTRIBUTION = 20
+
 /** 訓練度上限 */
 export const TRAINING_MAX = 100
+
+/** 攻防双方の家が戦争可能か（中立都市に防衛家はない） */
+export function isHouseWarReady(turnIndex: number, foundedTurn: number): boolean {
+  return turnIndex - foundedTurn >= BATTLE_STOP_MONTHS
+}
 
 /**
  * NET 開発系の上昇量。

@@ -89,6 +89,17 @@ export function GameHubPage({
         return { id: m.id, name: m.name }
       })
     : []
+  const warTargets = adjacentProvinces
+    .map((adj) => {
+      const p = provinces.find((row) => row.id === adj.id)
+      if (!p) return null
+      if (character.houseId && p.houseId === character.houseId) return null
+      const ownerLabel = p.houseId
+        ? (houseById[p.houseId]?.name ?? '他家')
+        : '中立'
+      return { id: adj.id, name: adj.name, ownerLabel }
+    })
+    .filter((row): row is { id: string; name: string; ownerLabel: string } => row != null)
   const provinceNameById = Object.fromEntries(provinces.map((p) => [p.id, p.name]))
 
   return (
@@ -358,6 +369,7 @@ export function GameHubPage({
               inHomeLand={inHomeLand}
               canShikan={canShikan}
               adjacentProvinces={adjacentProvinces}
+              warTargets={warTargets}
               marketRate={province.marketRate}
               provinceNameById={provinceNameById}
               troopCap={character.toso}

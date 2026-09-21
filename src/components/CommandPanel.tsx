@@ -20,6 +20,8 @@ import { StatIcon } from './StatIcon'
 
 type AdjacentOption = { id: string; name: string }
 
+type WarTargetOption = { id: string; name: string; ownerLabel: string }
+
 type CommandPanelProps = {
   queue: CharacterCommand[]
   currentYear: number
@@ -29,6 +31,7 @@ type CommandPanelProps = {
   inHomeLand: boolean
   canShikan: boolean
   adjacentProvinces: AdjacentOption[]
+  warTargets: WarTargetOption[]
   marketRate: number
   provinceNameById: Record<string, string>
   troopCap: number
@@ -77,6 +80,7 @@ export function CommandPanel({
   inHomeLand,
   canShikan,
   adjacentProvinces,
+  warTargets,
   marketRate,
   provinceNameById,
   troopCap,
@@ -317,6 +321,35 @@ export function CommandPanel({
                     data-needs-selection
                   >
                     徴兵を入力
+                  </button>
+                </div>
+              ) : null}
+
+              {inHomeLand ? (
+                <div class="command-param-block">
+                  <strong class="command-card-label">戦争</strong>
+                  <p class="hint">隣接する敵国・中立国のみ。建国後36ヶ月で解禁</p>
+                  <label class="field field-inline">
+                    <span class="field-label">攻撃先</span>
+                    <select class="field-input" name="warProvinceId" required={false}>
+                      <option value="">隣接の敵・中立を選ぶ</option>
+                      {warTargets.map((p) => (
+                        <option value={p.id} key={p.id}>
+                          {p.name}（{p.ownerLabel}）
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="submit"
+                    class="btn btn-primary btn-small"
+                    formaction="/actions/apply-commands"
+                    name="commandId"
+                    value="sensou"
+                    data-needs-selection
+                    disabled={warTargets.length === 0}
+                  >
+                    戦争を入力
                   </button>
                 </div>
               ) : null}

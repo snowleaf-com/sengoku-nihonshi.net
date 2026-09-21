@@ -190,6 +190,19 @@ export class CharacterRepository {
     return (result.results ?? []).map(mapCharacter)
   }
 
+  /** 都市の守備武将（defending=1 かつ所属が支配家） */
+  async findDefender(provinceId: string, houseId: string): Promise<Character | null> {
+    const row = await this.db
+      .prepare(
+        `SELECT ${CHARACTER_COLUMNS} FROM characters
+         WHERE province_id = ? AND house_id = ? AND defending = 1
+         LIMIT 1`,
+      )
+      .bind(provinceId, houseId)
+      .first<CharacterRow>()
+    return row ? mapCharacter(row) : null
+  }
+
   async assignHouse(characterId: string, houseId: string, updatedAt: number): Promise<void> {
     await this.db
       .prepare(

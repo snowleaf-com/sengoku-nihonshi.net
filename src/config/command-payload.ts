@@ -22,7 +22,12 @@ export type RecruitPayload = {
   amount: number
 }
 
-export type CommandPayload = MovePayload | TradePayload | RecruitPayload
+export type WarPayload = {
+  kind: 'war'
+  provinceId: string
+}
+
+export type CommandPayload = MovePayload | TradePayload | RecruitPayload | WarPayload
 
 export function parseCommandPayload(raw: string | null | undefined): CommandPayload | null {
   if (!raw) return null
@@ -38,6 +43,7 @@ export function parseCommandPayload(raw: string | null | undefined): CommandPayl
       return data
     }
     if (data?.kind === 'recruit' && typeof data.amount === 'number') return data
+    if (data?.kind === 'war' && typeof data.provinceId === 'string') return data
   } catch {
     return null
   }
@@ -65,6 +71,10 @@ export function formatQueueLabel(
   }
   if (payload?.kind === 'recruit') {
     return `徴兵${payload.amount}人`
+  }
+  if (payload?.kind === 'war') {
+    const name = provinceNameById(payload.provinceId) ?? payload.provinceId
+    return `${name}へ戦争`
   }
   return commandLabel || commandId
 }
