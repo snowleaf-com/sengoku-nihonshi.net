@@ -7,6 +7,7 @@ type GameStateRow = {
   month: number
   turn_index: number
   next_turn_at: number
+  maintenance: number
   updated_at: number
 }
 
@@ -16,6 +17,7 @@ function mapGameState(row: GameStateRow): GameState {
     month: row.month,
     turnIndex: row.turn_index,
     nextTurnAt: row.next_turn_at,
+    maintenance: row.maintenance ?? 0,
     updatedAt: row.updated_at,
   }
 }
@@ -26,7 +28,7 @@ export class GameStateRepository {
   async get(): Promise<GameState> {
     const row = await this.db
       .prepare(
-        `SELECT id, year, month, turn_index, next_turn_at, updated_at
+        `SELECT id, year, month, turn_index, next_turn_at, maintenance, updated_at
          FROM game_state WHERE id = 1`,
       )
       .first<GameStateRow>()
@@ -42,11 +44,14 @@ export class GameStateRepository {
     turnIndex: number
     nextTurnAt: number
     updatedAt: number
+    maintenance?: number
   }): Promise<GameState> {
+    const current = await this.get()
+    const maintenance = input.maintenance ?? current.maintenance
     await this.db
       .prepare(
         `UPDATE game_state
-         SET year = ?, month = ?, turn_index = ?, next_turn_at = ?, updated_at = ?
+         SET year = ?, month = ?, turn_index = ?, next_turn_at = ?, maintenance = ?, updated_at = ?
          WHERE id = 1`,
       )
       .bind(
@@ -54,6 +59,7 @@ export class GameStateRepository {
         input.date.month,
         input.turnIndex,
         input.nextTurnAt,
+        maintenance,
         input.updatedAt,
       )
       .run()
@@ -63,7 +69,15 @@ export class GameStateRepository {
       month: input.date.month,
       turnIndex: input.turnIndex,
       nextTurnAt: input.nextTurnAt,
+      maintenance,
       updatedAt: input.updatedAt,
     }
+  }
+
+  async setMaintenance(maintenance: number, updatedAt: number): Promise<void> {
+    await this.db
+      .prepare(`UPDATE game_state SET maintenance = ?, updated_at = ? WHERE id = 1`)
+      .bind(maintenance ? 1 : 0, updatedAt)
+      .run()
   }
 }

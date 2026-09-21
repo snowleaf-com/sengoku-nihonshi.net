@@ -100,7 +100,7 @@ cap  = 1000 + min(20, floor(階級値 / 500)) * 150
 
 ## 自国以外の制限
 
-自国以外（浪人を含む）で実行できるのは **移動・仕官・何もしない** のみ。  
+自国以外（浪人を含む）で実行できるのは **移動・仕官・集合・何もしない** のみ。  
 内政・売買は自国にいるときだけ。
 
 ## 相場変動（1月・7月）
@@ -186,3 +186,56 @@ edmg = max(1, rand(0..eatt)); 攻撃兵 -= edmg
 - 会議室・国法は **家メンバーのみ**
 - 本文は 1〜200 文字（trim）
 - `world_events`（全国ニュース）とは別チャネル
+
+## 鍛錬・登用・部隊・放置（N6）
+
+### 鍛錬（`tanren`）
+
+- payload: `{ kind: 'train_stat', stat: 'buyu'|'chiryaku'|'toso' }`
+- 金 50、選んだ能力 EX +2、貢献 +10、自国のみ
+
+### 登用（`touyou`）
+
+- payload: `{ kind: 'recruit_officer', targetCharacterId }`
+- 金 100、同国・他家または浪人（当主は不可）
+- 成功: `merit < 50` または `loyalty < 50` または `random < 0.4`
+- 成功時: 攻撃者の家へ家臣化、守備解除、ニュース
+
+### 部隊
+
+- テーブル `units` / `unit_members`
+- Hub POST: `/actions/unit-create` `/actions/unit-join` `/actions/unit-leave`
+- 集合（`syuugou`）: 隊長のみ。隊員を隊長の所在国へ移動（`foreignOk`）
+
+### 何もしない（`nashi`）
+
+- `foreignOk`。成功のたび `idle_streak++`
+- 他コマンド成功で `idle_streak = 0`
+- `idle_streak >= 60` で武将削除（当主なら家滅亡・領土解放）
+
+### 忠誠（武将）
+
+- `characters.loyalty` 既定 100（都市の民忠とは別）
+- 自国以外にいる各月 -1
+- 登用の成功条件に利用
+
+### 災厄（1月・7月）
+
+約 1/40 で全国一律:
+
+| 種別 | 効果 |
+|------|------|
+| locust | 農業 ×0.8 |
+| flood | 農/商/城壁 ×0.9 |
+| plague | 農民 ×0.8 |
+| bumper | 農業 ×1.2（上限） |
+| quake | 農/商/城壁 ×0.8、農民 ×0.9 |
+| boom | 商業×1.1、農民×1.1（上限） |
+
+`world_events.kind = disaster`
+
+### 管理
+
+- `/admin`（`ADMIN_SECRET` を query / header / form）
+- メンテ切替（`game_state.maintenance`）、ターン強制進行
+- メンテ中は Hub にバナー、コマンド POST を拒否

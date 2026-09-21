@@ -139,7 +139,11 @@ export class ProvinceRepository {
     return (result.results ?? []).map(mapProvince)
   }
 
-  async updateOwner(provinceId: string, houseId: string, updatedAt: number): Promise<void> {
+  async updateOwner(
+    provinceId: string,
+    houseId: string | null,
+    updatedAt: number,
+  ): Promise<void> {
     await this.db
       .prepare(
         `UPDATE provinces

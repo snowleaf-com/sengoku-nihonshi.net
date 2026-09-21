@@ -80,6 +80,10 @@ describe('phase N1 NET domestic', () => {
       'kunren',
       'shubi',
       'sensou',
+      'tanren',
+      'touyou',
+      'syuugou',
+      'nashi',
     ])
     expect(COMMAND_QUEUE_MAX).toBe(24)
     expect(STAT_EX_PER_LEVEL).toBe(10)

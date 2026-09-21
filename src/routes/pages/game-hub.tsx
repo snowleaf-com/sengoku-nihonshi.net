@@ -21,6 +21,17 @@ import type {
   WorldEvent,
 } from '../../types'
 
+type UnitSummary = {
+  id: string
+  name: string
+  isLeader: boolean
+}
+
+type HouseUnitOption = {
+  id: string
+  name: string
+}
+
 type GameHubPageProps = {
   character: Character
   province: Province
@@ -31,8 +42,13 @@ type GameHubPageProps = {
   queue: CharacterCommand[]
   news: WorldEvent[]
   results: WorldEvent[]
+  recruitTargets: Array<{ id: string; name: string; houseLabel: string }>
+  characterNameById: Record<string, string>
+  unit: UnitSummary | null
+  houseUnits: HouseUnitOption[]
   commandError?: string | null
   error?: string | null
+  notice?: string | null
 }
 
 function softMax(value: number, floor: number): number {
@@ -49,8 +65,13 @@ export function GameHubPage({
   queue,
   news,
   results,
+  recruitTargets,
+  characterNameById,
+  unit,
+  houseUnits,
   commandError = null,
   error,
+  notice = null,
 }: GameHubPageProps) {
   const master = getProvinceMaster(province.id)
   const adj = master ? adjacentCount(master, PROVINCES) : 0
@@ -150,7 +171,11 @@ export function GameHubPage({
           </div>
         </header>
 
+        {gameState.maintenance ? (
+          <p class="hero-error game-error">メンテナンス中です。コマンドの入力はできません。</p>
+        ) : null}
         {error ? <p class="hero-error game-error">{error}</p> : null}
+        {notice ? <p class="hint game-notice">{notice}</p> : null}
 
         <div class="game-board">
           <div class="game-info-stack">
@@ -240,7 +265,16 @@ export function GameHubPage({
                   </dt>
                   <dd>{character.merit}</dd>
                 </div>
+                <div>
+                  <dt>忠誠</dt>
+                  <dd>{character.loyalty}</dd>
+                </div>
               </dl>
+              {unit ? (
+                <p class="status-badge">
+                  部隊「{unit.name}」{unit.isLeader ? '（隊長）' : ''}
+                </p>
+              ) : null}
               <div class="gauge-grid card-gauges">
                 <StatGauge
                   label="兵"
@@ -329,7 +363,51 @@ export function GameHubPage({
                       <dd>{houseLine}</dd>
                     </div>
                   </dl>
-                  <p class="hint">国庫の金・米はこれから。</p>
+                  <div class="unit-actions">
+                    {unit ? (
+                      <form method="post" action="/actions/unit-leave">
+                        <button type="submit" class="btn btn-ghost btn-small">
+                          部隊を離脱
+                        </button>
+                      </form>
+                    ) : (
+                      <>
+                        <form class="stack-form" method="post" action="/actions/unit-create">
+                          <label class="field">
+                            <span class="field-label">新部隊</span>
+                            <input
+                              class="field-input"
+                              type="text"
+                              name="unitName"
+                              maxlength={12}
+                              required
+                              placeholder="部隊名"
+                            />
+                          </label>
+                          <button type="submit" class="btn btn-ghost btn-small">
+                            編成
+                          </button>
+                        </form>
+                        {houseUnits.length > 0 ? (
+                          <form class="stack-form" method="post" action="/actions/unit-join">
+                            <label class="field">
+                              <span class="field-label">参加</span>
+                              <select class="field-input" name="unitId" required>
+                                {houseUnits.map((u) => (
+                                  <option value={u.id} key={u.id}>
+                                    {u.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <button type="submit" class="btn btn-ghost btn-small">
+                              参加
+                            </button>
+                          </form>
+                        ) : null}
+                      </>
+                    )}
+                  </div>
                 </>
               ) : (
                 <form class="stack-form game-found-form" method="post" action="/actions/raise-house">
@@ -379,9 +457,12 @@ export function GameHubPage({
               canShikan={canShikan}
               adjacentProvinces={adjacentProvinces}
               warTargets={warTargets}
+              recruitTargets={recruitTargets}
               marketRate={province.marketRate}
               provinceNameById={provinceNameById}
+              characterNameById={characterNameById}
               troopCap={character.toso}
+              maintenance={Boolean(gameState.maintenance)}
             />
           </section>
         </div>

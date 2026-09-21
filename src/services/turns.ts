@@ -22,9 +22,18 @@ import {
   characterIncomeShare,
   executeCharacterCommand,
   houseIncomePool,
+  isInHomeLand,
   nextMarketRate,
 } from './commands'
+import { deleteCharacterWithCleanup } from './character-delete'
+import {
+  applyDisasterToProvince,
+  DISASTER_LABELS,
+  pickDisasterType,
+  shouldTriggerDisaster,
+} from './disaster'
 import { recordWorldEvents } from './events'
+import { nextIdleStreakAfterNashi, shouldDeleteForIdle } from './idle'
 
 export async function ensureGameState(db: D1Database): Promise<GameState> {
   const repo = new GameStateRepository(db)
@@ -84,7 +93,6 @@ async function paySeasonalIncome(
   const provinces = new ProvinceRepository(db)
   const all = await characters.listAll()
 
-  // 家ごとの領土・貢献合計
   const houseIds = new Set<string>()
   for (const c of all) {
     if (c.houseId) houseIds.add(c.houseId)
@@ -113,7 +121,6 @@ async function paySeasonalIncome(
       const totalMerit = houseMerit.get(character.houseId) ?? 0
       amount = characterIncomeShare(pool, character.merit, totalMerit, character.classPoints)
     } else {
-      // 浪人: 所在国のみ・自分の貢献だけ
       const province = await provinces.findById(character.provinceId)
       if (province) {
         const pool = houseIncomePool([province], kind)
@@ -166,6 +173,32 @@ async function applySeasonalPopulation(db: D1Database, wallClock: number): Promi
   }
 }
 
+/** 1月・7月: 低確率で全国災厄 */
+export async function applySeasonalDisaster(
+  db: D1Database,
+  nextDate: GameDate,
+  wallClock: number,
+  options: { random01?: number; typeRandom01?: number } = {},
+): Promise<{ triggered: boolean; type?: string; label?: string }> {
+  if (!shouldTriggerDisaster(options.random01 ?? Math.random())) {
+    return { triggered: false }
+  }
+  const type = pickDisasterType(options.typeRandom01 ?? Math.random())
+  const provinces = new ProvinceRepository(db)
+  const all = await provinces.listAll()
+  for (const province of all) {
+    const next = applyDisasterToProvince(province, type)
+    await provinces.updateStats(province.id, {
+      agriculture: next.agriculture,
+      commerce: next.commerce,
+      defense: next.defense,
+      population: next.population,
+      updatedAt: wallClock,
+    })
+  }
+  return { triggered: true, type, label: DISASTER_LABELS[type] }
+}
+
 /** 毎月: 兵1人につき米1。不足時は脱走 */
 export async function applyTroopUpkeep(
   db: D1Database,
@@ -214,6 +247,25 @@ export async function applyTroopUpkeep(
   return reports
 }
 
+/** 自国以外にいる武将の忠誠 -1 / 月 */
+async function applyCharacterLoyaltyDrift(db: D1Database, wallClock: number): Promise<void> {
+  const characters = new CharacterRepository(db)
+  const provinces = new ProvinceRepository(db)
+  const all = await characters.listAll()
+  for (const listed of all) {
+    const character = await characters.findById(listed.id)
+    if (!character) continue
+    const province = await provinces.findById(character.provinceId)
+    if (!province) continue
+    if (isInHomeLand(character, province)) continue
+    if (character.loyalty <= 0) continue
+    await characters.updateIdleAndLoyalty(character.id, {
+      loyalty: Math.max(0, character.loyalty - 1),
+      updatedAt: wallClock,
+    })
+  }
+}
+
 async function advanceOneTurn(
   db: D1Database,
   state: GameState,
@@ -226,7 +278,7 @@ async function advanceOneTurn(
     year: number
     month: number
     channel: 'result' | 'news'
-    kind: 'command' | 'income' | 'system'
+    kind: 'command' | 'income' | 'system' | 'disaster' | 'social'
     message: string
     provinceId?: string | null
     characterId?: string | null
@@ -256,6 +308,37 @@ async function advanceOneTurn(
         houseId: character.houseId,
         createdAt: wallClock,
       })
+
+      const fresh = await characters.findById(character.id)
+      if (fresh) {
+        if (item.commandId === 'nashi') {
+          const streak = nextIdleStreakAfterNashi(fresh.idleStreak)
+          if (shouldDeleteForIdle(streak)) {
+            await deleteCharacterWithCleanup(db, fresh.id)
+            eventBatch.push({
+              year: state.year,
+              month: state.month,
+              channel: 'news',
+              kind: 'social',
+              message: `${character.name}は長期の無活動により姿を消した。`,
+              provinceId: province.id,
+              characterId: null,
+              houseId: character.houseId,
+              createdAt: wallClock,
+            })
+          } else {
+            await characters.updateIdleAndLoyalty(fresh.id, {
+              idleStreak: streak,
+              updatedAt: wallClock,
+            })
+          }
+        } else if (fresh.idleStreak !== 0) {
+          await characters.updateIdleAndLoyalty(fresh.id, {
+            idleStreak: 0,
+            updatedAt: wallClock,
+          })
+        }
+      }
     } else if (!result.ok && definition && province) {
       eventBatch.push({
         year: state.year,
@@ -268,7 +351,6 @@ async function advanceOneTurn(
         houseId: character.houseId,
         createdAt: wallClock,
       })
-      // 失敗しても枠は消化（原本もコマンドは進む）
       await commands.delete(item.id)
       await commands.shiftDownAfter(character.id, item.position)
     }
@@ -290,10 +372,23 @@ async function advanceOneTurn(
     })
   }
 
+  await applyCharacterLoyaltyDrift(db, wallClock)
+
   const nextDate: GameDate = advanceMonth({ year: state.year, month: state.month })
 
   if (isTaxMonth(nextDate.month) || isTributeMonth(nextDate.month)) {
     await applySeasonalPopulation(db, wallClock)
+    const disaster = await applySeasonalDisaster(db, nextDate, wallClock)
+    if (disaster.triggered && disaster.label) {
+      eventBatch.push({
+        year: nextDate.year,
+        month: nextDate.month,
+        channel: 'news',
+        kind: 'disaster',
+        message: `${formatGameDate(nextDate)}、全国に${disaster.label}の災厄が起きた。`,
+        createdAt: wallClock,
+      })
+    }
     if (isTaxMonth(nextDate.month)) {
       const taxed = await paySeasonalIncome(db, nextDate, wallClock, 'tax')
       if (taxed > 0) {

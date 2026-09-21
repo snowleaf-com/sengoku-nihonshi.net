@@ -22,14 +22,15 @@
 | [phase-n3.md](./phase-n3.md) | Phase N3（徴兵・訓練・守備・兵糧） |
 | [phase-n4.md](./phase-n4.md) | Phase N4（戦争・占領） |
 | [phase-n5.md](./phase-n5.md) | Phase N5（会議室・手紙・国法・一覧） |
+| [phase-n6.md](./phase-n6.md) | Phase N6（部隊・登用・鍛錬・災厄・仕上げ） |
 | [net-spec.md](./net-spec.md) | 三国志.NET 式の要約 |
-| [roadmap.md](./roadmap.md) | **全体計画**（NETルール + 令制国、N1〜N6） |
+| [roadmap.md](./roadmap.md) | **全体計画**（NETルール + 令制国、N1〜N6 完了） |
 
 ## 読む順番（おすすめ）
 
-1. [roadmap.md](./roadmap.md) — 方針と今後のフェーズ
-2. [net-spec.md](./net-spec.md) / [phase-n5.md](./phase-n5.md) — いま実装中
-3. [phase0.md](./phase0.md) 〜 [phase-n4.md](./phase-n4.md) — 済んだ範囲
+1. [roadmap.md](./roadmap.md) — 方針とフェーズ（全完了）
+2. [net-spec.md](./net-spec.md) / [phase-n6.md](./phase-n6.md) — 最新の仕上げ
+3. [phase0.md](./phase0.md) 〜 [phase-n5.md](./phase-n5.md) — 済んだ範囲
 4. [architecture.md](./architecture.md) — 全体の置き場所
 5. [passkey.md](./passkey.md) / [session.md](./session.md) — 認証の核
 6. [database.md](./database.md) — 永続化

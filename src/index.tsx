@@ -13,8 +13,10 @@ import { LoginPage } from './routes/pages/login'
 import { RankingPage } from './routes/pages/ranking'
 import { CharacterCommandRepository } from './repositories/character-commands'
 import { CharacterRepository } from './repositories/characters'
+import { GameStateRepository } from './repositories/game-state'
 import { HouseRepository } from './repositories/houses'
 import { ProvinceRepository } from './repositories/provinces'
+import { UnitRepository } from './repositories/units'
 import { renderer } from './renderer'
 import {
   defaultStatsForArchetype,
@@ -33,7 +35,9 @@ import {
 import { ensureProvincesSeeded } from './services/world'
 import { listActionResults, listWorldNews } from './services/events'
 import { advanceDueTurns, ensureGameState } from './services/turns'
+import { nowSeconds } from './lib/id'
 import type { AppEnv } from './types'
+import { AdminPage } from './routes/pages/admin'
 
 const app = new Hono<AppEnv>()
 
@@ -104,6 +108,7 @@ app.get('/game', requireAuth, async (c) => {
 
   const error = c.req.query('error') ?? null
   const cmdError = c.req.query('cmdError') ?? null
+  const notice = c.req.query('notice') ?? null
   const characters = new CharacterRepository(c.env.DB)
   const character = await characters.findByUserId(user.id)
 
@@ -125,13 +130,14 @@ app.get('/game', requireAuth, async (c) => {
     )
   }
 
-  const [province, provinces, houses, queue, news, results] = await Promise.all([
+  const [province, provinces, houses, queue, news, results, locals] = await Promise.all([
     provincesRepo.findById(character.provinceId),
     provincesRepo.listAll(),
     housesRepo.listActive(),
     new CharacterCommandRepository(c.env.DB).listByCharacter(character.id),
     listWorldNews(c.env.DB),
     listActionResults(c.env.DB, character.id),
+    characters.listByProvinceId(character.provinceId),
   ])
 
   if (!province) {
@@ -146,6 +152,34 @@ app.get('/game', requireAuth, async (c) => {
   }
 
   const house = character.houseId ? await housesRepo.findById(character.houseId) : null
+  const houseById = Object.fromEntries(houses.map((h) => [h.id, h]))
+  const recruitTargets = locals
+    .filter((row) => row.id !== character.id)
+    .filter((row) => !row.houseId || row.houseId !== character.houseId)
+    .map((row) => ({
+      id: row.id,
+      name: row.name,
+      houseLabel: row.houseId ? (houseById[row.houseId]?.name ?? '他家') : '浪人',
+    }))
+  const allChars = await characters.listAll()
+  const characterNameById = Object.fromEntries(allChars.map((row) => [row.id, row.name]))
+
+  const unitsRepo = new UnitRepository(c.env.DB)
+  const myUnit = await unitsRepo.findByMember(character.id)
+  const unit = myUnit
+    ? {
+        id: myUnit.id,
+        name: myUnit.name,
+        isLeader: myUnit.leaderCharacterId === character.id,
+      }
+    : null
+  const houseUnits =
+    character.houseId && !myUnit
+      ? (await unitsRepo.listByHouse(character.houseId)).map((u) => ({
+          id: u.id,
+          name: u.name,
+        }))
+      : []
 
   return c.render(
     <GameHubPage
@@ -158,8 +192,13 @@ app.get('/game', requireAuth, async (c) => {
       queue={queue}
       news={news}
       results={results}
+      recruitTargets={recruitTargets}
+      characterNameById={characterNameById}
+      unit={unit}
+      houseUnits={houseUnits}
       commandError={cmdError}
       error={error}
+      notice={notice}
     />,
   )
 })
@@ -286,6 +325,81 @@ app.get('/game/ranking', requireAuth, async (c) => {
 
   const rows = await listRanking(c.env.DB)
   return c.render(<RankingPage rows={rows} />)
+})
+
+function adminAuthorized(
+  env: AppEnv['Bindings'],
+  input: { querySecret?: string | null; headerSecret?: string | null; formSecret?: string | null },
+): boolean {
+  const expected = env.ADMIN_SECRET
+  if (!expected) return false
+  return (
+    input.querySecret === expected ||
+    input.headerSecret === expected ||
+    input.formSecret === expected
+  )
+}
+
+app.get('/admin', async (c) => {
+  const secret =
+    c.req.query('secret') ??
+    c.req.header('x-admin-secret') ??
+    ''
+  const authorized = adminAuthorized(c.env, {
+    querySecret: secret || null,
+    headerSecret: c.req.header('x-admin-secret'),
+  })
+  const state = authorized ? await ensureGameState(c.env.DB) : null
+  return c.render(
+    <AdminPage
+      authorized={authorized}
+      secret={authorized ? secret : ''}
+      maintenance={state?.maintenance ?? 0}
+      year={state?.year ?? null}
+      month={state?.month ?? null}
+      error={c.req.query('error') ?? null}
+      notice={c.req.query('notice') ?? null}
+    />,
+  )
+})
+
+app.post('/admin', async (c) => {
+  const body = await c.req.parseBody()
+  const formSecret = typeof body.secret === 'string' ? body.secret : ''
+  if (
+    !adminAuthorized(c.env, {
+      formSecret,
+      querySecret: c.req.query('secret'),
+      headerSecret: c.req.header('x-admin-secret'),
+    })
+  ) {
+    return c.redirect(`/admin?error=${encodeURIComponent('認証に失敗しました')}`)
+  }
+
+  const intent = typeof body.intent === 'string' ? body.intent : ''
+  const repo = new GameStateRepository(c.env.DB)
+  const now = nowSeconds()
+
+  if (intent === 'toggle_maintenance') {
+    const state = await ensureGameState(c.env.DB)
+    await repo.setMaintenance(state.maintenance ? 0 : 1, now)
+    return c.redirect(
+      `/admin?secret=${encodeURIComponent(formSecret)}&notice=${encodeURIComponent(
+        state.maintenance ? 'メンテを解除した' : 'メンテを開始した',
+      )}`,
+    )
+  }
+
+  if (intent === 'advance_turn') {
+    await advanceDueTurns(c.env.DB, { force: true })
+    return c.redirect(
+      `/admin?secret=${encodeURIComponent(formSecret)}&notice=${encodeURIComponent('ターンを進行した')}`,
+    )
+  }
+
+  return c.redirect(
+    `/admin?secret=${encodeURIComponent(formSecret)}&error=${encodeURIComponent('不明な操作')}`,
+  )
 })
 
 const worker = {

@@ -24,6 +24,8 @@ type CharacterRow = {
   troops: number
   training: number
   defending: number
+  idle_streak: number
+  loyalty: number
   created_at: number
   updated_at: number
 }
@@ -31,6 +33,7 @@ type CharacterRow = {
 const CHARACTER_COLUMNS = `id, user_id, name, icon_id, archetype_id, buyu, chiryaku, toso, tokubo,
   buyu_ex, chiryaku_ex, toso_ex, tokubo_ex,
   house_id, province_id, rank, merit, class_points, money, rice, troops, training, defending,
+  idle_streak, loyalty,
   created_at, updated_at`
 
 function mapCharacter(row: CharacterRow): Character {
@@ -58,6 +61,8 @@ function mapCharacter(row: CharacterRow): Character {
     troops: row.troops,
     training: row.training,
     defending: row.defending,
+    idleStreak: row.idle_streak ?? 0,
+    loyalty: row.loyalty ?? 100,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -90,8 +95,8 @@ export class CharacterRepository {
            id, user_id, name, icon_id, archetype_id, buyu, chiryaku, toso, tokubo,
            buyu_ex, chiryaku_ex, toso_ex, tokubo_ex,
            house_id, province_id, rank, merit, class_points, money, rice, troops,
-           training, defending, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, NULL, ?, ?, ?, 0, ?, ?, ?, 0, 0, ?, ?)`,
+           training, defending, idle_streak, loyalty, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, NULL, ?, ?, ?, 0, ?, ?, ?, 0, 0, 0, 100, ?, ?)`,
       )
       .bind(
         input.id,
@@ -138,6 +143,8 @@ export class CharacterRepository {
       troops: input.troops,
       training: 0,
       defending: 0,
+      idleStreak: 0,
+      loyalty: 100,
       createdAt: input.createdAt,
       updatedAt: input.createdAt,
     }
@@ -203,7 +210,7 @@ export class CharacterRepository {
     return row ? mapCharacter(row) : null
   }
 
-  async assignHouse(characterId: string, houseId: string, updatedAt: number): Promise<void> {
+  async assignHouse(characterId: string, houseId: string | null, updatedAt: number): Promise<void> {
     await this.db
       .prepare(
         `UPDATE characters
@@ -251,6 +258,25 @@ export class CharacterRepository {
       .run()
   }
 
+  async updateIdleAndLoyalty(
+    characterId: string,
+    patch: { idleStreak?: number; loyalty?: number; updatedAt: number },
+  ): Promise<void> {
+    const current = await this.findById(characterId)
+    if (!current) return
+    await this.db
+      .prepare(
+        `UPDATE characters SET idle_streak = ?, loyalty = ?, updated_at = ? WHERE id = ?`,
+      )
+      .bind(
+        patch.idleStreak ?? current.idleStreak,
+        patch.loyalty ?? current.loyalty,
+        patch.updatedAt,
+        characterId,
+      )
+      .run()
+  }
+
   async updateResources(
     characterId: string,
     patch: {
@@ -270,6 +296,8 @@ export class CharacterRepository {
       chiryakuEx?: number
       tosoEx?: number
       tokuboEx?: number
+      idleStreak?: number
+      loyalty?: number
       updatedAt: number
     },
   ): Promise<void> {
@@ -283,6 +311,7 @@ export class CharacterRepository {
            merit = ?, class_points = ?, rank = ?,
            buyu = ?, chiryaku = ?, toso = ?, tokubo = ?,
            buyu_ex = ?, chiryaku_ex = ?, toso_ex = ?, tokubo_ex = ?,
+           idle_streak = ?, loyalty = ?,
            updated_at = ?
          WHERE id = ?`,
       )
@@ -303,9 +332,15 @@ export class CharacterRepository {
         patch.chiryakuEx ?? current.chiryakuEx,
         patch.tosoEx ?? current.tosoEx,
         patch.tokuboEx ?? current.tokuboEx,
+        patch.idleStreak ?? current.idleStreak,
+        patch.loyalty ?? current.loyalty,
         patch.updatedAt,
         characterId,
       )
       .run()
+  }
+
+  async delete(characterId: string): Promise<void> {
+    await this.db.prepare(`DELETE FROM characters WHERE id = ?`).bind(characterId).run()
   }
 }

@@ -3,8 +3,10 @@ import {
   parseCommandPayload,
   serializeCommandPayload,
   type CommandPayload,
+  type RecruitOfficerPayload,
   type RecruitPayload,
   type TradePayload,
+  type TrainStatPayload,
   type WarPayload,
 } from '../config/command-payload'
 import {
@@ -24,6 +26,7 @@ import {
   MOVE_CONTRIBUTION,
   RECRUIT_CONTRIBUTION,
   RECRUIT_GOLD_PER,
+  RECRUIT_OFFICER_GOLD_COST,
   RECRUIT_POP_PER,
   RICE_GIVE_COST,
   SALARY_BASE_CAP,
@@ -33,6 +36,9 @@ import {
   TECH_MAX,
   TRADE_MAX,
   TRAIN_CONTRIBUTION,
+  TRAIN_STAT_CONTRIBUTION,
+  TRAIN_STAT_EX_GAIN,
+  TRAIN_STAT_GOLD_COST,
   TRAINING_MAX,
   WAR_CONTRIBUTION,
   isHouseWarReady,
@@ -48,11 +54,13 @@ import { GameStateRepository } from '../repositories/game-state'
 import { HouseRoleRepository } from '../repositories/house-roles'
 import { HouseRepository } from '../repositories/houses'
 import { ProvinceRepository } from '../repositories/provinces'
+import { UnitRepository } from '../repositories/units'
 import { HOUSE_ROLES } from '../config/game'
 import type { Character, CharacterCommand, Province } from '../types'
 import { resolveBattle, wallDefender } from './battle'
 import { DomainError } from './character'
 import { recordWorldEvent } from './events'
+import { recruitOfficerSucceeds } from './recruit-officer'
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -125,6 +133,24 @@ export function buildWarPayload(input: { provinceId: string }): WarPayload {
   return { kind: 'war', provinceId: input.provinceId }
 }
 
+export function buildTrainStatPayload(input: {
+  stat: string
+}): TrainStatPayload {
+  if (input.stat !== 'buyu' && input.stat !== 'chiryaku' && input.stat !== 'toso') {
+    throw new DomainError('鍛錬する能力を選んでください')
+  }
+  return { kind: 'train_stat', stat: input.stat }
+}
+
+export function buildRecruitOfficerPayload(input: {
+  targetCharacterId: string
+}): RecruitOfficerPayload {
+  if (!input.targetCharacterId) {
+    throw new DomainError('登用する武将を選んでください')
+  }
+  return { kind: 'recruit_officer', targetCharacterId: input.targetCharacterId }
+}
+
 function resolvePayloadForApply(
   commandId: string,
   raw: CommandPayload | null | undefined,
@@ -147,6 +173,18 @@ function resolvePayloadForApply(
   if (def.needsPayload === 'war') {
     if (!raw || raw.kind !== 'war') throw new DomainError('攻撃先を選んでください')
     return serializeCommandPayload(buildWarPayload({ provinceId: raw.provinceId }))
+  }
+  if (def.needsPayload === 'train_stat') {
+    if (!raw || raw.kind !== 'train_stat') throw new DomainError('鍛錬する能力を選んでください')
+    return serializeCommandPayload(buildTrainStatPayload({ stat: raw.stat }))
+  }
+  if (def.needsPayload === 'recruit_officer') {
+    if (!raw || raw.kind !== 'recruit_officer') {
+      throw new DomainError('登用する武将を選んでください')
+    }
+    return serializeCommandPayload(
+      buildRecruitOfficerPayload({ targetCharacterId: raw.targetCharacterId }),
+    )
   }
   return null
 }
@@ -845,6 +883,161 @@ export async function executeCharacterCommand(
       ok: true,
       message: `${target.name}への侵攻に失敗した（残兵${personal.troops}）。`,
     }
+  }
+
+  if (commandId === 'tanren') {
+    if (!payload || payload.kind !== 'train_stat') {
+      return { ok: false, reason: '鍛錬する能力が指定されていません' }
+    }
+    if (personal.money < TRAIN_STAT_GOLD_COST) {
+      return { ok: false, reason: '金が足りません' }
+    }
+    personal.money -= TRAIN_STAT_GOLD_COST
+    personal.merit += TRAIN_STAT_CONTRIBUTION
+    const statLabel =
+      payload.stat === 'buyu' ? '武勇' : payload.stat === 'chiryaku' ? '知略' : '統率'
+    if (payload.stat === 'buyu') {
+      for (let i = 0; i < TRAIN_STAT_EX_GAIN; i += 1) gainBuyuEx(personal)
+    } else if (payload.stat === 'chiryaku') {
+      for (let i = 0; i < TRAIN_STAT_EX_GAIN; i += 1) gainChiryakuEx(personal)
+    } else {
+      for (let i = 0; i < TRAIN_STAT_EX_GAIN; i += 1) gainTosoEx(personal)
+    }
+    const now = nowSeconds()
+    await new CharacterRepository(db).updateResources(character.id, {
+      ...personal,
+      updatedAt: now,
+    })
+    await consumeQueuedCommand(db, character.id, queued)
+    return { ok: true, message: `${statLabel}を鍛錬した（EX+${TRAIN_STAT_EX_GAIN}）。` }
+  }
+
+  if (commandId === 'touyou') {
+    if (!payload || payload.kind !== 'recruit_officer') {
+      return { ok: false, reason: '登用先が指定されていません' }
+    }
+    if (!character.houseId) {
+      return { ok: false, reason: '無所属では登用できません' }
+    }
+    if (personal.money < RECRUIT_OFFICER_GOLD_COST) {
+      return { ok: false, reason: '金が足りません' }
+    }
+
+    const characters = new CharacterRepository(db)
+    const target = await characters.findById(payload.targetCharacterId)
+    if (!target) return { ok: false, reason: '登用先の武将がいません' }
+    if (target.id === character.id) {
+      return { ok: false, reason: '自分は登用できません' }
+    }
+    if (target.provinceId !== character.provinceId) {
+      return { ok: false, reason: '同じ国にいる武将のみ登用できます' }
+    }
+    if (target.houseId && target.houseId === character.houseId) {
+      return { ok: false, reason: '同家の武将は登用できません' }
+    }
+    if (target.houseId) {
+      const oldHouse = await new HouseRepository(db).findById(target.houseId)
+      if (oldHouse && oldHouse.leaderCharacterId === target.id) {
+        return { ok: false, reason: '当主は登用できません' }
+      }
+    }
+
+    personal.money -= RECRUIT_OFFICER_GOLD_COST
+    const now = nowSeconds()
+    const gameState = await new GameStateRepository(db).get()
+    const success = recruitOfficerSucceeds({
+      merit: target.merit,
+      loyalty: target.loyalty,
+    })
+
+    if (!success) {
+      await characters.updateResources(character.id, {
+        money: personal.money,
+        updatedAt: now,
+      })
+      await consumeQueuedCommand(db, character.id, queued)
+      return { ok: true, message: `${target.name}の登用に失敗した。` }
+    }
+
+    // 成功: 家へ引き抜き
+    const roles = new HouseRoleRepository(db)
+    if (target.houseId) {
+      await roles.deleteByCharacterId(target.id)
+    }
+    const targetUnit = await new UnitRepository(db).findByMember(target.id)
+    if (targetUnit) {
+      if (targetUnit.leaderCharacterId === target.id) {
+        await new UnitRepository(db).delete(targetUnit.id)
+      } else {
+        await new UnitRepository(db).removeMember(target.id)
+      }
+    }
+    await characters.assignHouse(target.id, character.houseId, now)
+    await characters.updateResources(target.id, {
+      defending: 0,
+      loyalty: 100,
+      updatedAt: now,
+    })
+    await roles.create({
+      id: createId(16),
+      houseId: character.houseId,
+      characterId: target.id,
+      role: HOUSE_ROLES.retainer,
+      createdAt: now,
+    })
+
+    const attackerHouse = await new HouseRepository(db).findById(character.houseId)
+    await characters.updateResources(character.id, {
+      money: personal.money,
+      updatedAt: now,
+    })
+    await consumeQueuedCommand(db, character.id, queued)
+    await recordWorldEvent(db, {
+      year: gameState.year,
+      month: gameState.month,
+      channel: 'news',
+      kind: 'social',
+      message: `${character.name}が${target.name}を${attackerHouse?.name ?? '自軍'}へ登用した。`,
+      provinceId: character.provinceId,
+      characterId: character.id,
+      houseId: character.houseId,
+      createdAt: now,
+    })
+    return { ok: true, message: `${target.name}を登用した。` }
+  }
+
+  if (commandId === 'syuugou') {
+    const units = new UnitRepository(db)
+    const unit = await units.findByLeader(character.id)
+    if (!unit) {
+      return { ok: false, reason: '部隊長でなければ集合できません' }
+    }
+    const memberIds = await units.listMemberIds(unit.id)
+    const characters = new CharacterRepository(db)
+    const now = nowSeconds()
+    let moved = 0
+    for (const memberId of memberIds) {
+      if (memberId === character.id) continue
+      const member = await characters.findById(memberId)
+      if (!member) continue
+      if (member.provinceId === character.provinceId) continue
+      await characters.updateProvince(member.id, character.provinceId, now)
+      await characters.updateResources(member.id, { defending: 0, updatedAt: now })
+      moved += 1
+    }
+    await consumeQueuedCommand(db, character.id, queued)
+    return {
+      ok: true,
+      message:
+        moved > 0
+          ? `部隊「${unit.name}」を${province.name}へ集めた（${moved}人）。`
+          : `部隊「${unit.name}」はすでに集まっている。`,
+    }
+  }
+
+  if (commandId === 'nashi') {
+    await consumeQueuedCommand(db, character.id, queued)
+    return { ok: true, message: '何もしなかった。' }
   }
 
   return { ok: false, reason: '未対応のコマンド' }
