@@ -1674,3 +1674,122 @@ a {
   }
 }
 
+/* N5 social subpages */
+.game-subpage-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.game-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.game-subnav a {
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.game-subnav a:hover {
+  color: var(--ink);
+  border-color: rgba(200, 160, 90, 0.45);
+}
+
+.game-subnav a.is-active {
+  color: var(--ink);
+  background: rgba(200, 160, 90, 0.12);
+  border-color: rgba(200, 160, 90, 0.55);
+}
+
+.game-subpage-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 800px) {
+  .game-subpage-grid {
+    grid-template-columns: 1fr 1.2fr;
+    align-items: start;
+  }
+}
+
+.game-notice {
+  margin: 0 0 0.75rem;
+  color: var(--ink);
+}
+
+.law-text {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.message-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.message-item {
+  padding: 0.65rem 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.message-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.message-meta strong {
+  color: var(--ink);
+}
+
+.message-body {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.ranking-table-wrap {
+  overflow-x: auto;
+}
+
+.ranking-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ranking-table th,
+.ranking-table td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.ranking-table th {
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.field-input[rows],
+textarea.field-input {
+  min-height: 4.5rem;
+  resize: vertical;
+  font: inherit;
+}
+

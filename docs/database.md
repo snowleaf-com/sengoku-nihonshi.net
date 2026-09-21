@@ -132,6 +132,10 @@ migration `0010_n4_war.sql`。
 
 - `houses.founded_turn` … 建国時の `game_state.turn_index`（戦争解禁の基準）
 
-## Phase N5 以降で増える想定
+## Phase N5 で追加
 
-会議室・手紙。
+migration `0011_n5_social.sql`。
+
+- `house_messages` … 国会議室（家メンバーのみ）
+- `personal_letters` … 個人宛て手紙
+- `houses.law_text` … 国法（当主が編集）

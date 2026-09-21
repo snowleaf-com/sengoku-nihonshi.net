@@ -173,3 +173,16 @@ edmg = max(1, rand(0..eatt)); 攻撃兵 -= edmg
 
 どちらかが 0 以下で終了。攻撃側勝利で占領（`house_id` 移譲）。城壁戦なら城壁も 0。  
 勝敗どちらも貢献 +20・武勇 EX +1。
+
+## 社会（N5）
+
+| 原本 | こちら |
+|------|--------|
+| `country_talk` / `country_write` | `/game/house` 国会議室（`house_messages`） |
+| `letter` / `mes_send` | `/game/letters` 個人手紙（`personal_letters`） |
+| `local_rule` | `houses.law_text`（当主編集） |
+| `ranking.cgi` | `/game/ranking`（貢献 → 階級値） |
+
+- 会議室・国法は **家メンバーのみ**
+- 本文は 1〜200 文字（trim）
+- `world_events`（全国ニュース）とは別チャネル

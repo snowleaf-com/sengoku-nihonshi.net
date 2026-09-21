@@ -88,8 +88,40 @@ export type House = {
   color: string
   /** 建国時の game_state.turn_index（戦争解禁の基準） */
   foundedTurn: number
+  /** 国法（当主が編集。家メンバー向け） */
+  lawText: string
   createdAt: number
   destroyedAt: number | null
+}
+
+export type HouseMessage = {
+  id: string
+  houseId: string
+  characterId: string
+  body: string
+  createdAt: number
+}
+
+export type PersonalLetter = {
+  id: string
+  fromCharacterId: string
+  toCharacterId: string
+  body: string
+  createdAt: number
+  readAt: number | null
+}
+
+export type RankingRow = {
+  characterId: string
+  name: string
+  houseName: string | null
+  buyu: number
+  chiryaku: number
+  toso: number
+  tokubo: number
+  merit: number
+  classPoints: number
+  rank: number
 }
 
 export type Province = {

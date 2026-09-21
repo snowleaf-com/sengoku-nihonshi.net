@@ -125,6 +125,15 @@ export function GameHubPage({
           </dl>
 
           <div class="game-top-actions">
+            <a class="btn btn-ghost btn-small" href="/game/house">
+              会議室
+            </a>
+            <a class="btn btn-ghost btn-small" href="/game/letters">
+              手紙
+            </a>
+            <a class="btn btn-ghost btn-small" href="/game/ranking">
+              一覧
+            </a>
             <a class="btn btn-ghost btn-small" href="/game">
               更新
             </a>
