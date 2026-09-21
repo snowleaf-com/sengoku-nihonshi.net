@@ -49,6 +49,15 @@ npm run lint
 npm run typecheck
 ```
 
+PR / `main` への push では GitHub Actions（`.github/workflows/ci.yml`）が同じ3つを実行する。  
+テストは `@cloudflare/vitest-pool-workers` 経由で **workerd（Workers ランタイム）** 上で動く。`.dev.vars` は不要（必要な binding は `vitest.config.ts` 側で渡している）。
+
+Cloudflare Workers Builds を使う場合は、Build command に例えば次を設定する:
+
+```bash
+npm test && npm run build
+```
+
 ## デプロイ
 
 ```bash
