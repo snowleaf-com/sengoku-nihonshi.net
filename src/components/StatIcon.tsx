@@ -33,8 +33,14 @@ export function StatIcon({ target, class: className = 'stat-icon', size = 14 }: 
       return <IconSprout class={className} size={size} />
     case 'commerce':
       return <IconStore class={className} size={size} />
-    case 'loyalty':
+    case 'defense':
       return <IconShield class={className} size={size} />
+    case 'tech':
+      return <IconBrain class={className} size={size} />
+    case 'loyalty':
+      return <IconHeart class={className} size={size} />
+    case 'merit':
+      return <IconUsers class={className} size={size} />
     case 'money':
       return <IconCoins class={className} size={size} />
     case 'rice':

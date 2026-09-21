@@ -1,12 +1,16 @@
 /**
- * Phase 2: コマンド定義。
- * UI は gains / costs をアイコン＋数値で表示する。
+ * N1: NET内政コマンド定義。
+ * 実効値は execute 時に知略・徳望から算出する（docs/net-spec.md）。
  */
 
-/** 予約上限。古典NET並みにまとめて積めるようにする */
-export const COMMAND_QUEUE_MAX = 100
-/** 能力+1 に必要な EX。内政×20 / 稽古×10 で1上がる */
-export const STAT_EX_PER_LEVEL = 20
+import {
+  COMMAND_QUEUE_MAX,
+  DOMESTIC_GOLD_COST,
+  RICE_GIVE_COST,
+  STAT_EX_PER_LEVEL,
+} from './net'
+
+export { COMMAND_QUEUE_MAX, STAT_EX_PER_LEVEL }
 
 export type EffectTarget =
   | 'buyu'
@@ -15,19 +19,24 @@ export type EffectTarget =
   | 'tokubo'
   | 'agriculture'
   | 'commerce'
+  | 'defense'
+  | 'tech'
   | 'loyalty'
   | 'money'
   | 'rice'
   | 'troops'
   | 'population'
+  | 'merit'
 
 export type EffectMagnitude = 'up2' | 'up' | 'down' | 'down2'
 
 export type CommandEffect = {
   target: EffectTarget
   magnitude: EffectMagnitude
-  /** 実際に加減する量（能力は EX、都市は実値） */
+  /** 固定量。variable のときは UI の目安 */
   amount: number
+  /** 実行時に式で決まる */
+  variable?: boolean
 }
 
 export type GameCommand = {
@@ -45,11 +54,14 @@ const EFFECT_LABELS: Record<EffectTarget, string> = {
   tokubo: '徳望',
   agriculture: '農業',
   commerce: '商業',
+  defense: '城壁',
+  tech: '技術',
   loyalty: '民忠',
   money: '金',
   rice: '米',
   troops: '兵',
   population: '農民',
+  merit: '貢献',
 }
 
 const EX_TARGETS: EffectTarget[] = ['buyu', 'chiryaku', 'toso', 'tokubo']
@@ -66,8 +78,12 @@ export function isCostEffect(magnitude: EffectMagnitude): boolean {
   return magnitude === 'down' || magnitude === 'down2'
 }
 
-/** 表示用の増減テキスト（例: +8 / -50 両 / +2 EX） */
+/** 表示用の増減テキスト */
 export function formatEffectAmount(effect: CommandEffect): string {
+  if (effect.variable) {
+    if (effect.target === 'loyalty') return '徳望依存'
+    return '知略依存'
+  }
   const sign = isCostEffect(effect.magnitude) ? '-' : '+'
   if (isExEffect(effect.target)) {
     return `${sign}${effect.amount} EX`
@@ -77,6 +93,9 @@ export function formatEffectAmount(effect: CommandEffect): string {
   }
   if (effect.target === 'rice') {
     return `${sign}${effect.amount} 石`
+  }
+  if (effect.target === 'merit') {
+    return `${sign}${effect.amount}`
   }
   return `${sign}${effect.amount}`
 }
@@ -90,45 +109,51 @@ export function visibleEffects(command: GameCommand): CommandEffect[] {
 
 export const COMMANDS: GameCommand[] = [
   {
-    id: 'kaikon',
-    label: '開墾',
-    blurb: '田畑を広げる',
+    id: 'nougyou',
+    label: '農業',
+    blurb: '田畑を拓く（知略で効果）',
     category: 'domestic',
     effects: [
-      { target: 'agriculture', magnitude: 'up2', amount: 8 },
+      { target: 'agriculture', magnitude: 'up2', amount: 5, variable: true },
       { target: 'chiryaku', magnitude: 'up', amount: 1 },
-      { target: 'money', magnitude: 'down', amount: 50 },
+      { target: 'merit', magnitude: 'up', amount: 30 },
+      { target: 'money', magnitude: 'down', amount: DOMESTIC_GOLD_COST },
     ],
   },
   {
-    id: 'ichitate',
-    label: '市立て',
-    blurb: '市を立てて商いを盛んにする',
+    id: 'syougyou',
+    label: '商業',
+    blurb: '市を盛んにする（知略で効果）',
     category: 'domestic',
     effects: [
-      { target: 'commerce', magnitude: 'up2', amount: 8 },
+      { target: 'commerce', magnitude: 'up2', amount: 5, variable: true },
       { target: 'chiryaku', magnitude: 'up', amount: 1 },
-      { target: 'money', magnitude: 'down', amount: 50 },
+      { target: 'merit', magnitude: 'up', amount: 30 },
+      { target: 'money', magnitude: 'down', amount: DOMESTIC_GOLD_COST },
     ],
   },
   {
-    id: 'keiko',
-    label: '稽古',
-    blurb: '武芸を磨く',
+    id: 'shiro',
+    label: '城壁',
+    blurb: '城壁を固める（知略で効果）',
     category: 'domestic',
     effects: [
-      { target: 'buyu', magnitude: 'up2', amount: 2 },
-      { target: 'money', magnitude: 'down', amount: 50 },
+      { target: 'defense', magnitude: 'up2', amount: 5, variable: true },
+      { target: 'chiryaku', magnitude: 'up', amount: 1 },
+      { target: 'merit', magnitude: 'up', amount: 30 },
+      { target: 'money', magnitude: 'down', amount: DOMESTIC_GOLD_COST },
     ],
   },
   {
-    id: 'seimu',
-    label: '政務',
-    blurb: '政を練って知略を磨く',
+    id: 'gijutsu',
+    label: '技術',
+    blurb: '技術を進める（知略で効果）',
     category: 'domestic',
     effects: [
-      { target: 'chiryaku', magnitude: 'up2', amount: 1 },
-      { target: 'money', magnitude: 'down', amount: 50 },
+      { target: 'tech', magnitude: 'up2', amount: 5, variable: true },
+      { target: 'chiryaku', magnitude: 'up', amount: 1 },
+      { target: 'merit', magnitude: 'up', amount: 30 },
+      { target: 'money', magnitude: 'down', amount: DOMESTIC_GOLD_COST },
     ],
   },
   {
@@ -137,9 +162,10 @@ export const COMMANDS: GameCommand[] = [
     blurb: '米を施して民心を得る',
     category: 'domestic',
     effects: [
-      { target: 'loyalty', magnitude: 'up2', amount: 5 },
+      { target: 'loyalty', magnitude: 'up2', amount: 3, variable: true },
       { target: 'tokubo', magnitude: 'up', amount: 1 },
-      { target: 'rice', magnitude: 'down', amount: 50 },
+      { target: 'merit', magnitude: 'up', amount: 30 },
+      { target: 'rice', magnitude: 'down', amount: RICE_GIVE_COST },
     ],
   },
 ]

@@ -1,21 +1,30 @@
 import type { Province } from '../types'
+import { DEFAULT_MARKET_RATE, POPULATION_MAX } from '../config/net'
 
 type ProvinceRow = {
   id: string
   name: string
   house_id: string | null
   population: number
+  population_max: number
   agriculture: number
+  agriculture_max: number
   commerce: number
+  commerce_max: number
   defense: number
+  defense_max: number
   garrison: number
   loyalty: number
+  tech: number
+  market_rate: number
   created_at: number
   updated_at: number
 }
 
-const PROVINCE_COLUMNS = `id, name, house_id, population, agriculture, commerce, defense, garrison,
-  loyalty, created_at, updated_at`
+const PROVINCE_COLUMNS = `id, name, house_id, population, population_max,
+  agriculture, agriculture_max, commerce, commerce_max,
+  defense, defense_max, garrison, loyalty, tech, market_rate,
+  created_at, updated_at`
 
 function mapProvince(row: ProvinceRow): Province {
   return {
@@ -23,11 +32,17 @@ function mapProvince(row: ProvinceRow): Province {
     name: row.name,
     houseId: row.house_id,
     population: row.population,
+    populationMax: row.population_max,
     agriculture: row.agriculture,
+    agricultureMax: row.agriculture_max,
     commerce: row.commerce,
+    commerceMax: row.commerce_max,
     defense: row.defense,
+    defenseMax: row.defense_max,
     garrison: row.garrison,
     loyalty: row.loyalty,
+    tech: row.tech,
+    marketRate: row.market_rate,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -46,11 +61,17 @@ export class ProvinceRepository {
       id: string
       name: string
       population: number
+      populationMax: number
       agriculture: number
+      agricultureMax: number
       commerce: number
+      commerceMax: number
       defense: number
+      defenseMax: number
       garrison: number
       loyalty: number
+      tech?: number
+      marketRate?: number
       createdAt: number
     }>,
   ): Promise<void> {
@@ -60,19 +81,27 @@ export class ProvinceRepository {
       this.db
         .prepare(
           `INSERT OR IGNORE INTO provinces (
-             id, name, house_id, population, agriculture, commerce, defense, garrison, loyalty,
+             id, name, house_id, population, population_max,
+             agriculture, agriculture_max, commerce, commerce_max,
+             defense, defense_max, garrison, loyalty, tech, market_rate,
              created_at, updated_at
-           ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           row.id,
           row.name,
           row.population,
+          row.populationMax,
           row.agriculture,
+          row.agricultureMax,
           row.commerce,
+          row.commerceMax,
           row.defense,
+          row.defenseMax,
           row.garrison,
           row.loyalty,
+          row.tech ?? 0,
+          row.marketRate ?? DEFAULT_MARKET_RATE,
           row.createdAt,
           row.createdAt,
         ),
@@ -83,6 +112,14 @@ export class ProvinceRepository {
   async listAll(): Promise<Province[]> {
     const result = await this.db
       .prepare(`SELECT ${PROVINCE_COLUMNS} FROM provinces`)
+      .all<ProvinceRow>()
+    return (result.results ?? []).map(mapProvince)
+  }
+
+  async listByHouseId(houseId: string): Promise<Province[]> {
+    const result = await this.db
+      .prepare(`SELECT ${PROVINCE_COLUMNS} FROM provinces WHERE house_id = ?`)
+      .bind(houseId)
       .all<ProvinceRow>()
     return (result.results ?? []).map(mapProvince)
   }
@@ -122,6 +159,8 @@ export class ProvinceRepository {
       population?: number
       defense?: number
       garrison?: number
+      tech?: number
+      marketRate?: number
       updatedAt: number
     },
   ): Promise<void> {
@@ -132,7 +171,7 @@ export class ProvinceRepository {
       .prepare(
         `UPDATE provinces SET
            agriculture = ?, commerce = ?, loyalty = ?, population = ?,
-           defense = ?, garrison = ?, updated_at = ?
+           defense = ?, garrison = ?, tech = ?, market_rate = ?, updated_at = ?
          WHERE id = ?`,
       )
       .bind(
@@ -142,9 +181,13 @@ export class ProvinceRepository {
         patch.population ?? current.population,
         patch.defense ?? current.defense,
         patch.garrison ?? current.garrison,
+        patch.tech ?? current.tech,
+        patch.marketRate ?? current.marketRate,
         patch.updatedAt,
         provinceId,
       )
       .run()
   }
 }
+
+export { POPULATION_MAX }

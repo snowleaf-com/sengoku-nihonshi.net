@@ -16,12 +16,17 @@
 | [phase0.md](./phase0.md) | Phase 0 の範囲・完了条件 |
 | [phase1.md](./phase1.md) | Phase 1（武将・マップ・建国/仕官） |
 | [phase1.5.md](./phase1.5.md) | Phase 1.5（立ち回り・能力） |
-| [phase2.md](./phase2.md) | Phase 2（ターン・コマンド・内政） |
+| [phase2.md](./phase2.md) | Phase 2（ターン基盤・暫定内政）※N1 で置換 |
+| [phase-n1.md](./phase-n1.md) | Phase N1（NET内政・式合わせ） |
+| [net-spec.md](./net-spec.md) | 三国志.NET 式の要約 |
+| [roadmap.md](./roadmap.md) | **全体計画**（NETルール + 令制国、N1〜N6） |
 
 ## 読む順番（おすすめ）
 
-1. [phase0.md](./phase0.md) / [phase1.md](./phase1.md) / [phase1.5.md](./phase1.5.md) / [phase2.md](./phase2.md) — フェーズ範囲
-2. [architecture.md](./architecture.md) — 全体の置き場所
-3. [passkey.md](./passkey.md) / [session.md](./session.md) — 認証の核
-4. [database.md](./database.md) — 永続化
-5. [development.md](./development.md) — 手を動かすとき
+1. [roadmap.md](./roadmap.md) — 方針と今後のフェーズ
+2. [net-spec.md](./net-spec.md) / [phase-n1.md](./phase-n1.md) — いま実装中
+3. [phase0.md](./phase0.md) 〜 [phase2.md](./phase2.md) — 済んだ範囲
+4. [architecture.md](./architecture.md) — 全体の置き場所
+5. [passkey.md](./passkey.md) / [session.md](./session.md) — 認証の核
+6. [database.md](./database.md) — 永続化
+7. [development.md](./development.md) — 手を動かすとき

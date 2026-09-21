@@ -66,7 +66,10 @@ export type Character = {
   houseId: string | null
   provinceId: string
   rank: number
+  /** 貢献（1月・7月でリセット。NET の kcex） */
   merit: number
+  /** 階級値（蓄積。NET の kclass） */
+  classPoints: number
   money: number
   rice: number
   troops: number
@@ -88,11 +91,18 @@ export type Province = {
   name: string
   houseId: string | null
   population: number
+  populationMax: number
   agriculture: number
+  agricultureMax: number
   commerce: number
+  commerceMax: number
+  /** 城壁（NET の zshiro） */
   defense: number
+  defenseMax: number
   garrison: number
   loyalty: number
+  tech: number
+  marketRate: number
   createdAt: number
   updatedAt: number
 }

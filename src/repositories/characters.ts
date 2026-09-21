@@ -18,6 +18,7 @@ type CharacterRow = {
   province_id: string
   rank: number
   merit: number
+  class_points: number
   money: number
   rice: number
   troops: number
@@ -27,7 +28,7 @@ type CharacterRow = {
 
 const CHARACTER_COLUMNS = `id, user_id, name, icon_id, archetype_id, buyu, chiryaku, toso, tokubo,
   buyu_ex, chiryaku_ex, toso_ex, tokubo_ex,
-  house_id, province_id, rank, merit, money, rice, troops, created_at, updated_at`
+  house_id, province_id, rank, merit, class_points, money, rice, troops, created_at, updated_at`
 
 function mapCharacter(row: CharacterRow): Character {
   return {
@@ -48,6 +49,7 @@ function mapCharacter(row: CharacterRow): Character {
     provinceId: row.province_id,
     rank: row.rank,
     merit: row.merit,
+    classPoints: row.class_points,
     money: row.money,
     rice: row.rice,
     troops: row.troops,
@@ -82,8 +84,8 @@ export class CharacterRepository {
         `INSERT INTO characters (
            id, user_id, name, icon_id, archetype_id, buyu, chiryaku, toso, tokubo,
            buyu_ex, chiryaku_ex, toso_ex, tokubo_ex,
-           house_id, province_id, rank, merit, money, rice, troops, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, NULL, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           house_id, province_id, rank, merit, class_points, money, rice, troops, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, NULL, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
       )
       .bind(
         input.id,
@@ -124,6 +126,7 @@ export class CharacterRepository {
       provinceId: input.provinceId,
       rank: input.rank,
       merit: input.merit,
+      classPoints: 0,
       money: input.money,
       rice: input.rice,
       troops: input.troops,
@@ -163,6 +166,14 @@ export class CharacterRepository {
     return (result.results ?? []).map(mapCharacter)
   }
 
+  async listByHouseId(houseId: string): Promise<Character[]> {
+    const result = await this.db
+      .prepare(`SELECT ${CHARACTER_COLUMNS} FROM characters WHERE house_id = ?`)
+      .bind(houseId)
+      .all<CharacterRow>()
+    return (result.results ?? []).map(mapCharacter)
+  }
+
   async assignHouse(characterId: string, houseId: string, updatedAt: number): Promise<void> {
     await this.db
       .prepare(
@@ -181,6 +192,8 @@ export class CharacterRepository {
       rice?: number
       troops?: number
       merit?: number
+      classPoints?: number
+      rank?: number
       buyu?: number
       chiryaku?: number
       toso?: number
@@ -198,7 +211,7 @@ export class CharacterRepository {
     await this.db
       .prepare(
         `UPDATE characters SET
-           money = ?, rice = ?, troops = ?, merit = ?,
+           money = ?, rice = ?, troops = ?, merit = ?, class_points = ?, rank = ?,
            buyu = ?, chiryaku = ?, toso = ?, tokubo = ?,
            buyu_ex = ?, chiryaku_ex = ?, toso_ex = ?, tokubo_ex = ?,
            updated_at = ?
@@ -209,6 +222,8 @@ export class CharacterRepository {
         patch.rice ?? current.rice,
         patch.troops ?? current.troops,
         patch.merit ?? current.merit,
+        patch.classPoints ?? current.classPoints,
+        patch.rank ?? current.rank,
         patch.buyu ?? current.buyu,
         patch.chiryaku ?? current.chiryaku,
         patch.toso ?? current.toso,

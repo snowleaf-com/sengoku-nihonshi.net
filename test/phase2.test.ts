@@ -10,12 +10,25 @@ import {
   getCommand,
   visibleEffects,
 } from '../src/config/commands'
-import { START_MONTH, START_YEAR, advanceMonth, dateAtQueueOffset, formatGameDate, monthAtQueueOffset, seasonLabel, seasonOfMonth } from '../src/config/calendar'
+import { COMMAND_CONTRIBUTION, netStatGainWithRandom } from '../src/config/net'
+import {
+  START_MONTH,
+  START_YEAR,
+  advanceMonth,
+  dateAtQueueOffset,
+  formatGameDate,
+  monthAtQueueOffset,
+  seasonLabel,
+  seasonOfMonth,
+} from '../src/config/calendar'
 import {
   applyCommandsToPositions,
+  applyLoyaltyPopulationDelta,
+  characterIncomeShare,
   clearCommandPositions,
   enqueueCommand,
   executeCharacterCommand,
+  houseIncomePool,
   repeatSelectedCommands,
 } from '../src/services/commands'
 import { createCharacter } from '../src/services/character'
@@ -27,7 +40,7 @@ import { CharacterRepository } from '../src/repositories/characters'
 import { ProvinceRepository } from '../src/repositories/provinces'
 import { createId, nowSeconds } from '../src/lib/id'
 
-describe('phase2 calendar and commands', () => {
+describe('phase N1 NET domestic', () => {
   it('starts at 1467/1 and advances by month', () => {
     expect(START_YEAR).toBe(1467)
     expect(START_MONTH).toBe(1)
@@ -53,27 +66,77 @@ describe('phase2 calendar and commands', () => {
     expect(formatGameDate(dateAtQueueOffset({ year: 1467, month: 1 }, 12))).toBe('1468年1月')
   })
 
-  it('shows numeric effect amounts for UI chips', () => {
+  it('defines NET domestic commands with variable gains', () => {
     expect(COMMANDS.map((c) => c.id)).toEqual([
-      'kaikon',
-      'ichitate',
-      'keiko',
-      'seimu',
+      'nougyou',
+      'syougyou',
+      'shiro',
+      'gijutsu',
       'komehodokoshi',
     ])
-    const kaikon = getCommand('kaikon')!
-    const chips = visibleEffects(kaikon)
-    expect(chips[0]).toMatchObject({ target: 'agriculture', magnitude: 'up2', amount: 8 })
+    expect(COMMAND_QUEUE_MAX).toBe(24)
+    expect(STAT_EX_PER_LEVEL).toBe(10)
+    const nougyou = getCommand('nougyou')!
+    const chips = visibleEffects(nougyou)
+    expect(chips[0]).toMatchObject({ target: 'agriculture', variable: true })
     expect(effectLabel('agriculture')).toBe('農業')
-    expect(formatEffectAmount(chips[0])).toBe('+8')
-    expect(formatEffectAmount(chips[1])).toBe('+1 EX')
-    expect(formatEffectAmount(chips[2])).toBe('-50 両')
-    expect(STAT_EX_PER_LEVEL).toBe(20)
-    expect(getCommand('keiko')!.effects[0]).toMatchObject({ target: 'buyu', amount: 2 })
-    expect(getCommand('seimu')!.effects[0]).toMatchObject({ target: 'chiryaku', amount: 1 })
+    expect(formatEffectAmount(chips[0]!)).toBe('知略依存')
+    expect(formatEffectAmount(chips.find((c) => c.target === 'money')!)).toBe('-50 両')
+    expect(netStatGainWithRandom(40, 0)).toBe(2)
+    expect(netStatGainWithRandom(40, 1)).toBe(3)
   })
 
-  it('enqueues and executes kaikon on turn advance', async () => {
+  it('computes NET salary share and loyalty population', () => {
+    const pool = houseIncomePool(
+      [
+        {
+          id: 'a',
+          name: 'a',
+          houseId: 'h',
+          population: 10000,
+          populationMax: 30000,
+          agriculture: 500,
+          agricultureMax: 750,
+          commerce: 500,
+          commerceMax: 750,
+          defense: 100,
+          defenseMax: 150,
+          garrison: 0,
+          loyalty: 50,
+          tech: 0,
+          marketRate: 1,
+          createdAt: 0,
+          updatedAt: 0,
+        },
+      ],
+      'tax',
+    )
+    expect(pool).toBe(4000)
+    expect(characterIncomeShare(4000, 100, 100, 0)).toBe(1000)
+    expect(
+      applyLoyaltyPopulationDelta({
+        id: 'a',
+        name: 'a',
+        houseId: null,
+        population: 5000,
+        populationMax: 30000,
+        agriculture: 0,
+        agricultureMax: 100,
+        commerce: 0,
+        commerceMax: 100,
+        defense: 0,
+        defenseMax: 100,
+        garrison: 0,
+        loyalty: 50,
+        tech: 0,
+        marketRate: 1,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    ).toBe(500)
+  })
+
+  it('enqueues and executes nougyou on turn advance', async () => {
     await ensureProvincesSeeded(env.DB)
     await ensureGameState(env.DB)
 
@@ -95,7 +158,7 @@ describe('phase2 calendar and commands', () => {
     const beforeProvince = await new ProvinceRepository(env.DB).findById('yamashiro')
     expect(beforeProvince).not.toBeNull()
 
-    await enqueueCommand(env.DB, { userId, commandId: 'kaikon' })
+    await enqueueCommand(env.DB, { userId, commandId: 'nougyou' })
     const queue = await new CharacterCommandRepository(env.DB).listByCharacter(character.id)
     expect(queue).toHaveLength(1)
 
@@ -109,8 +172,9 @@ describe('phase2 calendar and commands', () => {
 
     expect(afterQueue).toHaveLength(0)
     expect(afterCharacter?.money).toBe(character.money - 50)
-    expect(afterProvince?.agriculture).toBe((beforeProvince?.agriculture ?? 0) + 8)
+    expect(afterCharacter?.merit).toBe(COMMAND_CONTRIBUTION)
     expect(afterCharacter?.chiryakuEx).toBe(1)
+    expect(afterProvince!.agriculture).toBeGreaterThanOrEqual(beforeProvince!.agriculture)
 
     const results = await listActionResults(env.DB, character.id)
     const news = await listWorldNews(env.DB)
@@ -140,12 +204,12 @@ describe('phase2 calendar and commands', () => {
 
     await applyCommandsToPositions(env.DB, {
       userId,
-      commandId: 'kaikon',
+      commandId: 'nougyou',
       positions: [0, 2],
     })
     await applyCommandsToPositions(env.DB, {
       userId,
-      commandId: 'ichitate',
+      commandId: 'syougyou',
       positions: [1],
     })
 
@@ -153,29 +217,29 @@ describe('phase2 calendar and commands', () => {
     let queue = await commands.listByCharacter(character.id)
     let slots = buildCommandSlots(queue)
     expect(slots).toHaveLength(COMMAND_QUEUE_MAX)
-    expect(slots[0]?.commandId).toBe('kaikon')
-    expect(slots[1]?.commandId).toBe('ichitate')
-    expect(slots[2]?.commandId).toBe('kaikon')
+    expect(slots[0]?.commandId).toBe('nougyou')
+    expect(slots[1]?.commandId).toBe('syougyou')
+    expect(slots[2]?.commandId).toBe('nougyou')
     expect(slots[3]).toBeNull()
 
     await clearCommandPositions(env.DB, { userId, positions: [1] })
     queue = await commands.listByCharacter(character.id)
     slots = buildCommandSlots(queue)
     expect(slots[1]).toBeNull()
-    expect(slots[2]?.commandId).toBe('kaikon')
+    expect(slots[2]?.commandId).toBe('nougyou')
 
     await applyCommandsToPositions(env.DB, {
       userId,
-      commandId: 'ichitate',
+      commandId: 'syougyou',
       positions: [1],
     })
     await repeatSelectedCommands(env.DB, { userId, positions: [0, 1] })
     queue = await commands.listByCharacter(character.id)
     slots = buildCommandSlots(queue)
-    expect(slots[2]?.commandId).toBe('kaikon')
-    expect(slots[3]?.commandId).toBe('ichitate')
-    expect(slots[4]?.commandId).toBe('kaikon')
-    expect(slots[COMMAND_QUEUE_MAX - 1]?.commandId).toBe('ichitate')
+    expect(slots[2]?.commandId).toBe('nougyou')
+    expect(slots[3]?.commandId).toBe('syougyou')
+    expect(slots[4]?.commandId).toBe('nougyou')
+    expect(slots[COMMAND_QUEUE_MAX - 1]?.commandId).toBe('syougyou')
   })
 
   it('rejects rice gift without rice', async () => {
