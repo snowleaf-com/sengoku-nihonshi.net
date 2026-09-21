@@ -1,3 +1,5 @@
+import { POPULATION_MAX } from './net'
+
 /**
  * 令制国マスター（ゲーム盤）。
  * 史実の正確な海岸線より、隣接と立地のゲーム性を優先した圧縮配置。
@@ -21,12 +23,20 @@ export type ProvinceMaster = {
   defenseTier: ProvinceTier
 }
 
-/** tier → 初期値。上限は初期値の 1.5 倍を runtime で付与する。 */
+/** tier → 農商城などの基準値。農民は ×10 して NET スケールに寄せる */
 export const TIER_BASE: Record<ProvinceTier, number> = {
   S: 900,
   A: 700,
   B: 500,
   C: 350,
+}
+
+/** 農民の tier → 初期人口（NET の数千〜数万に寄せる） */
+export const POPULATION_TIER_BASE: Record<ProvinceTier, number> = {
+  S: 9000,
+  A: 7000,
+  B: 5000,
+  C: 3500,
 }
 
 /** 中立国の守備兵（仕様例に合わせた初期値） */
@@ -134,7 +144,7 @@ export function mapBounds(provinces: ProvinceMaster[] = PROVINCES) {
 }
 
 export function initialStats(master: ProvinceMaster) {
-  const population = TIER_BASE[master.populationTier]
+  const population = POPULATION_TIER_BASE[master.populationTier]
   const agriculture = TIER_BASE[master.agricultureTier]
   const commerce = TIER_BASE[master.commerceTier]
   const defense = TIER_BASE[master.defenseTier]
@@ -143,7 +153,7 @@ export function initialStats(master: ProvinceMaster) {
     agriculture,
     commerce,
     defense,
-    populationCap: Math.floor(population * 1.5),
+    populationCap: POPULATION_MAX,
     agricultureCap: Math.floor(agriculture * 1.5),
     commerceCap: Math.floor(commerce * 1.5),
     defenseCap: Math.floor(defense * 1.5),

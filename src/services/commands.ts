@@ -5,10 +5,19 @@ import {
   getCommand,
   isCommandId,
   parseSlotPositions,
-  STAT_EX_PER_LEVEL,
-  type CommandEffect,
-  type EffectTarget,
 } from '../config/commands'
+import {
+  CLASS_PER_RANK,
+  COMMAND_CONTRIBUTION,
+  DOMESTIC_GOLD_COST,
+  RICE_GIVE_COST,
+  SALARY_BASE_CAP,
+  SALARY_CAP_PER_RANK,
+  SALARY_RANK_MAX,
+  STAT_EX_PER_LEVEL,
+  TECH_MAX,
+  netStatGain,
+} from '../config/net'
 import { createId, nowSeconds } from '../lib/id'
 import { CharacterCommandRepository } from '../repositories/character-commands'
 import { CharacterRepository } from '../repositories/characters'
@@ -32,7 +41,7 @@ function normalizePositions(raw: Array<number | string>): number[] {
 }
 
 /** 能力に上限はない。EX が溜まるたびに +1 */
-function applyStatEx(
+export function applyStatEx(
   current: number,
   currentEx: number,
   gain: number,
@@ -170,7 +179,6 @@ export async function cancelQueuedCommands(
 
 /**
  * 選択した枠の並びを、その直後から末尾まで繰り返して書き込む。
- * 例: 1=開墾 2=市立て を選ぶ → 3以降が 開墾市立て開墾市立て…
  */
 export async function repeatSelectedCommands(
   db: D1Database,
@@ -199,8 +207,9 @@ export async function repeatSelectedCommands(
     { length: COMMAND_QUEUE_MAX - start },
     (_, offset) => start + offset,
   )
-  // パターンを順に適用するため、positionごとに command を変える
-  const byPosition = new Map((await commands.listByCharacter(character.id)).map((row) => [row.position, row]))
+  const byPosition = new Map(
+    (await commands.listByCharacter(character.id)).map((row) => [row.position, row]),
+  )
   const createdAt = nowSeconds()
   const updates: Array<{ id: string; commandId: string }> = []
   const inserts: Array<{
@@ -247,74 +256,72 @@ type MutableCharacter = {
 
 type MutableProvince = {
   agriculture: number
+  agricultureMax: number
   commerce: number
+  commerceMax: number
+  defense: number
+  defenseMax: number
   loyalty: number
   population: number
+  populationMax: number
+  tech: number
 }
 
-function applyPersonalEffect(state: MutableCharacter, effect: CommandEffect): string | null {
-  const target = effect.target
-  if (target === 'money') {
-    if (state.money < effect.amount) return '金が足りません'
-    state.money -= effect.amount
-    return null
-  }
-  if (target === 'rice') {
-    if (state.rice < effect.amount) return '米が足りません'
-    state.rice -= effect.amount
-    return null
-  }
-  if (target === 'buyu') {
-    const next = applyStatEx(state.buyu, state.buyuEx, effect.amount)
-    state.buyu = next.value
-    state.buyuEx = next.ex
-    return null
-  }
-  if (target === 'chiryaku') {
-    const next = applyStatEx(state.chiryaku, state.chiryakuEx, effect.amount)
-    state.chiryaku = next.value
-    state.chiryakuEx = next.ex
-    return null
-  }
-  if (target === 'toso') {
-    const next = applyStatEx(state.toso, state.tosoEx, effect.amount)
-    state.toso = next.value
-    state.tosoEx = next.ex
-    return null
-  }
-  if (target === 'tokubo') {
-    const next = applyStatEx(state.tokubo, state.tokuboEx, effect.amount)
-    state.tokubo = Math.max(STAT_MIN, next.value)
-    state.tokuboEx = next.ex
-    return null
-  }
-  return null
+export type CommandExecutionOk = {
+  ok: true
+  message: string
 }
 
-function applyProvinceEffect(state: MutableProvince, effect: CommandEffect): void {
-  if (effect.target === 'agriculture') {
-    state.agriculture = clamp(state.agriculture + effect.amount, 0, 9999)
-  } else if (effect.target === 'commerce') {
-    state.commerce = clamp(state.commerce + effect.amount, 0, 9999)
-  } else if (effect.target === 'loyalty') {
-    state.loyalty = clamp(state.loyalty + effect.amount, 0, 100)
-  } else if (effect.target === 'population') {
-    state.population = clamp(state.population + effect.amount, 0, 999999)
-  }
+export type CommandExecutionFail = {
+  ok: false
+  reason: string
 }
 
-const PROVINCE_TARGETS: EffectTarget[] = [
-  'agriculture',
-  'commerce',
-  'loyalty',
-  'population',
-]
+function gainChiryakuEx(state: MutableCharacter): void {
+  const next = applyStatEx(state.chiryaku, state.chiryakuEx, 1)
+  state.chiryaku = next.value
+  state.chiryakuEx = next.ex
+}
 
+function gainTokuboEx(state: MutableCharacter): void {
+  const next = applyStatEx(state.tokubo, state.tokuboEx, 1)
+  state.tokubo = Math.max(STAT_MIN, next.value)
+  state.tokuboEx = next.ex
+}
+
+async function finishCommand(
+  db: D1Database,
+  character: Character,
+  queued: CharacterCommand,
+  personal: MutableCharacter,
+  local: MutableProvince,
+): Promise<void> {
+  const now = nowSeconds()
+  const characters = new CharacterRepository(db)
+  const provinces = new ProvinceRepository(db)
+  await characters.updateResources(character.id, { ...personal, updatedAt: now })
+  await provinces.updateStats(character.provinceId, {
+    agriculture: local.agriculture,
+    commerce: local.commerce,
+    defense: local.defense,
+    loyalty: local.loyalty,
+    population: local.population,
+    tech: local.tech,
+    updatedAt: now,
+  })
+  const commands = new CharacterCommandRepository(db)
+  await commands.delete(queued.id)
+  await commands.shiftDownAfter(character.id, queued.position)
+}
+
+/**
+ * NET内政を1件実行。成功メッセージに上昇量を含める。
+ */
 export async function executeCharacterCommand(
   db: D1Database,
   character: Character,
   queued: CharacterCommand,
-): Promise<{ ok: true } | { ok: false; reason: string }> {
+): Promise<CommandExecutionOk | CommandExecutionFail> {
   const definition = getCommand(queued.commandId)
   if (!definition) {
     return { ok: false, reason: '不明なコマンド' }
@@ -342,45 +349,112 @@ export async function executeCharacterCommand(
   }
   const local: MutableProvince = {
     agriculture: province.agriculture,
+    agricultureMax: province.agricultureMax,
     commerce: province.commerce,
+    commerceMax: province.commerceMax,
+    defense: province.defense,
+    defenseMax: province.defenseMax,
     loyalty: province.loyalty,
     population: province.population,
+    populationMax: province.populationMax,
+    tech: province.tech,
   }
 
-  for (const effect of definition.effects) {
-    if (effect.magnitude === 'down' || effect.magnitude === 'down2') {
-      const err = applyPersonalEffect(personal, effect)
-      if (err) return { ok: false, reason: err }
+  const commandId = queued.commandId
+
+  if (
+    commandId === 'nougyou' ||
+    commandId === 'syougyou' ||
+    commandId === 'shiro' ||
+    commandId === 'gijutsu'
+  ) {
+    if (personal.money < DOMESTIC_GOLD_COST) {
+      return { ok: false, reason: '金が足りません' }
     }
-  }
+    personal.money -= DOMESTIC_GOLD_COST
+    const gain = netStatGain(personal.chiryaku)
+    personal.merit += COMMAND_CONTRIBUTION
+    gainChiryakuEx(personal)
 
-  for (const effect of definition.effects) {
-    if (effect.magnitude === 'up' || effect.magnitude === 'up2') {
-      if (PROVINCE_TARGETS.includes(effect.target)) {
-        applyProvinceEffect(local, effect)
-      } else {
-        applyPersonalEffect(personal, effect)
-      }
+    let message = ''
+    if (commandId === 'nougyou') {
+      local.agriculture = clamp(local.agriculture + gain, 0, local.agricultureMax)
+      message = `${province.name}の農業を+${gain}開発した。`
+    } else if (commandId === 'syougyou') {
+      local.commerce = clamp(local.commerce + gain, 0, local.commerceMax)
+      message = `${province.name}の商業を+${gain}発展させた。`
+    } else if (commandId === 'shiro') {
+      local.defense = clamp(local.defense + gain, 0, local.defenseMax)
+      message = `${province.name}の城壁を+${gain}強化した。`
+    } else {
+      local.tech = clamp(local.tech + gain, 0, TECH_MAX)
+      message = `${province.name}の技術を+${gain}進めた。`
     }
+
+    await finishCommand(db, character, queued, personal, local)
+    return { ok: true, message }
   }
 
-  personal.merit += 5
-  const now = nowSeconds()
-  const characters = new CharacterRepository(db)
-  await characters.updateResources(character.id, { ...personal, updatedAt: now })
-  await provinces.updateStats(province.id, { ...local, updatedAt: now })
+  if (commandId === 'komehodokoshi') {
+    if (personal.rice < RICE_GIVE_COST) {
+      return { ok: false, reason: '米が足りません' }
+    }
+    personal.rice -= RICE_GIVE_COST
+    const gain = netStatGain(personal.tokubo)
+    local.loyalty = clamp(local.loyalty + gain, 0, 100)
+    personal.merit += COMMAND_CONTRIBUTION
+    gainTokuboEx(personal)
+    await finishCommand(db, character, queued, personal, local)
+    return { ok: true, message: `${province.name}の民忠が+${gain}上がった。` }
+  }
 
-  const commands = new CharacterCommandRepository(db)
-  await commands.delete(queued.id)
-  await commands.shiftDownAfter(character.id, queued.position)
-
-  return { ok: true }
+  return { ok: false, reason: '未対応のコマンド' }
 }
 
+/** 家の給与・俸禄プール（NET SALARY） */
+export function houseIncomePool(owned: Province[], kind: 'tax' | 'tribute'): number {
+  let ksal = 0
+  for (const p of owned) {
+    if (kind === 'tax') {
+      ksal += Math.floor((p.commerce * 8 * p.population) / 10000)
+    } else {
+      ksal += Math.floor((p.agriculture * 8 * p.population) / 10000)
+    }
+  }
+  return ksal
+}
+
+/** 個人取り分（貢献按分） */
+export function characterIncomeShare(
+  pool: number,
+  merit: number,
+  houseMeritTotal: number,
+  classPoints: number,
+): number {
+  if (houseMeritTotal <= 0 || merit <= 0) return 0
+  let kadd = Math.floor((pool * merit) / houseMeritTotal + merit * 1.3)
+  const sNum = Math.min(SALARY_RANK_MAX, Math.floor(classPoints / CLASS_PER_RANK))
+  const cap = SALARY_BASE_CAP + sNum * SALARY_CAP_PER_RANK
+  if (kadd > cap) kadd = cap
+  return Math.max(0, kadd)
+}
+
+/** UI / 単国プレビュー用（所属なし想定の簡易） */
 export function previewTaxAmount(province: Province): number {
-  return Math.max(50, Math.floor(province.commerce * 0.4 + province.population * 0.02))
+  return houseIncomePool([province], 'tax')
 }
 
 export function previewTributeAmount(province: Province): number {
-  return Math.max(50, Math.floor(province.agriculture * 0.4 + province.population * 0.02))
+  return houseIncomePool([province], 'tribute')
+}
+
+/** 民忠による人口増減（1月・7月） */
+export function applyLoyaltyPopulationDelta(province: Province): number {
+  if (province.loyalty >= 50) {
+    let add = Math.floor(80 * (province.loyalty - 50))
+    if (add < 500) add = 500
+    return clamp(province.population + add, 0, province.populationMax) - province.population
+  }
+  const loss = Math.floor(80 * (50 - province.loyalty))
+  return clamp(province.population - loss, 0, province.populationMax) - province.population
 }

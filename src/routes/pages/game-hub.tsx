@@ -203,6 +203,13 @@ export function GameHubPage({
                   </dt>
                   <dd>{formatRice(character.rice)}</dd>
                 </div>
+                <div>
+                  <dt>
+                    <StatIcon target="merit" />
+                    貢献
+                  </dt>
+                  <dd>{character.merit}</dd>
+                </div>
               </dl>
               <div class="gauge-grid card-gauges">
                 <StatGauge
@@ -222,23 +229,30 @@ export function GameHubPage({
                 <StatGauge
                   label="農民"
                   value={province.population}
-                  max={softMax(province.population, 10000)}
+                  max={province.populationMax}
                   tone="loyalty"
                   icon={<StatIcon target="population" />}
                 />
                 <StatGauge
                   label="農業"
                   value={province.agriculture}
-                  max={softMax(province.agriculture, 200)}
+                  max={province.agricultureMax}
                   tone="agri"
                   icon={<StatIcon target="agriculture" />}
                 />
                 <StatGauge
                   label="商業"
                   value={province.commerce}
-                  max={softMax(province.commerce, 200)}
+                  max={province.commerceMax}
                   tone="commerce"
                   icon={<StatIcon target="commerce" />}
+                />
+                <StatGauge
+                  label="城壁"
+                  value={province.defense}
+                  max={province.defenseMax}
+                  tone="toso"
+                  icon={<StatIcon target="defense" />}
                 />
                 <StatGauge
                   label="民忠"
@@ -246,6 +260,13 @@ export function GameHubPage({
                   max={100}
                   tone="loyalty"
                   icon={<StatIcon target="loyalty" />}
+                />
+                <StatGauge
+                  label="技術"
+                  value={province.tech}
+                  max={999}
+                  tone="chiryaku"
+                  icon={<StatIcon target="tech" />}
                 />
               </div>
             </section>

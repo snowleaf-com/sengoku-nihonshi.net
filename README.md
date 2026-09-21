@@ -66,9 +66,8 @@ WEBAUTHN_ORIGIN=http://localhost:5173
 
 ## 現在のマイルストーン
 
-**Phase 0** … Passkey / session / 認証保護  
-**Phase 1** … 武将作成（名前 + アイコン）・令制国マップ・建国/仕官  
-**Phase 1.5** … 立ち回り選択で能力確定（武勇・知略・統率・徳望）  
-**Phase 2** … ターン進行・コマンド予約・内政（開墾/市立て/稽古/政務/米施し）
+**Phase 0〜2** … 認証・武将・地図・ターン基盤（main 済）  
+**N1（実装中）** … 三国志.NET内政式（農業/商業/城壁/技術/米施し）+ 令制国地図  
+**次** … N2 移動・商人 → N3 軍事 → N4 戦争 → N5 会議室など
 
-詳細は [`docs/phase1.md`](./docs/phase1.md) / [`docs/phase1.5.md`](./docs/phase1.5.md) / [`docs/phase2.md`](./docs/phase2.md)。
+全体計画: [`docs/roadmap.md`](./docs/roadmap.md)

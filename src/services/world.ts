@@ -1,4 +1,5 @@
 import { STARTING_LOYALTY } from '../config/game'
+import { DEFAULT_MARKET_RATE } from '../config/net'
 import {
   initialStats,
   NEUTRAL_GARRISON,
@@ -21,11 +22,17 @@ export async function ensureProvincesSeeded(db: D1Database): Promise<void> {
         id: master.id,
         name: master.name,
         population: stats.population,
+        populationMax: stats.populationCap,
         agriculture: stats.agriculture,
+        agricultureMax: stats.agricultureCap,
         commerce: stats.commerce,
+        commerceMax: stats.commerceCap,
         defense: stats.defense,
+        defenseMax: stats.defenseCap,
         garrison: NEUTRAL_GARRISON,
         loyalty: STARTING_LOYALTY,
+        tech: 0,
+        marketRate: DEFAULT_MARKET_RATE,
         createdAt,
       }
     }),
