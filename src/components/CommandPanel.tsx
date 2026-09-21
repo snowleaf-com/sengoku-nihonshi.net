@@ -10,11 +10,15 @@ import {
   type CommandEffect,
   type GameCommand,
 } from '../config/commands'
+import { formatQueueLabel } from '../config/command-payload'
 import { formatGameDate, dateAtQueueOffset } from '../config/calendar'
+import { TRADE_MAX } from '../config/net'
 import type { CharacterCommand, WorldEvent } from '../types'
 import { IconTrendingDown, IconTrendingUp } from './icons'
 import { EventFeed } from './EventFeed'
 import { StatIcon } from './StatIcon'
+
+type AdjacentOption = { id: string; name: string }
 
 type CommandPanelProps = {
   queue: CharacterCommand[]
@@ -22,12 +26,19 @@ type CommandPanelProps = {
   currentMonth: number
   results?: WorldEvent[]
   error?: string | null
+  inHomeLand: boolean
+  canShikan: boolean
+  adjacentProvinces: AdjacentOption[]
+  marketRate: number
+  provinceNameById: Record<string, string>
 }
 
 function EffectChips({ command }: { command: GameCommand }) {
+  const effects = visibleEffects(command)
+  if (effects.length === 0) return null
   return (
     <ul class="effect-chips">
-      {visibleEffects(command).map((effect) => (
+      {effects.map((effect) => (
         <EffectChip effect={effect} key={`${effect.target}-${effect.magnitude}`} />
       ))}
     </ul>
@@ -50,16 +61,29 @@ function EffectChip({ effect }: { effect: CommandEffect }) {
   )
 }
 
+function commandAvailable(command: GameCommand, inHomeLand: boolean, canShikan: boolean): boolean {
+  if (command.id === 'shikan') return canShikan
+  if (command.foreignOk) return true
+  return inHomeLand
+}
+
 export function CommandPanel({
   queue,
   currentYear,
   currentMonth,
   results = [],
   error = null,
+  inHomeLand,
+  canShikan,
+  adjacentProvinces,
+  marketRate,
+  provinceNameById,
 }: CommandPanelProps) {
   const slots = buildCommandSlots(queue)
   const filled = slots.filter(Boolean).length
   const currentDate = { year: currentYear, month: currentMonth }
+  const ricePer100 = Math.floor(marketRate * 100)
+  const goldPer100 = Math.floor((2 - marketRate) * 100)
 
   return (
     <section
@@ -80,37 +104,23 @@ export function CommandPanel({
             </span>
           </div>
 
+          {!inHomeLand ? (
+            <p class="hint command-foreign-hint">
+              ここは自国ではありません。移動と仕官のみできます。
+            </p>
+          ) : null}
+
           <div class="queue-toolbar" role="toolbar" aria-label="予約枠の選択">
-            <button
-              type="button"
-              class="btn btn-ghost btn-small"
-              data-queue-select="all"
-              title="すべての枠を選択"
-            >
+            <button type="button" class="btn btn-ghost btn-small" data-queue-select="all">
               全選択
             </button>
-            <button
-              type="button"
-              class="btn btn-ghost btn-small"
-              data-queue-select="odd"
-              title="奇数番号の枠を選択"
-            >
+            <button type="button" class="btn btn-ghost btn-small" data-queue-select="odd">
               奇数
             </button>
-            <button
-              type="button"
-              class="btn btn-ghost btn-small"
-              data-queue-select="even"
-              title="偶数番号の枠を選択"
-            >
+            <button type="button" class="btn btn-ghost btn-small" data-queue-select="even">
               偶数
             </button>
-            <button
-              type="button"
-              class="btn btn-ghost btn-small"
-              data-queue-select="none"
-              title="枠の選択だけ外す"
-            >
+            <button type="button" class="btn btn-ghost btn-small" data-queue-select="none">
               選択解除
             </button>
           </div>
@@ -138,48 +148,11 @@ export function CommandPanel({
                 type="search"
                 class="queue-tool-input queue-tool-search"
                 data-queue-search
-                placeholder="開墾 など"
+                placeholder="農業 など"
                 autocomplete="off"
                 enterkeyhint="search"
               />
               <button type="button" class="btn btn-ghost btn-small" data-queue-select-search>
-                選択
-              </button>
-            </div>
-
-            <div class="queue-select-row" title="例: 1番から2ごと20まで → 1,3,5…19">
-              <span class="queue-select-label">範囲</span>
-              <input
-                type="number"
-                class="queue-tool-input queue-tool-num"
-                data-queue-from
-                min={1}
-                max={COMMAND_QUEUE_MAX}
-                placeholder="1"
-                inputmode="numeric"
-              />
-              <span class="queue-select-unit">番から</span>
-              <input
-                type="number"
-                class="queue-tool-input queue-tool-num"
-                data-queue-step
-                min={1}
-                max={COMMAND_QUEUE_MAX}
-                placeholder="1"
-                inputmode="numeric"
-              />
-              <span class="queue-select-unit">ごと</span>
-              <input
-                type="number"
-                class="queue-tool-input queue-tool-num"
-                data-queue-to
-                min={1}
-                max={COMMAND_QUEUE_MAX}
-                placeholder={String(COMMAND_QUEUE_MAX)}
-                inputmode="numeric"
-              />
-              <span class="queue-select-unit">まで</span>
-              <button type="button" class="btn btn-ghost btn-small" data-queue-select-range>
                 選択
               </button>
             </div>
@@ -200,9 +173,15 @@ export function CommandPanel({
             <ol class="command-queue-list" data-queue-list>
               {slots.map((item, index) => {
                 const displayIndex = index + 1
-                const def = item ? getCommand(item.commandId) : null
                 const empty = !item
-                const label = empty ? '—' : (def?.label ?? item.commandId)
+                const label = empty
+                  ? '—'
+                  : formatQueueLabel(
+                      item.commandId,
+                      item.payload,
+                      getCommand(item.commandId)?.label ?? item.commandId,
+                      (id) => provinceNameById[id] ?? null,
+                    )
                 const slotDate = dateAtQueueOffset(currentDate, index)
                 const slotMonth = slotDate.month
                 const dateLabel = formatGameDate(slotDate)
@@ -235,7 +214,6 @@ export function CommandPanel({
                 class="command-card command-card-action"
                 formaction="/actions/clear-commands"
                 data-needs-selection
-                title="選んだ枠のコマンドを空にする"
               >
                 <strong class="command-card-label">削除</strong>
                 <span class="command-card-hint">選んだ枠を空にする</span>
@@ -245,12 +223,78 @@ export function CommandPanel({
                 class="command-card command-card-action"
                 formaction="/actions/repeat-commands"
                 data-needs-selection
-                title="選んだ並びを後ろの枠へ繰り返す"
               >
                 <strong class="command-card-label">繰返</strong>
                 <span class="command-card-hint">選んだ並びを後ろへ繰り返す</span>
               </button>
-              {COMMANDS.map((command) => (
+
+              <div class="command-param-block">
+                <strong class="command-card-label">移動</strong>
+                <label class="field field-inline">
+                  <span class="field-label">行き先</span>
+                  <select class="field-input" name="moveProvinceId" required={false}>
+                    <option value="">隣接国を選ぶ</option>
+                    {adjacentProvinces.map((p) => (
+                      <option value={p.id} key={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="submit"
+                  class="btn btn-primary btn-small"
+                  formaction="/actions/apply-commands"
+                  name="commandId"
+                  value="idou"
+                  data-needs-selection
+                  disabled={adjacentProvinces.length === 0}
+                >
+                  移動を入力
+                </button>
+              </div>
+
+              {inHomeLand ? (
+                <div class="command-param-block">
+                  <strong class="command-card-label">米売買</strong>
+                  <p class="hint">
+                    相場 米100→金{ricePer100} / 金100→米{goldPer100}（最大{TRADE_MAX}）
+                  </p>
+                  <label class="field field-inline">
+                    <span class="field-label">取引</span>
+                    <select class="field-input" name="tradeSide">
+                      <option value="sell_rice">米を売る</option>
+                      <option value="sell_gold">金を売る</option>
+                    </select>
+                  </label>
+                  <label class="field field-inline">
+                    <span class="field-label">数量</span>
+                    <input
+                      class="field-input"
+                      type="number"
+                      name="tradeAmount"
+                      min={1}
+                      max={TRADE_MAX}
+                      value={100}
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    class="btn btn-primary btn-small"
+                    formaction="/actions/apply-commands"
+                    name="commandId"
+                    value="beibai"
+                    data-needs-selection
+                  >
+                    売買を入力
+                  </button>
+                </div>
+              ) : null}
+
+              {COMMANDS.filter(
+                (command) =>
+                  !command.needsPayload && commandAvailable(command, inHomeLand, canShikan),
+              ).map((command) => (
                 <button
                   type="submit"
                   class="command-card"
@@ -261,6 +305,7 @@ export function CommandPanel({
                   data-needs-selection
                 >
                   <strong class="command-card-label">{command.label}</strong>
+                  <span class="command-card-hint">{command.blurb}</span>
                   <EffectChips command={command} />
                 </button>
               ))}

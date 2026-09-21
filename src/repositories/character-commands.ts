@@ -5,6 +5,7 @@ type CommandRow = {
   character_id: string
   command_id: string
   position: number
+  payload: string | null
   created_at: number
 }
 
@@ -14,6 +15,7 @@ function mapCommand(row: CommandRow): CharacterCommand {
     characterId: row.character_id,
     commandId: row.command_id,
     position: row.position,
+    payload: row.payload ?? null,
     createdAt: row.created_at,
   }
 }
@@ -24,7 +26,7 @@ export class CharacterCommandRepository {
   async listByCharacter(characterId: string): Promise<CharacterCommand[]> {
     const result = await this.db
       .prepare(
-        `SELECT id, character_id, command_id, position, created_at
+        `SELECT id, character_id, command_id, position, payload, created_at
          FROM character_commands
          WHERE character_id = ?
          ORDER BY position ASC`,
@@ -47,6 +49,7 @@ export class CharacterCommandRepository {
     characterId: string
     commandId: string
     position: number
+    payload?: string | null
     createdAt: number
   }): Promise<CharacterCommand> {
     await this.enqueueMany([input])
@@ -55,6 +58,7 @@ export class CharacterCommandRepository {
       characterId: input.characterId,
       commandId: input.commandId,
       position: input.position,
+      payload: input.payload ?? null,
       createdAt: input.createdAt,
     }
   }
@@ -65,6 +69,7 @@ export class CharacterCommandRepository {
       characterId: string
       commandId: string
       position: number
+      payload?: string | null
       createdAt: number
     }>,
   ): Promise<void> {
@@ -72,10 +77,17 @@ export class CharacterCommandRepository {
     const stmts = inputs.map((input) =>
       this.db
         .prepare(
-          `INSERT INTO character_commands (id, character_id, command_id, position, created_at)
-           VALUES (?, ?, ?, ?, ?)`,
+          `INSERT INTO character_commands (id, character_id, command_id, position, payload, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)`,
         )
-        .bind(input.id, input.characterId, input.commandId, input.position, input.createdAt),
+        .bind(
+          input.id,
+          input.characterId,
+          input.commandId,
+          input.position,
+          input.payload ?? null,
+          input.createdAt,
+        ),
     )
     await this.db.batch(stmts)
   }
@@ -92,20 +104,27 @@ export class CharacterCommandRepository {
     await this.db.batch(stmts)
   }
 
-  async updateCommandIds(updates: Array<{ id: string; commandId: string }>): Promise<void> {
+  async updateCommands(
+    updates: Array<{ id: string; commandId: string; payload?: string | null }>,
+  ): Promise<void> {
     if (updates.length === 0) return
     const stmts = updates.map((row) =>
       this.db
-        .prepare(`UPDATE character_commands SET command_id = ? WHERE id = ?`)
-        .bind(row.commandId, row.id),
+        .prepare(`UPDATE character_commands SET command_id = ?, payload = ? WHERE id = ?`)
+        .bind(row.commandId, row.payload ?? null, row.id),
     )
     await this.db.batch(stmts)
+  }
+
+  /** @deprecated use updateCommands */
+  async updateCommandIds(updates: Array<{ id: string; commandId: string }>): Promise<void> {
+    await this.updateCommands(updates.map((row) => ({ ...row, payload: null })))
   }
 
   async listFirstPerCharacter(): Promise<CharacterCommand[]> {
     const result = await this.db
       .prepare(
-        `SELECT c.id, c.character_id, c.command_id, c.position, c.created_at
+        `SELECT c.id, c.character_id, c.command_id, c.position, c.payload, c.created_at
          FROM character_commands c
          INNER JOIN (
            SELECT character_id, MIN(position) AS min_position
@@ -117,7 +136,6 @@ export class CharacterCommandRepository {
     return (result.results ?? []).map(mapCommand)
   }
 
-  /** 実行後など、欠けた枠より後ろを1つ前へずらす */
   async shiftDownAfter(characterId: string, position: number): Promise<void> {
     await this.db
       .prepare(

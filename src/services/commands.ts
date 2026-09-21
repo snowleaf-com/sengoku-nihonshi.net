@@ -1,5 +1,11 @@
 import { STAT_MIN } from '../config/archetypes'
 import {
+  parseCommandPayload,
+  serializeCommandPayload,
+  type CommandPayload,
+  type TradePayload,
+} from '../config/command-payload'
+import {
   COMMAND_QUEUE_MAX,
   buildCommandSlots,
   getCommand,
@@ -10,18 +16,27 @@ import {
   CLASS_PER_RANK,
   COMMAND_CONTRIBUTION,
   DOMESTIC_GOLD_COST,
+  MARKET_RATE_MAX,
+  MARKET_RATE_MIN,
+  MOVE_CONTRIBUTION,
   RICE_GIVE_COST,
   SALARY_BASE_CAP,
   SALARY_CAP_PER_RANK,
   SALARY_RANK_MAX,
   STAT_EX_PER_LEVEL,
   TECH_MAX,
+  TRADE_MAX,
   netStatGain,
 } from '../config/net'
+import { getProvinceMaster } from '../config/provinces'
+import { areAdjacent } from '../domain/province/adjacency'
 import { createId, nowSeconds } from '../lib/id'
 import { CharacterCommandRepository } from '../repositories/character-commands'
 import { CharacterRepository } from '../repositories/characters'
+import { HouseRoleRepository } from '../repositories/house-roles'
+import { HouseRepository } from '../repositories/houses'
 import { ProvinceRepository } from '../repositories/provinces'
+import { HOUSE_ROLES } from '../config/game'
 import type { Character, CharacterCommand, Province } from '../types'
 import { DomainError } from './character'
 
@@ -55,10 +70,59 @@ export function applyStatEx(
   return { value, ex }
 }
 
+/** 自国にいるか（浪人×中立は可。原本: zcon==kcon） */
+export function isInHomeLand(character: Character, province: Province): boolean {
+  if (!character.houseId && !province.houseId) return true
+  return Boolean(character.houseId && province.houseId === character.houseId)
+}
+
+export function buildTradePayload(input: {
+  side: 'sell_rice' | 'sell_gold'
+  amount: number
+  marketRate: number
+}): TradePayload {
+  const amount = Math.floor(input.amount)
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new DomainError('売買する数を入力してください')
+  }
+  if (amount > TRADE_MAX) {
+    throw new DomainError(`一度に扱えるのは${TRADE_MAX}までです`)
+  }
+  return {
+    kind: 'trade',
+    side: input.side,
+    amount,
+    marketRate: input.marketRate,
+  }
+}
+
+function resolvePayloadForApply(
+  commandId: string,
+  raw: CommandPayload | null | undefined,
+): string | null {
+  const def = getCommand(commandId)
+  if (!def) throw new DomainError('コマンドが不正です')
+  if (def.needsPayload === 'move') {
+    if (!raw || raw.kind !== 'move') throw new DomainError('移動先を選んでください')
+    if (!getProvinceMaster(raw.provinceId)) throw new DomainError('移動先が不正です')
+    return serializeCommandPayload(raw)
+  }
+  if (def.needsPayload === 'trade') {
+    if (!raw || raw.kind !== 'trade') throw new DomainError('売買の内容を指定してください')
+    return serializeCommandPayload(raw)
+  }
+  return null
+}
+
 /** 選択した枠にコマンドを書き込む（空き＝無しの枠も含む） */
 export async function applyCommandsToPositions(
   db: D1Database,
-  input: { userId: string; commandId: string; positions: Array<number | string> },
+  input: {
+    userId: string
+    commandId: string
+    positions: Array<number | string>
+    payload?: CommandPayload | null
+  },
 ): Promise<void> {
   if (!isCommandId(input.commandId)) {
     throw new DomainError('コマンドが不正です')
@@ -68,37 +132,40 @@ export async function applyCommandsToPositions(
     throw new DomainError('入力する予約枠を選んでください')
   }
 
+  const payloadJson = resolvePayloadForApply(input.commandId, input.payload ?? null)
   const character = await requireOwnedCharacter(db, input.userId)
   const commands = new CharacterCommandRepository(db)
   const queue = await commands.listByCharacter(character.id)
   const byPosition = new Map(queue.map((row) => [row.position, row]))
   const createdAt = nowSeconds()
 
-  const updates: Array<{ id: string; commandId: string }> = []
+  const updates: Array<{ id: string; commandId: string; payload: string | null }> = []
   const inserts: Array<{
     id: string
     characterId: string
     commandId: string
     position: number
+    payload: string | null
     createdAt: number
   }> = []
 
   for (const position of positions) {
     const existing = byPosition.get(position)
     if (existing) {
-      updates.push({ id: existing.id, commandId: input.commandId })
+      updates.push({ id: existing.id, commandId: input.commandId, payload: payloadJson })
     } else {
       inserts.push({
         id: createId(16),
         characterId: character.id,
         commandId: input.commandId,
         position,
+        payload: payloadJson,
         createdAt,
       })
     }
   }
 
-  await commands.updateCommandIds(updates)
+  await commands.updateCommands(updates)
   await commands.enqueueMany(inserts)
 }
 
@@ -211,31 +278,39 @@ export async function repeatSelectedCommands(
     (await commands.listByCharacter(character.id)).map((row) => [row.position, row]),
   )
   const createdAt = nowSeconds()
-  const updates: Array<{ id: string; commandId: string }> = []
+  const updates: Array<{ id: string; commandId: string; payload: string | null }> = []
   const inserts: Array<{
     id: string
     characterId: string
     commandId: string
     position: number
+    payload: string | null
     createdAt: number
   }> = []
 
   writePositions.forEach((position, offset) => {
+    const source = slots[positions[offset % positions.length]!]!
     const commandId = pattern[offset % pattern.length]!
     const existing = byPosition.get(position)
-    if (existing) updates.push({ id: existing.id, commandId })
-    else {
+    if (existing) {
+      updates.push({
+        id: existing.id,
+        commandId,
+        payload: source.payload ?? null,
+      })
+    } else {
       inserts.push({
         id: createId(16),
         characterId: character.id,
         commandId,
         position,
+        payload: source.payload ?? null,
         createdAt,
       })
     }
   })
 
-  await commands.updateCommandIds(updates)
+  await commands.updateCommands(updates)
   await commands.enqueueMany(inserts)
 }
 
@@ -289,6 +364,16 @@ function gainTokuboEx(state: MutableCharacter): void {
   state.tokuboEx = next.ex
 }
 
+async function consumeQueuedCommand(
+  db: D1Database,
+  characterId: string,
+  queued: CharacterCommand,
+): Promise<void> {
+  const commands = new CharacterCommandRepository(db)
+  await commands.delete(queued.id)
+  await commands.shiftDownAfter(characterId, queued.position)
+}
+
 async function finishCommand(
   db: D1Database,
   character: Character,
@@ -309,13 +394,11 @@ async function finishCommand(
     tech: local.tech,
     updatedAt: now,
   })
-  const commands = new CharacterCommandRepository(db)
-  await commands.delete(queued.id)
-  await commands.shiftDownAfter(character.id, queued.position)
+  await consumeQueuedCommand(db, character.id, queued)
 }
 
 /**
- * NET内政を1件実行。成功メッセージに上昇量を含める。
+ * NETコマンドを1件実行。成功メッセージに上昇量を含める。
  */
 export async function executeCharacterCommand(
   db: D1Database,
@@ -331,6 +414,11 @@ export async function executeCharacterCommand(
   const province = await provinces.findById(character.provinceId)
   if (!province) {
     return { ok: false, reason: '所在国がありません' }
+  }
+
+  const home = isInHomeLand(character, province)
+  if (!home && !definition.foreignOk) {
+    return { ok: false, reason: '自国以外では実行できません' }
   }
 
   const personal: MutableCharacter = {
@@ -361,6 +449,99 @@ export async function executeCharacterCommand(
   }
 
   const commandId = queued.commandId
+  const payload = parseCommandPayload(queued.payload)
+
+  if (commandId === 'idou') {
+    if (!payload || payload.kind !== 'move') {
+      return { ok: false, reason: '移動先が指定されていません' }
+    }
+    const fromMaster = getProvinceMaster(character.provinceId)
+    const toMaster = getProvinceMaster(payload.provinceId)
+    if (!fromMaster || !toMaster) {
+      return { ok: false, reason: '移動先が不正です' }
+    }
+    if (!areAdjacent(fromMaster, toMaster)) {
+      return { ok: false, reason: `${toMaster.name}へは隣接していません` }
+    }
+    const dest = await provinces.findById(payload.provinceId)
+    if (!dest) return { ok: false, reason: '移動先がありません' }
+
+    const tosoNext = applyStatEx(personal.toso, personal.tosoEx, 1)
+    personal.toso = tosoNext.value
+    personal.tosoEx = tosoNext.ex
+    if (character.houseId) personal.merit += MOVE_CONTRIBUTION
+
+    const now = nowSeconds()
+    const characters = new CharacterRepository(db)
+    await characters.updateProvince(character.id, dest.id, now)
+    await characters.updateResources(character.id, {
+      merit: personal.merit,
+      toso: personal.toso,
+      tosoEx: personal.tosoEx,
+      updatedAt: now,
+    })
+    await consumeQueuedCommand(db, character.id, queued)
+    return { ok: true, message: `${dest.name}へ移動した。` }
+  }
+
+  if (commandId === 'beibai') {
+    if (!payload || payload.kind !== 'trade') {
+      return { ok: false, reason: '売買内容がありません' }
+    }
+    const amount = Math.min(TRADE_MAX, Math.max(0, Math.floor(payload.amount)))
+    const rate = payload.marketRate
+    if (payload.side === 'sell_rice') {
+      if (personal.rice < amount) return { ok: false, reason: '米が足りません' }
+      const gained = Math.floor(amount * rate)
+      personal.rice -= amount
+      personal.money += gained
+      gainChiryakuEx(personal)
+      const now = nowSeconds()
+      await new CharacterRepository(db).updateResources(character.id, {
+        ...personal,
+        updatedAt: now,
+      })
+      await consumeQueuedCommand(db, character.id, queued)
+      return { ok: true, message: `米${amount}を売って金${gained}を得た。` }
+    }
+    if (personal.money < amount) return { ok: false, reason: '金が足りません' }
+    const gained = Math.floor(amount * (2 - rate))
+    personal.money -= amount
+    personal.rice += gained
+    gainChiryakuEx(personal)
+    const now = nowSeconds()
+    await new CharacterRepository(db).updateResources(character.id, {
+      ...personal,
+      updatedAt: now,
+    })
+    await consumeQueuedCommand(db, character.id, queued)
+    return { ok: true, message: `金${amount}を払って米${gained}を買った。` }
+  }
+
+  if (commandId === 'shikan') {
+    if (character.houseId) {
+      return { ok: false, reason: '無所属でなければ仕官できません' }
+    }
+    if (!province.houseId) {
+      return { ok: false, reason: '中立国には仕官できません' }
+    }
+    const houses = new HouseRepository(db)
+    const house = await houses.findById(province.houseId)
+    if (!house || house.destroyedAt) {
+      return { ok: false, reason: '仕官先の家がありません' }
+    }
+    const now = nowSeconds()
+    await new CharacterRepository(db).assignHouse(character.id, house.id, now)
+    await new HouseRoleRepository(db).create({
+      id: createId(16),
+      houseId: house.id,
+      characterId: character.id,
+      role: HOUSE_ROLES.retainer,
+      createdAt: now,
+    })
+    await consumeQueuedCommand(db, character.id, queued)
+    return { ok: true, message: `${house.name}へ仕官した。` }
+  }
 
   if (
     commandId === 'nougyou' ||
@@ -409,6 +590,13 @@ export async function executeCharacterCommand(
   }
 
   return { ok: false, reason: '未対応のコマンド' }
+}
+
+/** 1月・7月の相場変動 */
+export function nextMarketRate(current: number): number {
+  const delta = Math.round(Math.random() * 50) / 100
+  const next = Math.random() < 0.5 ? current + delta : current - delta
+  return clamp(Math.round(next * 100) / 100, MARKET_RATE_MIN, MARKET_RATE_MAX)
 }
 
 /** 家の給与・俸禄プール（NET SALARY） */

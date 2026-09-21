@@ -22,6 +22,7 @@ import {
   characterIncomeShare,
   executeCharacterCommand,
   houseIncomePool,
+  nextMarketRate,
 } from './commands'
 import { recordWorldEvents } from './events'
 
@@ -155,9 +156,11 @@ async function applySeasonalPopulation(db: D1Database, wallClock: number): Promi
   const all = await provinces.listAll()
   for (const province of all) {
     const delta = applyLoyaltyPopulationDelta(province)
-    if (delta === 0) continue
+    const marketRate = nextMarketRate(province.marketRate)
+    if (delta === 0 && marketRate === province.marketRate) continue
     await provinces.updateStats(province.id, {
       population: province.population + delta,
+      marketRate,
       updatedAt: wallClock,
     })
   }

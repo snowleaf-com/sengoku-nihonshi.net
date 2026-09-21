@@ -3,6 +3,7 @@ import { requireAuth } from '../../middleware/auth'
 import { DomainError } from '../../services/character'
 import {
   applyCommandsToPositions,
+  buildTradePayload,
   clearCommandPositions,
   repeatSelectedCommands,
 } from '../../services/commands'
@@ -10,6 +11,8 @@ import { enterWorld } from '../../services/enter-world'
 import { raiseHouse } from '../../services/house'
 import { advanceDueTurns } from '../../services/turns'
 import { ensureProvincesSeeded } from '../../services/world'
+import { CharacterRepository } from '../../repositories/characters'
+import { ProvinceRepository } from '../../repositories/provinces'
 import type { AppEnv } from '../../types'
 
 export const gameActionRoutes = new Hono<AppEnv>()
@@ -101,13 +104,39 @@ gameActionRoutes.post('/apply-commands', async (c) => {
   const user = c.get('user')
   if (!user) return c.redirect('/')
 
-  const { commandId, positions } = await parseCommandForm(c)
+  const body = await c.req.parseBody({ all: true })
+  const commandId = parseBodyString(body, 'commandId')
+  const positions = parseBodyIds(body, 'positions')
 
   try {
+    let payload = null as
+      | { kind: 'move'; provinceId: string }
+      | { kind: 'trade'; side: 'sell_rice' | 'sell_gold'; amount: number; marketRate: number }
+      | null
+
+    if (commandId === 'idou') {
+      const provinceId = parseBodyString(body, 'moveProvinceId')
+      payload = { kind: 'move', provinceId }
+    } else if (commandId === 'beibai') {
+      const sideRaw = parseBodyString(body, 'tradeSide')
+      const side = sideRaw === 'sell_gold' ? 'sell_gold' : 'sell_rice'
+      const amount = Number.parseInt(parseBodyString(body, 'tradeAmount'), 10)
+      const character = await new CharacterRepository(c.env.DB).findByUserId(user.id)
+      if (!character) throw new DomainError('武将が見つかりません')
+      const province = await new ProvinceRepository(c.env.DB).findById(character.provinceId)
+      if (!province) throw new DomainError('所在国がありません')
+      payload = buildTradePayload({
+        side,
+        amount,
+        marketRate: province.marketRate,
+      })
+    }
+
     await applyCommandsToPositions(c.env.DB, {
       userId: user.id,
       commandId,
       positions,
+      payload,
     })
     return c.redirect('/game')
   } catch (error) {
