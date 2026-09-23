@@ -103,6 +103,8 @@ npm run preview:upload
 Passkey 確認は **staging の workers.dev** か **production の `sengoku.snow-leaf.com`** で行う（RP ID とホストが一致していること）。  
 production の `*.workers.dev` は残っていても、Passkey はカスタムドメイン向け設定のためそちらでは失敗する。
 
+注意: `routes`（custom domain）は Wrangler で **env に inherit される**。staging 側で `routes: []` を明示しないと、staging デプロイが本番ドメインを奪い、RP ID 不一致で Passkey が壊れる。
+
 ## トラブルシュート
 
 | 症状 | 確認 |

@@ -35,6 +35,8 @@
     // bindings（vars / d1 等）は inherit されないので staging 側に明示する
     "staging": {
       "name": "sengoku-nihonshi-net-staging",
+      // routes は inherit される。空で上書きしないと本番カスタムドメインを staging が奪う
+      "routes": [],
       "vars": {
         "WEBAUTHN_RP_NAME": "戦国日本史.net (staging)",
         "WEBAUTHN_RP_ID": "sengoku-nihonshi-net-staging.yy-dec5.workers.dev",
