@@ -2016,6 +2016,81 @@ textarea.field-input {
   box-shadow: 0 0.35rem 1rem rgba(0, 0, 0, 0.28);
 }
 
+.command-dock {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.35rem;
+}
+
+.queue-summary {
+  border: 1px solid var(--line);
+  background: rgba(26, 20, 16, 0.72);
+  padding: 0.75rem 0.85rem;
+}
+
+.queue-summary-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.45rem;
+}
+
+.queue-summary-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+}
+
+.queue-summary-count {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.queue-summary-head .btn {
+  margin-left: auto;
+}
+
+.queue-summary-empty {
+  margin: 0;
+}
+
+.queue-summary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.queue-summary-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.55rem;
+  align-items: baseline;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.88rem;
+}
+
+.queue-summary-item:last-child {
+  border-bottom: none;
+}
+
+.queue-summary-when {
+  color: var(--muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.queue-summary-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .command-sheet {
   width: min(96vw, 42rem);
   max-height: min(92vh, 52rem);
@@ -2025,6 +2100,38 @@ textarea.field-input {
   border-radius: 0.75rem;
   background: var(--bg, #1a1814);
   color: inherit;
+}
+
+/* スマホ: 下から出るボトムシート */
+@media (max-width: 719px) {
+  .command-sheet {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: min(88vh, 44rem);
+    margin: 0;
+    margin-top: auto;
+    border-radius: 0.85rem 0.85rem 0 0;
+    border-bottom: none;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .command-sheet[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .command-dock {
+    position: sticky;
+    bottom: 0;
+    z-index: 18;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: linear-gradient(transparent, rgba(12, 9, 7, 0.92) 28%);
+  }
+
+  .command-fab-bar {
+    position: static;
+    padding-bottom: 0.35rem;
+  }
 }
 
 .command-sheet::backdrop {

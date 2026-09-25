@@ -179,11 +179,15 @@ app.get('/game', requireAuth, async (c) => {
 
   const unitsRepo = new UnitRepository(c.env.DB)
   const myUnit = await unitsRepo.findByMember(character.id)
+  const unitMemberIds = myUnit ? await unitsRepo.listMemberIds(myUnit.id) : []
   const unit = myUnit
     ? {
         id: myUnit.id,
         name: myUnit.name,
         isLeader: myUnit.leaderCharacterId === character.id,
+        memberNames: unitMemberIds
+          .map((id) => characterNameById[id])
+          .filter((name): name is string => Boolean(name)),
       }
     : null
   const houseUnits =
