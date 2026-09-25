@@ -3,6 +3,11 @@ import type { House, Province } from '../types'
 
 const NEUTRAL_COLOR = '#6e6e6e'
 
+export type WarInvasionArrow = {
+  fromProvinceId: string
+  toProvinceId: string
+}
+
 type ProvinceMapViewProps = {
   mode?: 'view'
   provinces: Province[]
@@ -12,6 +17,8 @@ type ProvinceMapViewProps = {
   compact?: boolean
   /** 戦争の攻撃候補など、地図上で強調する国 */
   highlightProvinceIds?: string[]
+  /** 最近の侵攻方向（from→to） */
+  warInvasions?: WarInvasionArrow[]
 }
 
 type ProvinceMapPickProps = {
@@ -46,6 +53,9 @@ export function ProvinceMap(props: ProvinceMapProps) {
   const highlightIds = new Set(
     !pickMode && props.highlightProvinceIds ? props.highlightProvinceIds : [],
   )
+  const warInvasions = !pickMode && props.warInvasions ? props.warInvasions : []
+  const invasionFromIds = new Set(warInvasions.map((a) => a.fromProvinceId))
+  const invasionToIds = new Set(warInvasions.map((a) => a.toProvinceId))
 
   const cells: Array<{ key: string; province: Province | null }> = []
   for (let y = 0; y < height; y++) {
@@ -57,6 +67,21 @@ export function ProvinceMap(props: ProvinceMapProps) {
       })
     }
   }
+
+  const arrowLines = warInvasions
+    .map((arrow) => {
+      const from = PROVINCE_BY_ID[arrow.fromProvinceId]
+      const to = PROVINCE_BY_ID[arrow.toProvinceId]
+      if (!from || !to) return null
+      return {
+        key: `${arrow.fromProvinceId}-${arrow.toProvinceId}`,
+        x1: ((from.x + 0.5) / width) * 100,
+        y1: ((from.y + 0.5) / height) * 100,
+        x2: ((to.x + 0.5) / width) * 100,
+        y2: ((to.y + 0.5) / height) * 100,
+      }
+    })
+    .filter((row): row is NonNullable<typeof row> => row != null)
 
   return (
     <div
@@ -72,6 +97,8 @@ export function ProvinceMap(props: ProvinceMapProps) {
         const house = cell.province.houseId ? houseById[cell.province.houseId] : null
         const focused = cell.province.id === focusProvinceId
         const highlighted = highlightIds.has(cell.province.id)
+        const invasionFrom = invasionFromIds.has(cell.province.id)
+        const invasionTo = invasionToIds.has(cell.province.id)
         const fill = house?.color ?? NEUTRAL_COLOR
 
         if (pickMode && inputName) {
@@ -112,15 +139,20 @@ export function ProvinceMap(props: ProvinceMapProps) {
           )
         }
 
+        const extras: string[] = []
+        if (highlighted) extras.push('攻撃可')
+        if (invasionFrom) extras.push('出兵')
+        if (invasionTo) extras.push('侵攻先')
+
         return (
           <div
-            class={`province-cell${house ? ' is-owned' : ' is-neutral'}${focused ? ' is-focus' : ''}${highlighted ? ' is-war-target' : ''}`}
+            class={`province-cell${house ? ' is-owned' : ' is-neutral'}${focused ? ' is-focus' : ''}${highlighted ? ' is-war-target' : ''}${invasionFrom ? ' is-war-from' : ''}${invasionTo ? ' is-war-to' : ''}`}
             key={cell.key}
             style={`background-color:${fill}`}
             title={
               house
-                ? `${cell.province.name}（${house.name}${highlighted ? '・攻撃可' : ''}）`
-                : `${cell.province.name}（中立・守備${cell.province.garrison}${highlighted ? '・攻撃可' : ''}）`
+                ? `${cell.province.name}（${house.name}${extras.length ? `・${extras.join('・')}` : ''}）`
+                : `${cell.province.name}（中立・守備${cell.province.garrison}${extras.length ? `・${extras.join('・')}` : ''}）`
             }
           >
             <span class="province-name">{cell.province.name}</span>
@@ -130,6 +162,38 @@ export function ProvinceMap(props: ProvinceMapProps) {
           </div>
         )
       })}
+
+      {arrowLines.length > 0 ? (
+        <svg
+          class="province-map-arrows"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <defs>
+            <marker
+              id="war-arrowhead"
+              markerWidth="5"
+              markerHeight="5"
+              refX="4"
+              refY="2.5"
+              orient="auto"
+            >
+              <path d="M0,0 L5,2.5 L0,5 Z" fill="#c45c26" />
+            </marker>
+          </defs>
+          {arrowLines.map((line) => (
+            <line
+              key={line.key}
+              x1={line.x1}
+              y1={line.y1}
+              x2={line.x2}
+              y2={line.y2}
+              marker-end="url(#war-arrowhead)"
+            />
+          ))}
+        </svg>
+      ) : null}
     </div>
   )
 }

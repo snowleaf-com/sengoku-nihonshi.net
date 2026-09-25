@@ -1,9 +1,15 @@
+import {
+  HOUSE_ROLES,
+  UNIQUE_HOUSE_ROLE_IDS,
+  isAppointableHouseRoleId,
+} from '../config/game'
 import { createId, nowSeconds } from '../lib/id'
 import { CharacterRepository } from '../repositories/characters'
 import {
   HouseMessageRepository,
   type HouseMessageWithAuthor,
 } from '../repositories/house-messages'
+import { HouseRoleRepository } from '../repositories/house-roles'
 import { HouseRepository } from '../repositories/houses'
 import {
   PersonalLetterRepository,
@@ -11,12 +17,21 @@ import {
 } from '../repositories/personal-letters'
 import type { Character, House, RankingRow } from '../types'
 import { DomainError } from './character'
+import { recordWorldEvent } from './events'
+import { ensureGameState } from './turns'
 
 export const SOCIAL_BODY_MIN = 1
 export const SOCIAL_BODY_MAX = 200
 export const HOUSE_LAW_MAX = 2000
 export const HOUSE_MESSAGE_LIMIT = 50
 export const LETTER_INBOX_LIMIT = 50
+
+export type HouseMemberRow = {
+  characterId: string
+  name: string
+  roleLabel: string
+  isLord: boolean
+}
 
 export function validateSocialBody(raw: string): string {
   const body = raw.trim()
@@ -55,6 +70,31 @@ async function requireHouseMember(
   return { character, house }
 }
 
+async function listMembersForHouse(
+  db: D1Database,
+  house: House,
+): Promise<HouseMemberRow[]> {
+  const [characters, roles] = await Promise.all([
+    new CharacterRepository(db).listByHouseId(house.id),
+    new HouseRoleRepository(db).listByHouseId(house.id),
+  ])
+  const roleByChar = Object.fromEntries(roles.map((r) => [r.characterId, r.role]))
+  return characters
+    .map((c) => ({
+      characterId: c.id,
+      name: c.name,
+      roleLabel:
+        c.id === house.leaderCharacterId
+          ? HOUSE_ROLES.lord
+          : (roleByChar[c.id] ?? HOUSE_ROLES.retainer),
+      isLord: c.id === house.leaderCharacterId,
+    }))
+    .sort((a, b) => {
+      if (a.isLord !== b.isLord) return a.isLord ? -1 : 1
+      return a.name.localeCompare(b.name, 'ja')
+    })
+}
+
 export async function postHouseMessage(
   db: D1Database,
   input: { userId: string; body: string },
@@ -75,13 +115,90 @@ export async function postHouseMessage(
 export async function listHouseMessages(
   db: D1Database,
   input: { userId: string; limit?: number },
-): Promise<{ house: House; character: Character; messages: HouseMessageWithAuthor[] }> {
+): Promise<{
+  house: House
+  character: Character
+  messages: HouseMessageWithAuthor[]
+  members: HouseMemberRow[]
+}> {
   const { character, house } = await requireHouseMember(db, input.userId)
-  const messages = await new HouseMessageRepository(db).listByHouse(
-    house.id,
-    input.limit ?? HOUSE_MESSAGE_LIMIT,
-  )
-  return { house, character, messages }
+  const [messages, members] = await Promise.all([
+    new HouseMessageRepository(db).listByHouse(
+      house.id,
+      input.limit ?? HOUSE_MESSAGE_LIMIT,
+    ),
+    listMembersForHouse(db, house),
+  ])
+  return { house, character, messages, members }
+}
+
+/**
+ * 当主が家臣に役職（称号）を付ける。効果はなく表示のみ。
+ * 軍師・大将は家に1人まで（前任は家臣へ）。当主自身は変更不可。
+ */
+export async function appointHouseRole(
+  db: D1Database,
+  input: { userId: string; targetCharacterId: string; roleId: string },
+): Promise<{ targetName: string; roleLabel: string }> {
+  const { character, house } = await requireHouseMember(db, input.userId)
+  if (house.leaderCharacterId !== character.id) {
+    throw new DomainError('任命できるのは当主のみです')
+  }
+  if (!isAppointableHouseRoleId(input.roleId)) {
+    throw new DomainError('その役職には任命できません')
+  }
+
+  const characters = new CharacterRepository(db)
+  const target = await characters.findById(input.targetCharacterId)
+  if (!target || target.houseId !== house.id) {
+    throw new DomainError('任命先の武将が見つかりません')
+  }
+  if (target.id === house.leaderCharacterId) {
+    throw new DomainError('当主の役職は変更できません')
+  }
+
+  const roleLabel = HOUSE_ROLES[input.roleId]
+  const roles = new HouseRoleRepository(db)
+  const now = nowSeconds()
+
+  if ((UNIQUE_HOUSE_ROLE_IDS as readonly string[]).includes(input.roleId)) {
+    const holders = await roles.listByHouseAndRole(house.id, roleLabel)
+    for (const holder of holders) {
+      if (holder.characterId === target.id) continue
+      await roles.deleteByCharacterId(holder.characterId)
+      await roles.create({
+        id: createId(16),
+        houseId: house.id,
+        characterId: holder.characterId,
+        role: HOUSE_ROLES.retainer,
+        createdAt: now,
+      })
+    }
+  }
+
+  await roles.deleteByCharacterId(target.id)
+  await roles.create({
+    id: createId(16),
+    houseId: house.id,
+    characterId: target.id,
+    role: roleLabel,
+    createdAt: now,
+  })
+
+  const gameState = await ensureGameState(db)
+  await recordWorldEvent(db, {
+    year: gameState.year,
+    month: gameState.month,
+    channel: 'news',
+    kind: 'social',
+    message: `${character.name}が${target.name}を${roleLabel}に任命した。`,
+    provinceId: character.provinceId,
+    characterId: character.id,
+    houseId: house.id,
+    createdAt: now,
+  })
+
+  return { targetName: target.name, roleLabel }
 }
 
 export async function updateHouseLaw(
@@ -145,17 +262,26 @@ export async function listInbox(
 export async function listRanking(db: D1Database): Promise<RankingRow[]> {
   const result = await db
     .prepare(
-      `SELECT c.id AS character_id, c.name, h.name AS house_name,
+      `SELECT c.id AS character_id, c.name, h.name AS house_name, c.house_id AS house_id,
+              c.province_id AS province_id, p.name AS province_name, c.troops AS troops,
+              hr.role AS role_label,
               c.buyu, c.chiryaku, c.toso, c.tokubo,
               c.merit, c.class_points, c.rank
        FROM characters c
        LEFT JOIN houses h ON h.id = c.house_id AND h.destroyed_at IS NULL
+       LEFT JOIN provinces p ON p.id = c.province_id
+       LEFT JOIN house_roles hr ON hr.character_id = c.id
        ORDER BY c.merit DESC, c.class_points DESC, c.name ASC`,
     )
     .all<{
       character_id: string
       name: string
       house_name: string | null
+      house_id: string | null
+      province_id: string
+      province_name: string | null
+      troops: number
+      role_label: string | null
       buyu: number
       chiryaku: number
       toso: number
@@ -169,6 +295,11 @@ export async function listRanking(db: D1Database): Promise<RankingRow[]> {
     characterId: row.character_id,
     name: row.name,
     houseName: row.house_name,
+    houseId: row.house_id,
+    provinceId: row.province_id,
+    provinceName: row.province_name ?? row.province_id,
+    troops: row.troops,
+    roleLabel: row.role_label,
     buyu: row.buyu,
     chiryaku: row.chiryaku,
     toso: row.toso,

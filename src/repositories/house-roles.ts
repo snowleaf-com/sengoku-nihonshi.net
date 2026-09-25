@@ -56,6 +56,29 @@ export class HouseRoleRepository {
     return row ? mapHouseRole(row) : null
   }
 
+  async listByHouseId(houseId: string): Promise<HouseRole[]> {
+    const result = await this.db
+      .prepare(
+        `SELECT id, house_id, character_id, role, created_at
+         FROM house_roles WHERE house_id = ?
+         ORDER BY created_at ASC`,
+      )
+      .bind(houseId)
+      .all<HouseRoleRow>()
+    return (result.results ?? []).map(mapHouseRole)
+  }
+
+  async listByHouseAndRole(houseId: string, role: string): Promise<HouseRole[]> {
+    const result = await this.db
+      .prepare(
+        `SELECT id, house_id, character_id, role, created_at
+         FROM house_roles WHERE house_id = ? AND role = ?`,
+      )
+      .bind(houseId, role)
+      .all<HouseRoleRow>()
+    return (result.results ?? []).map(mapHouseRole)
+  }
+
   async deleteByCharacterId(characterId: string): Promise<void> {
     await this.db
       .prepare(`DELETE FROM house_roles WHERE character_id = ?`)

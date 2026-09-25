@@ -119,6 +119,11 @@ export type RankingRow = {
   characterId: string
   name: string
   houseName: string | null
+  houseId: string | null
+  provinceId: string
+  provinceName: string
+  troops: number
+  roleLabel: string | null
   buyu: number
   chiryaku: number
   toso: number
@@ -198,6 +203,7 @@ export type WorldEvent = {
   kind: WorldEventKind
   message: string
   provinceId: string | null
+  fromProvinceId: string | null
   characterId: string | null
   houseId: string | null
   createdAt: number

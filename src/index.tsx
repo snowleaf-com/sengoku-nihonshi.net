@@ -25,6 +25,7 @@ import {
 import { nextHouseColor } from './config/game'
 import { DomainError } from './services/character'
 import {
+  appointHouseRole,
   listHouseMessages,
   listInbox,
   listRanking,
@@ -33,10 +34,11 @@ import {
   updateHouseLaw,
 } from './services/social'
 import { ensureProvincesSeeded } from './services/world'
-import { listActionResults, listWorldNews } from './services/events'
+import { listActionResults, listRecentWarInvasions, listWorldNews } from './services/events'
 import { advanceDueTurns, ensureGameState } from './services/turns'
 import { getTurnIntervalSeconds } from './config/calendar'
 import { nowSeconds } from './lib/id'
+import { HouseRoleRepository } from './repositories/house-roles'
 import type { AppEnv } from './types'
 import { AdminPage } from './routes/pages/admin'
 
@@ -132,15 +134,17 @@ app.get('/game', requireAuth, async (c) => {
     )
   }
 
-  const [province, provinces, houses, queue, news, results, locals] = await Promise.all([
-    provincesRepo.findById(character.provinceId),
-    provincesRepo.listAll(),
-    housesRepo.listActive(),
-    new CharacterCommandRepository(c.env.DB).listByCharacter(character.id),
-    listWorldNews(c.env.DB),
-    listActionResults(c.env.DB, character.id),
-    characters.listByProvinceId(character.provinceId),
-  ])
+  const [province, provinces, houses, queue, news, results, locals, warInvasions] =
+    await Promise.all([
+      provincesRepo.findById(character.provinceId),
+      provincesRepo.listAll(),
+      housesRepo.listActive(),
+      new CharacterCommandRepository(c.env.DB).listByCharacter(character.id),
+      listWorldNews(c.env.DB),
+      listActionResults(c.env.DB, character.id),
+      characters.listByProvinceId(character.provinceId),
+      listRecentWarInvasions(c.env.DB),
+    ])
 
   if (!province) {
     return c.render(
@@ -154,6 +158,9 @@ app.get('/game', requireAuth, async (c) => {
   }
 
   const house = character.houseId ? await housesRepo.findById(character.houseId) : null
+  const houseRole = character.houseId
+    ? await new HouseRoleRepository(c.env.DB).findByCharacterId(character.id)
+    : null
   const defender =
     province.houseId != null
       ? await characters.findDefender(province.id, province.houseId)
@@ -192,6 +199,7 @@ app.get('/game', requireAuth, async (c) => {
       character={character}
       province={province}
       house={house}
+      houseRoleLabel={houseRole?.role ?? null}
       provinces={provinces}
       houses={houses}
       gameState={gameState}
@@ -202,6 +210,7 @@ app.get('/game', requireAuth, async (c) => {
       characterNameById={characterNameById}
       unit={unit}
       houseUnits={houseUnits}
+      warInvasions={warInvasions}
       defenderName={defender?.name ?? null}
       commandError={cmdError}
       error={error}
@@ -223,7 +232,7 @@ app.get('/game/house', requireAuth, async (c) => {
   const notice = c.req.query('notice') ?? null
 
   try {
-    const { house, character, messages } = await listHouseMessages(c.env.DB, {
+    const { house, character, messages, members } = await listHouseMessages(c.env.DB, {
       userId: user.id,
     })
     return c.render(
@@ -231,6 +240,7 @@ app.get('/game/house', requireAuth, async (c) => {
         character={character}
         house={house}
         messages={messages}
+        members={members}
         error={error}
         notice={notice}
       />,
@@ -257,6 +267,16 @@ app.post('/game/house', requireAuth, async (c) => {
         lawText: parseBodyString(body, 'lawText'),
       })
       return c.redirect(`/game/house?notice=${encodeURIComponent('国法を更新した')}`)
+    }
+    if (intent === 'appoint') {
+      const { targetName, roleLabel } = await appointHouseRole(c.env.DB, {
+        userId: user.id,
+        targetCharacterId: parseBodyString(body, 'targetCharacterId'),
+        roleId: parseBodyString(body, 'roleId'),
+      })
+      return c.redirect(
+        `/game/house?notice=${encodeURIComponent(`${targetName}を${roleLabel}に任命した`)}`,
+      )
     }
     await postHouseMessage(c.env.DB, {
       userId: user.id,

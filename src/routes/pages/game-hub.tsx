@@ -37,6 +37,7 @@ type GameHubPageProps = {
   character: Character
   province: Province
   house: House | null
+  houseRoleLabel?: string | null
   provinces: Province[]
   houses: House[]
   gameState: GameState
@@ -47,6 +48,7 @@ type GameHubPageProps = {
   characterNameById: Record<string, string>
   unit: UnitSummary | null
   houseUnits: HouseUnitOption[]
+  warInvasions?: Array<{ fromProvinceId: string; toProvinceId: string }>
   defenderName?: string | null
   commandError?: string | null
   error?: string | null
@@ -61,6 +63,7 @@ export function GameHubPage({
   character,
   province,
   house,
+  houseRoleLabel = null,
   provinces,
   houses,
   gameState,
@@ -71,6 +74,7 @@ export function GameHubPage({
   characterNameById,
   unit,
   houseUnits,
+  warInvasions = [],
   defenderName = null,
   commandError = null,
   error,
@@ -99,7 +103,7 @@ export function GameHubPage({
     ? '浪人'
     : house.leaderCharacterId === character.id
       ? `${house.name} の当主`
-      : `${house.name} の家臣`
+      : `${house.name} の${houseRoleLabel ?? '家臣'}`
   const ownedProvinces = house
     ? provinces.filter((p) => p.houseId === house.id).length
     : 0
@@ -479,8 +483,11 @@ export function GameHubPage({
               houses={houses}
               focusProvinceId={character.provinceId}
               highlightProvinceIds={warTargets.map((t) => t.id)}
+              warInvasions={warInvasions}
             />
-            <p class="hint">隣接の攻撃可能国は地図上で強調表示される。</p>
+            <p class="hint">
+              隣接の攻撃可能国は地図上で強調。最近の侵攻は矢印で表示される。
+            </p>
             <div id="feed-news">
               <EventFeed title="知らせ" events={news} empty="まだ知らせはない" />
             </div>
