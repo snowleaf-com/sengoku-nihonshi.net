@@ -2,6 +2,7 @@ import { CommandPanel } from '../../components/CommandPanel'
 import { EventFeed } from '../../components/EventFeed'
 import { ExGauge } from '../../components/ExGauge'
 import { ProvinceMap } from '../../components/ProvinceMap'
+import { QueueSummary } from '../../components/QueueSummary'
 import { SiteShell } from '../../components/SiteShell'
 import { StatGauge } from '../../components/StatGauge'
 import { StatIcon } from '../../components/StatIcon'
@@ -26,6 +27,7 @@ type UnitSummary = {
   id: string
   name: string
   isLeader: boolean
+  memberNames: string[]
 }
 
 type HouseUnitOption = {
@@ -435,6 +437,11 @@ export function GameHubPage({
                           <p class="status-badge">
                             所属「{unit.name}」{unit.isLeader ? '（隊長）' : '（隊員）'}
                           </p>
+                          {unit.memberNames.length > 0 ? (
+                            <p class="hint">
+                              メンバー: {unit.memberNames.join('、')}
+                            </p>
+                          ) : null}
                           <form method="post" action="/actions/unit-leave">
                             <button type="submit" class="btn btn-ghost btn-small">
                               部隊を離脱
@@ -529,17 +536,26 @@ export function GameHubPage({
             </div>
           </section>
 
-          <div class="command-fab-bar">
-            <button type="button" class="btn btn-primary btn-touch" data-open-commands>
-              コマンドを開く
-            </button>
+          <div class="command-dock">
+            <QueueSummary
+              queue={queue}
+              currentYear={gameState.year}
+              currentMonth={gameState.month}
+              provinceNameById={provinceNameById}
+              characterNameById={characterNameById}
+            />
+            <div class="command-fab-bar">
+              <button type="button" class="btn btn-primary btn-touch" data-open-commands>
+                コマンドを開く
+              </button>
+            </div>
           </div>
 
           <dialog id="command-sheet" class="command-sheet">
             <div class="command-sheet-inner">
               <header class="command-sheet-head">
                 <h2>コマンド</h2>
-                <button type="button" class="btn btn-ghost btn-small" data-close-commands>
+                <button type="button" class="btn btn-ghost btn-small btn-touch" data-close-commands>
                   閉じる
                 </button>
               </header>
