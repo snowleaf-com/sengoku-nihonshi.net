@@ -151,3 +151,10 @@ migration `0012_n6_finish.sql`。
 - `characters.idle_streak` … 「何もしない」連続回数（60 で削除）
 - `characters.loyalty` … 武将の国への忠誠（都市の民忠とは別。既定 100）
 - `game_state.maintenance` … メンテ中フラグ（コマンド投稿を止める）
+
+## プレイ改善（武将一覧・侵攻矢印・任命）
+
+migration `0013_war_from_province.sql`。
+
+- `world_events.from_province_id` … 戦争の出発国（地図矢印用）
+- 家役職表示を拡張（`HOUSE_ROLES`: 当主 / 軍師 / 大将 / 家臣。称号のみ）

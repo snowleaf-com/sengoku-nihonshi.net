@@ -53,9 +53,37 @@ type RecordInput = {
   kind: WorldEventKind
   message: string
   provinceId?: string | null
+  fromProvinceId?: string | null
   characterId?: string | null
   houseId?: string | null
   createdAt?: number
+}
+
+export type WarInvasionArrow = {
+  fromProvinceId: string
+  toProvinceId: string
+}
+
+/** 最近の侵攻（from→to）。同一経路は最新のみ。 */
+export async function listRecentWarInvasions(
+  db: D1Database,
+  limit = 8,
+): Promise<WarInvasionArrow[]> {
+  const events = await new WorldEventRepository(db).listRecentWars(Math.max(limit * 2, 12))
+  const seen = new Set<string>()
+  const arrows: WarInvasionArrow[] = []
+  for (const event of events) {
+    if (!event.fromProvinceId || !event.provinceId) continue
+    const key = `${event.fromProvinceId}->${event.provinceId}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    arrows.push({
+      fromProvinceId: event.fromProvinceId,
+      toProvinceId: event.provinceId,
+    })
+    if (arrows.length >= limit) break
+  }
+  return arrows
 }
 
 export async function recordWorldEvent(db: D1Database, input: RecordInput): Promise<void> {
@@ -67,6 +95,7 @@ export async function recordWorldEvent(db: D1Database, input: RecordInput): Prom
     kind: input.kind,
     message: input.message,
     provinceId: input.provinceId,
+    fromProvinceId: input.fromProvinceId,
     characterId: input.characterId,
     houseId: input.houseId,
     createdAt: input.createdAt ?? nowSeconds(),
@@ -85,6 +114,7 @@ export async function recordWorldEvents(db: D1Database, events: RecordInput[]): 
       kind: event.kind,
       message: event.message,
       provinceId: event.provinceId,
+      fromProvinceId: event.fromProvinceId,
       characterId: event.characterId,
       houseId: event.houseId,
       createdAt: event.createdAt ?? createdAt,

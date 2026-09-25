@@ -26,13 +26,33 @@ export function rankName(rank: number): string {
   return CHARACTER_RANKS.find((r) => r.id === rank)?.name ?? '無名'
 }
 
-/** 家中役職（ランクとは別）。Phase 1 では当主を中心に使う。 */
+/** 家中役職（ランクとは別）。当主以外は会議室から任命できる。 */
 export const HOUSE_ROLES = {
   lord: '当主',
+  strategist: '軍師',
+  general: '大将',
   retainer: '家臣',
 } as const
 
 export type HouseRoleId = keyof typeof HOUSE_ROLES
+
+/** 家に1人までの称号役（当主以外） */
+export const UNIQUE_HOUSE_ROLE_IDS = ['strategist', 'general'] as const
+
+export const APPOINTABLE_HOUSE_ROLE_IDS = [
+  'strategist',
+  'general',
+  'retainer',
+] as const satisfies ReadonlyArray<HouseRoleId>
+
+export function isAppointableHouseRoleId(value: string): value is (typeof APPOINTABLE_HOUSE_ROLE_IDS)[number] {
+  return (APPOINTABLE_HOUSE_ROLE_IDS as readonly string[]).includes(value)
+}
+
+export function houseRoleLabel(role: string): string {
+  const found = Object.values(HOUSE_ROLES).find((label) => label === role)
+  return found ?? role
+}
 
 export const HOUSE_COLORS = [
   '#c45c26',
