@@ -54,7 +54,7 @@ import { ProvinceRepository } from '../repositories/provinces'
 import { UnitRepository } from '../repositories/units'
 import { HOUSE_ROLES } from '../config/game'
 import type { Character, CharacterCommand, Province } from '../types'
-import { resolveBattle, wallDefender } from './battle'
+import { formatBattleLog, resolveBattle, wallDefender } from './battle'
 import { DomainError } from './character'
 import { recordWorldEvent } from './events'
 import { recruitOfficerSucceeds } from './recruit-officer'
@@ -803,6 +803,8 @@ export async function executeCharacterCommand(
       : wallDefender(target.defense)
 
     const battle = resolveBattle(attackerSide, defenderSide)
+    const battleLog = formatBattleLog(battle)
+    const roundLabel = battle.rounds > 0 ? `${battle.rounds}ラウンド` : '交戦なし'
     const now = nowSeconds()
 
     personal.troops = battle.attackerTroops
@@ -829,7 +831,7 @@ export async function executeCharacterCommand(
       await consumeQueuedCommand(db, character.id, queued)
 
       const vsLabel = defenderChar ? `${defenderChar.name}` : `${target.name}の城壁`
-      const newsMessage = `${character.name}が${fromMaster.name}から${target.name}へ侵攻し攻略した（対${vsLabel}、攻残兵${personal.troops}）。`
+      const newsMessage = `${character.name}が${fromMaster.name}から${target.name}へ侵攻し攻略した（対${vsLabel}、${roundLabel}、攻残兵${personal.troops}）。`
       await recordWorldEvent(db, {
         year: gameState.year,
         month: gameState.month,
@@ -848,7 +850,7 @@ export async function executeCharacterCommand(
           month: gameState.month,
           channel: 'result',
           kind: 'war',
-          message: `${character.name}の侵攻により${target.name}の守備に敗北した。`,
+          message: `${character.name}の侵攻により${target.name}の守備に敗北した（${roundLabel}、守残兵0）。\n${battleLog}`,
           provinceId: target.id,
           fromProvinceId: fromMaster.id,
           characterId: defenderChar.id,
@@ -858,7 +860,7 @@ export async function executeCharacterCommand(
       }
       return {
         ok: true,
-        message: `${fromMaster.name}から${target.name}へ侵攻し占領した（残兵${personal.troops}）。`,
+        message: `${fromMaster.name}から${target.name}へ侵攻し占領した（対${vsLabel}、${roundLabel}、残兵${personal.troops}）。\n${battleLog}`,
       }
     }
 
@@ -885,7 +887,7 @@ export async function executeCharacterCommand(
       month: gameState.month,
       channel: 'news',
       kind: 'war',
-      message: `${character.name}が${fromMaster.name}から${target.name}へ侵攻したが失敗した（攻残兵${personal.troops}）。`,
+      message: `${character.name}が${fromMaster.name}から${target.name}へ侵攻したが失敗した（${roundLabel}、攻残兵${personal.troops}）。`,
       provinceId: target.id,
       fromProvinceId: fromMaster.id,
       characterId: character.id,
@@ -898,7 +900,7 @@ export async function executeCharacterCommand(
         month: gameState.month,
         channel: 'result',
         kind: 'war',
-        message: `${character.name}の侵攻を${target.name}で撃退した（守残兵${battle.defenderTroops}）。`,
+        message: `${character.name}の侵攻を${target.name}で撃退した（${roundLabel}、守残兵${battle.defenderTroops}）。\n${battleLog}`,
         provinceId: target.id,
         fromProvinceId: fromMaster.id,
         characterId: defenderChar.id,
@@ -908,7 +910,7 @@ export async function executeCharacterCommand(
     }
     return {
       ok: true,
-      message: `${fromMaster.name}から${target.name}への侵攻に失敗した（残兵${personal.troops}）。`,
+      message: `${fromMaster.name}から${target.name}への侵攻に失敗した（${roundLabel}、残兵${personal.troops}）。\n${battleLog}`,
     }
   }
 

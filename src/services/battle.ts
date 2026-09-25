@@ -12,11 +12,22 @@ export type BattleCombatant = {
   defAdd?: number
 }
 
+export type BattleRoundLog = {
+  round: number
+  /** 攻撃側が与えたダメージ */
+  attackerDamage: number
+  defenderTroopsAfter: number
+  /** 防衛側が与えたダメージ（攻撃側が先に壊滅した場合は null） */
+  defenderDamage: number | null
+  attackerTroopsAfter: number
+}
+
 export type BattleResult = {
   winner: 'attacker' | 'defender'
   attackerTroops: number
   defenderTroops: number
   rounds: number
+  log: BattleRoundLog[]
 }
 
 const BATTLE_MAX_ROUNDS = 50
@@ -51,12 +62,13 @@ export function resolveBattle(
 ): BattleResult {
   let ksol = Math.max(0, Math.floor(attacker.troops))
   let esol = Math.max(0, Math.floor(defender.troops))
+  const log: BattleRoundLog[] = []
 
   if (esol <= 0) {
-    return { winner: 'attacker', attackerTroops: ksol, defenderTroops: 0, rounds: 0 }
+    return { winner: 'attacker', attackerTroops: ksol, defenderTroops: 0, rounds: 0, log }
   }
   if (ksol <= 0) {
-    return { winner: 'defender', attackerTroops: 0, defenderTroops: esol, rounds: 0 }
+    return { winner: 'defender', attackerTroops: 0, defenderTroops: esol, rounds: 0, log }
   }
 
   const katt = calcAttackPower(
@@ -77,24 +89,50 @@ export function resolveBattle(
     const kdmg = Math.max(1, randInclusive(katt, rng))
     esol -= kdmg
     if (esol <= 0) {
+      esol = 0
+      log.push({
+        round: rounds + 1,
+        attackerDamage: kdmg,
+        defenderTroopsAfter: 0,
+        defenderDamage: null,
+        attackerTroopsAfter: ksol,
+      })
       return {
         winner: 'attacker',
         attackerTroops: ksol,
         defenderTroops: 0,
         rounds: rounds + 1,
+        log,
       }
     }
 
     const edmg = Math.max(1, randInclusive(eatt, rng))
     ksol -= edmg
     if (ksol <= 0) {
+      ksol = 0
+      log.push({
+        round: rounds + 1,
+        attackerDamage: kdmg,
+        defenderTroopsAfter: esol,
+        defenderDamage: edmg,
+        attackerTroopsAfter: 0,
+      })
       return {
         winner: 'defender',
         attackerTroops: 0,
         defenderTroops: esol,
         rounds: rounds + 1,
+        log,
       }
     }
+
+    log.push({
+      round: rounds + 1,
+      attackerDamage: kdmg,
+      defenderTroopsAfter: esol,
+      defenderDamage: edmg,
+      attackerTroopsAfter: ksol,
+    })
   }
 
   // ラウンド上限: 兵が残っていれば防衛側の勝ち扱い
@@ -103,6 +141,7 @@ export function resolveBattle(
     attackerTroops: ksol,
     defenderTroops: esol,
     rounds,
+    log,
   }
 }
 
@@ -113,4 +152,43 @@ export function wallDefender(defense: number): BattleCombatant {
     buyu: 30,
     training: 60,
   }
+}
+
+function formatRoundLine(row: BattleRoundLog): string {
+  if (row.defenderDamage == null) {
+    return `${row.round} 攻-${row.attackerDamage}→守${row.defenderTroopsAfter} 攻略`
+  }
+  if (row.attackerTroopsAfter <= 0) {
+    return `${row.round} 攻-${row.attackerDamage}→守${row.defenderTroopsAfter} / 守-${row.defenderDamage}→攻0 撃退`
+  }
+  return `${row.round} 攻-${row.attackerDamage}→守${row.defenderTroopsAfter} / 守-${row.defenderDamage}→攻${row.attackerTroopsAfter}`
+}
+
+/**
+ * 個人結果向けの戦況テキスト。長い場合は先頭・末尾を残して省略。
+ */
+export function formatBattleLog(
+  result: Pick<BattleResult, 'rounds' | 'log' | 'winner'>,
+  options?: { maxLines?: number },
+): string {
+  const maxLines = options?.maxLines ?? 20
+  const { log, rounds, winner } = result
+  if (log.length === 0) {
+    return `【戦況】交戦なし（${winner === 'attacker' ? '守備兵なし' : '攻撃兵なし'}）`
+  }
+
+  const header = `【戦況】全${rounds}ラウンド`
+  if (log.length <= maxLines) {
+    return [header, ...log.map(formatRoundLine)].join('\n')
+  }
+
+  const head = Math.ceil(maxLines / 2)
+  const tail = maxLines - head
+  const omitted = log.length - head - tail
+  return [
+    header,
+    ...log.slice(0, head).map(formatRoundLine),
+    `…（中略 ${omitted} ラウンド）…`,
+    ...log.slice(-tail).map(formatRoundLine),
+  ].join('\n')
 }
