@@ -879,10 +879,73 @@ a {
   padding-top: 0.7rem;
 }
 
+.event-feed-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.75rem;
+  margin-bottom: 0.45rem;
+}
+
+.event-feed-title {
+  margin: 0;
+}
+
+.event-feed-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-left: auto;
+}
+
+.event-feed-filter {
+  min-height: 2rem;
+  min-width: 2rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.event-feed-filter.is-active {
+  border-color: rgba(196, 92, 38, 0.75);
+  color: #f0c27a;
+  background: rgba(196, 92, 38, 0.12);
+}
+
 .event-feed-empty {
   margin: 0;
   color: var(--muted);
   font-size: 0.82rem;
+}
+
+.province-cell.is-defending {
+  position: relative;
+}
+
+.province-defend-mark {
+  position: absolute;
+  top: 0.1rem;
+  right: 0.12rem;
+  padding: 0 0.15rem;
+  border: 1px solid rgba(240, 194, 122, 0.7);
+  background: rgba(26, 20, 16, 0.75);
+  color: #f0c27a;
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+.province-map.is-compact .province-defend-mark {
+  font-size: 0.5rem;
+  top: 0.05rem;
+  right: 0.05rem;
 }
 
 .event-kind-social .event-kind {

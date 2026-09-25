@@ -18,6 +18,7 @@ export const renderer = jsxRenderer(({ children }) => {
         <Script src="/src/client/command-sheet.ts" />
         <Script src="/src/client/ranking-filter.ts" />
         <Script src="/src/client/feed-seen.ts" />
+        <Script src="/src/client/event-feed-filter.ts" />
       </head>
       <body>{children}</body>
     </html>

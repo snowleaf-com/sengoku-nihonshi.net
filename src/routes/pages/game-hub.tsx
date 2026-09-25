@@ -51,6 +51,7 @@ type GameHubPageProps = {
   unit: UnitSummary | null
   houseUnits: HouseUnitOption[]
   warInvasions?: Array<{ fromProvinceId: string; toProvinceId: string }>
+  defendingProvinceIds?: string[]
   defenderName?: string | null
   commandError?: string | null
   error?: string | null
@@ -77,6 +78,7 @@ export function GameHubPage({
   unit,
   houseUnits,
   warInvasions = [],
+  defendingProvinceIds = [],
   defenderName = null,
   commandError = null,
   error,
@@ -524,12 +526,18 @@ export function GameHubPage({
               focusProvinceId={character.provinceId}
               highlightProvinceIds={warTargets.map((t) => t.id)}
               warInvasions={warInvasions}
+              defendingProvinceIds={defendingProvinceIds}
             />
             <p class="hint">
-              隣接の攻撃可能国は地図上で強調。最近の侵攻は矢印で表示される。
+              隣接の攻撃可能国は強調。守備中は「守」。最近の侵攻は矢印。
             </p>
             <div id="feed-news">
-              <EventFeed title="知らせ" events={news} empty="まだ知らせはない" />
+              <EventFeed
+                title="知らせ"
+                events={news}
+                empty="まだ知らせはない"
+                filterable
+              />
             </div>
             <div id="feed-results">
               <EventFeed title="あなたの結果" events={results} empty="まだ結果はない" />
