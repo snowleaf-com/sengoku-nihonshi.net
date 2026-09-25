@@ -17,6 +17,7 @@ export const renderer = jsxRenderer(({ children }) => {
         <Script src="/src/client/turn-countdown.ts" />
         <Script src="/src/client/command-sheet.ts" />
         <Script src="/src/client/ranking-filter.ts" />
+        <Script src="/src/client/feed-seen.ts" />
       </head>
       <body>{children}</body>
     </html>

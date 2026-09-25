@@ -338,6 +338,20 @@ a {
   text-overflow: ellipsis;
 }
 
+/* 顔の上に載せない。選択時のラベルは顔の下へ */
+.icon-option-caption {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.58rem;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .icon-option:hover .icon-option-face {
   transform: translateY(-1px);
 }
@@ -512,7 +526,8 @@ a {
     padding: 0.45rem;
   }
 
-  .icon-option-label {
+  .icon-option-label,
+  .icon-option-caption {
     font-size: 0.52rem;
   }
 
@@ -768,6 +783,81 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
+.resource-list-primary .is-primary dd {
+  font-size: 1.25rem;
+}
+
+.vital-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.65rem 1.1rem;
+  margin: 0.55rem 0 0;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--line);
+  background: rgba(26, 20, 16, 0.55);
+  position: sticky;
+  top: 0;
+  z-index: 15;
+}
+
+.vital-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.vital-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.vital-value {
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.vital-sub {
+  margin-left: 0.1rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.vital-flag {
+  margin-left: auto;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid rgba(196, 92, 38, 0.55);
+  color: #f0c27a;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.btn-touch {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding-inline: 0.85rem;
+}
+
+.feed-new-chip {
+  display: inline-block;
+  margin-left: 0.3rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.2rem;
+  background: #c45c26;
+  color: #fff7ef;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  vertical-align: middle;
+}
+
+.game-top-actions .has-unseen {
+  border-color: rgba(196, 92, 38, 0.75);
+  color: #f0c27a;
+}
+
 .card-meta {
   margin: 0 0 0.5rem;
 }
@@ -921,16 +1011,36 @@ a {
     grid-template-columns: 1fr;
   }
 
-  .game-info-stack {
+  /* スマホ: 地図を先に（位置・侵攻が主役） */
+  .game-map-section {
     order: 1;
   }
 
-  .game-commands {
+  .game-info-stack {
     order: 2;
   }
 
-  .game-map-section {
+  .game-commands {
     order: 3;
+  }
+
+  .province-map {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    overscroll-behavior-x: contain;
+  }
+
+  .command-fab-bar {
+    bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .game-top-actions {
+    gap: 0.4rem;
+  }
+
+  .game-top-actions .btn-touch {
+    min-height: 2.5rem;
   }
 }
 
@@ -1890,11 +2000,12 @@ textarea.field-input {
 
 .command-fab-bar {
   position: sticky;
-  bottom: 0.75rem;
+  bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
   z-index: 20;
   display: flex;
   justify-content: center;
   padding: 0.5rem;
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
   pointer-events: none;
 }
 
