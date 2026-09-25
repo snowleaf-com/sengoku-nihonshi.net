@@ -1,12 +1,14 @@
 :root {
-  --bg0: #1a1410;
-  --bg1: #2a1f18;
-  --ink: #f3e6d4;
-  --muted: #c4b09a;
+  --bg0: #ffffff;
+  --bg1: #f4f2ef;
+  --ink: #1a1814;
+  --muted: #6a635c;
   --accent: #c45c26;
   --accent-ink: #fff7ef;
-  --line: rgba(243, 230, 212, 0.18);
-  --danger: #e07171;
+  --line: rgba(26, 20, 16, 0.14);
+  --danger: #c04545;
+  --panel: #ffffff;
+  --panel-soft: rgba(26, 20, 16, 0.035);
   --font-display: 'Hiragino Mincho ProN', 'Yu Mincho', 'Shippori Mincho', serif;
   --font-body: 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', sans-serif;
 }
@@ -24,10 +26,7 @@ body {
 body {
   color: var(--ink);
   font-family: var(--font-body);
-  background:
-    radial-gradient(1200px 600px at 20% -10%, rgba(196, 92, 38, 0.28), transparent 60%),
-    radial-gradient(900px 500px at 100% 10%, rgba(90, 120, 90, 0.18), transparent 55%),
-    linear-gradient(160deg, var(--bg0), var(--bg1) 55%, #120e0b);
+  background: var(--bg0);
 }
 
 a {
@@ -135,13 +134,13 @@ a {
 }
 
 .btn-ghost:hover {
-  background: rgba(243, 230, 212, 0.06);
+  background: var(--panel-soft);
 }
 
 .panel {
   text-align: left;
   border: 1px solid var(--line);
-  background: rgba(26, 20, 16, 0.55);
+  background: var(--panel);
   padding: 1.5rem;
 }
 
@@ -201,7 +200,7 @@ a {
   padding: 0.75rem 0.85rem;
   border: 1px solid var(--line);
   border-radius: 0.2rem;
-  background: rgba(0, 0, 0, 0.25);
+  background: #fff;
   color: var(--ink);
   font: inherit;
 }
@@ -219,7 +218,7 @@ a {
 
 .create-panel {
   border: 1px solid var(--line);
-  background: rgba(26, 20, 16, 0.55);
+  background: var(--panel);
   padding: 1.15rem 1.25rem;
   min-width: 0;
 }
@@ -583,60 +582,10 @@ a {
 
 .game-layout {
   position: relative;
-  isolation: isolate;
   width: 100%;
   max-width: none;
   display: grid;
   gap: 0.85rem;
-  --season-wash: rgba(196, 92, 38, 0.16);
-  --season-glow: rgba(90, 120, 90, 0.12);
-  --season-deep: #1a1410;
-  --season-mid: #2a1f18;
-}
-
-.game-layout::after {
-  content: '';
-  position: absolute;
-  inset: -2rem;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(900px 480px at 18% -8%, var(--season-wash), transparent 62%),
-    radial-gradient(760px 420px at 92% 8%, var(--season-glow), transparent 58%),
-    linear-gradient(165deg, var(--season-deep), var(--season-mid) 55%, #120e0b);
-}
-
-.game-layout > * {
-  position: relative;
-  z-index: 1;
-}
-
-.game-layout[data-season='spring'] {
-  --season-wash: rgba(220, 140, 160, 0.28);
-  --season-glow: rgba(180, 150, 120, 0.16);
-  --season-deep: #22181a;
-  --season-mid: #3a2a2c;
-}
-
-.game-layout[data-season='summer'] {
-  --season-wash: rgba(70, 140, 100, 0.28);
-  --season-glow: rgba(80, 130, 160, 0.18);
-  --season-deep: #141a16;
-  --season-mid: #1f2c24;
-}
-
-.game-layout[data-season='autumn'] {
-  --season-wash: rgba(196, 92, 38, 0.3);
-  --season-glow: rgba(180, 120, 50, 0.18);
-  --season-deep: #1c1410;
-  --season-mid: #322018;
-}
-
-.game-layout[data-season='winter'] {
-  --season-wash: rgba(120, 150, 180, 0.24);
-  --season-glow: rgba(200, 210, 220, 0.12);
-  --season-deep: #12161a;
-  --season-mid: #1c242c;
 }
 
 .season-chip {
@@ -664,7 +613,7 @@ a {
   justify-content: space-between;
   padding: 0.7rem 1rem;
   border: 1px solid var(--line);
-  background: rgba(26, 20, 16, 0.72);
+  background: var(--panel);
 }
 
 .game-top-meta {
@@ -725,8 +674,7 @@ a {
 
 .game-panel {
   border: 1px solid var(--line);
-  background:
-    linear-gradient(165deg, rgba(48, 36, 28, 0.72), rgba(26, 20, 16, 0.55));
+  background: var(--panel);
   padding: 1rem 1.05rem 1.1rem;
   min-width: 0;
   border-radius: 0.55rem;
@@ -833,7 +781,7 @@ a {
   margin: 0.55rem 0 0;
   padding: 0.55rem 0.85rem;
   border: 1px solid var(--line);
-  background: rgba(26, 20, 16, 0.55);
+  background: var(--panel);
   position: sticky;
   top: 0;
   z-index: 15;
@@ -905,6 +853,40 @@ a {
   margin: 0 0 0.55rem;
   font-family: var(--font-display);
   letter-spacing: 0.06em;
+}
+
+.game-map-section {
+  --map-season-wash: rgba(196, 92, 38, 0.12);
+  --map-season-glow: rgba(90, 120, 90, 0.1);
+  --map-season-base: #f7f3ee;
+  background:
+    radial-gradient(520px 280px at 12% 0%, var(--map-season-wash), transparent 65%),
+    radial-gradient(460px 240px at 95% 10%, var(--map-season-glow), transparent 60%),
+    var(--map-season-base);
+}
+
+.game-map-section[data-season='spring'] {
+  --map-season-wash: rgba(220, 140, 160, 0.28);
+  --map-season-glow: rgba(200, 170, 120, 0.18);
+  --map-season-base: #fbf4f6;
+}
+
+.game-map-section[data-season='summer'] {
+  --map-season-wash: rgba(70, 150, 110, 0.22);
+  --map-season-glow: rgba(80, 140, 180, 0.16);
+  --map-season-base: #f3f8f5;
+}
+
+.game-map-section[data-season='autumn'] {
+  --map-season-wash: rgba(196, 92, 38, 0.26);
+  --map-season-glow: rgba(180, 120, 50, 0.16);
+  --map-season-base: #faf4ee;
+}
+
+.game-map-section[data-season='winter'] {
+  --map-season-wash: rgba(120, 150, 180, 0.22);
+  --map-season-glow: rgba(180, 200, 220, 0.2);
+  --map-season-base: #f2f5f8;
 }
 
 .game-map-section .province-map {
@@ -1516,7 +1498,7 @@ a {
   max-height: calc(var(--queue-row) * 20);
   overflow: auto;
   border: 1px solid var(--line);
-  background: rgba(0, 0, 0, 0.12);
+  background: var(--panel-soft);
 }
 
 .command-board-main {
@@ -1997,6 +1979,10 @@ textarea.field-input {
 }
 
 
+.live-clock {
+  font-variant-numeric: tabular-nums;
+}
+
 .turn-countdown {
   display: block;
   margin-top: 0.15rem;
@@ -2312,7 +2298,7 @@ textarea.field-input {
 
 .queue-summary {
   border: 1px solid var(--line);
-  background: rgba(26, 20, 16, 0.72);
+  background: var(--panel);
   padding: 0.75rem 0.85rem;
 }
 
@@ -2386,7 +2372,7 @@ textarea.field-input {
   padding: 0;
   border: 1px solid var(--line);
   border-radius: 0.75rem;
-  background: var(--bg, #1a1814);
+  background: var(--panel);
   color: inherit;
 }
 
@@ -2413,7 +2399,7 @@ textarea.field-input {
     bottom: 0;
     z-index: 18;
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    background: linear-gradient(transparent, rgba(12, 9, 7, 0.92) 28%);
+    background: linear-gradient(transparent, rgba(255, 255, 255, 0.95) 28%);
   }
 
   .command-fab-bar {

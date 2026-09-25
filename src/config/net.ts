@@ -4,7 +4,7 @@
  */
 
 /** 先行入力枠（原本 $MAX_COM） */
-export const COMMAND_QUEUE_MAX = 24
+export const COMMAND_QUEUE_MAX = 100
 
 /** 能力 +1 に必要な EX（原本は 10） */
 export const STAT_EX_PER_LEVEL = 10

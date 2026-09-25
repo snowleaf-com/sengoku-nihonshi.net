@@ -85,7 +85,7 @@ describe('phase N1 NET domestic', () => {
       'syuugou',
       'nashi',
     ])
-    expect(COMMAND_QUEUE_MAX).toBe(24)
+    expect(COMMAND_QUEUE_MAX).toBe(100)
     expect(STAT_EX_PER_LEVEL).toBe(10)
     const nougyou = getCommand('nougyou')!
     const chips = visibleEffects(nougyou)
