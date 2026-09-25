@@ -17,7 +17,6 @@ import {
   parseSlotPositions,
 } from '../config/commands'
 import {
-  CLASS_PER_RANK,
   COMMAND_CONTRIBUTION,
   DEFEND_CONTRIBUTION,
   DOMESTIC_GOLD_COST,
@@ -29,9 +28,6 @@ import {
   RECRUIT_OFFICER_GOLD_COST,
   RECRUIT_POP_PER,
   RICE_GIVE_COST,
-  SALARY_BASE_CAP,
-  SALARY_CAP_PER_RANK,
-  SALARY_RANK_MAX,
   STAT_EX_PER_LEVEL,
   TECH_MAX,
   TRADE_MAX,
@@ -44,6 +40,7 @@ import {
   isHouseWarReady,
   netStatGain,
   netTrainGain,
+  salaryCapForClassPoints,
 } from '../config/net'
 import { getProvinceMaster } from '../config/provinces'
 import { areAdjacent } from '../domain/province/adjacency'
@@ -832,7 +829,7 @@ export async function executeCharacterCommand(
       await consumeQueuedCommand(db, character.id, queued)
 
       const vsLabel = defenderChar ? `${defenderChar.name}` : `${target.name}の城壁`
-      const newsMessage = `${character.name}が${target.name}を攻略した（対${vsLabel}）。`
+      const newsMessage = `${character.name}が${fromMaster.name}から${target.name}へ侵攻し攻略した（対${vsLabel}、攻残兵${personal.troops}）。`
       await recordWorldEvent(db, {
         year: gameState.year,
         month: gameState.month,
@@ -844,9 +841,22 @@ export async function executeCharacterCommand(
         houseId: character.houseId,
         createdAt: now,
       })
+      if (defenderChar) {
+        await recordWorldEvent(db, {
+          year: gameState.year,
+          month: gameState.month,
+          channel: 'result',
+          kind: 'war',
+          message: `${character.name}の侵攻により${target.name}の守備に敗北した。`,
+          provinceId: target.id,
+          characterId: defenderChar.id,
+          houseId: defenderChar.houseId,
+          createdAt: now,
+        })
+      }
       return {
         ok: true,
-        message: `${target.name}を占領した（残兵${personal.troops}）。`,
+        message: `${fromMaster.name}から${target.name}へ侵攻し占領した（残兵${personal.troops}）。`,
       }
     }
 
@@ -873,15 +883,28 @@ export async function executeCharacterCommand(
       month: gameState.month,
       channel: 'news',
       kind: 'war',
-      message: `${character.name}が${target.name}への侵攻に失敗した。`,
+      message: `${character.name}が${fromMaster.name}から${target.name}へ侵攻したが失敗した（攻残兵${personal.troops}）。`,
       provinceId: target.id,
       characterId: character.id,
       houseId: character.houseId,
       createdAt: now,
     })
+    if (defenderChar) {
+      await recordWorldEvent(db, {
+        year: gameState.year,
+        month: gameState.month,
+        channel: 'result',
+        kind: 'war',
+        message: `${character.name}の侵攻を${target.name}で撃退した（守残兵${battle.defenderTroops}）。`,
+        provinceId: target.id,
+        characterId: defenderChar.id,
+        houseId: defenderChar.houseId,
+        createdAt: now,
+      })
+    }
     return {
       ok: true,
-      message: `${target.name}への侵攻に失敗した（残兵${personal.troops}）。`,
+      message: `${fromMaster.name}から${target.name}への侵攻に失敗した（残兵${personal.troops}）。`,
     }
   }
 
@@ -1072,8 +1095,7 @@ export function characterIncomeShare(
 ): number {
   if (houseMeritTotal <= 0 || merit <= 0) return 0
   let kadd = Math.floor((pool * merit) / houseMeritTotal + merit * 1.3)
-  const sNum = Math.min(SALARY_RANK_MAX, Math.floor(classPoints / CLASS_PER_RANK))
-  const cap = SALARY_BASE_CAP + sNum * SALARY_CAP_PER_RANK
+  const cap = salaryCapForClassPoints(classPoints)
   if (kadd > cap) kadd = cap
   return Math.max(0, kadd)
 }

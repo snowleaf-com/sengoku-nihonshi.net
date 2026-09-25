@@ -3,8 +3,20 @@
 export const START_YEAR = 1467
 export const START_MONTH = 1
 
-/** 実時間のターン間隔（秒）。開発中は短め、公開は 1800（30分）想定 */
-export const TURN_INTERVAL_SECONDS = 60
+/** 実時間のターン間隔の既定（秒）。env `TURN_INTERVAL_SECONDS` で上書き */
+export const DEFAULT_TURN_INTERVAL_SECONDS = 60
+
+/** @deprecated 互換用。新規は getTurnIntervalSeconds / DEFAULT を使う */
+export const TURN_INTERVAL_SECONDS = DEFAULT_TURN_INTERVAL_SECONDS
+
+export function getTurnIntervalSeconds(env: {
+  TURN_INTERVAL_SECONDS?: string
+}): number {
+  const parsed = Number(env.TURN_INTERVAL_SECONDS)
+  return Number.isFinite(parsed) && parsed > 0
+    ? Math.floor(parsed)
+    : DEFAULT_TURN_INTERVAL_SECONDS
+}
 
 /** 税金（金）が入る月 */
 export const TAX_MONTH = 1

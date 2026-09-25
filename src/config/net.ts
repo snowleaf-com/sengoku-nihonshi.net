@@ -32,6 +32,12 @@ export const SALARY_BASE_CAP = 1000
 export const SALARY_CAP_PER_RANK = 150
 export const SALARY_RANK_MAX = 20
 
+/** class_points から給与・俸禄の個人 cap を求める */
+export function salaryCapForClassPoints(classPoints: number): number {
+  const sNum = Math.min(SALARY_RANK_MAX, Math.floor(classPoints / CLASS_PER_RANK))
+  return SALARY_BASE_CAP + sNum * SALARY_CAP_PER_RANK
+}
+
 /** 初期相場 */
 export const DEFAULT_MARKET_RATE = 1.0
 

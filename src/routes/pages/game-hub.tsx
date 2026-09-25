@@ -8,7 +8,8 @@ import { StatIcon } from '../../components/StatIcon'
 import { getArchetype } from '../../config/archetypes'
 import { formatGameDate, seasonLabel, seasonOfMonth } from '../../config/calendar'
 import { formatMoney, formatRice, rankName } from '../../config/game'
-import { getCharacterIcon, iconPublicPath } from '../../config/icons'
+import { salaryCapForClassPoints } from '../../config/net'
+import { iconPublicPath } from '../../config/icons'
 import { getProvinceMaster, PROVINCES } from '../../config/provinces'
 import { adjacentCount, listAdjacentIds } from '../../domain/province/adjacency'
 import { isInHomeLand } from '../../services/commands'
@@ -46,6 +47,7 @@ type GameHubPageProps = {
   characterNameById: Record<string, string>
   unit: UnitSummary | null
   houseUnits: HouseUnitOption[]
+  defenderName?: string | null
   commandError?: string | null
   error?: string | null
   notice?: string | null
@@ -69,6 +71,7 @@ export function GameHubPage({
   characterNameById,
   unit,
   houseUnits,
+  defenderName = null,
   commandError = null,
   error,
   notice = null,
@@ -76,7 +79,6 @@ export function GameHubPage({
   const master = getProvinceMaster(province.id)
   const adj = master ? adjacentCount(master, PROVINCES) : 0
   const houseById = Object.fromEntries(houses.map((h) => [h.id, h]))
-  const icon = getCharacterIcon(character.iconId)
   const archetype = getArchetype(character.archetypeId)
   const timeFmt: Intl.DateTimeFormatOptions = {
     timeZone: 'Asia/Tokyo',
@@ -122,6 +124,9 @@ export function GameHubPage({
     })
     .filter((row): row is { id: string; name: string; ownerLabel: string } => row != null)
   const provinceNameById = Object.fromEntries(provinces.map((p) => [p.id, p.name]))
+  const salaryCap = salaryCapForClassPoints(character.classPoints)
+  const newsCount = news.length
+  const resultsCount = results.length
 
   return (
     <SiteShell title={`${character.name} — 戦国日本史.net`}>
@@ -137,7 +142,14 @@ export function GameHubPage({
             </div>
             <div>
               <dt>次ターン</dt>
-              <dd>{nextTurnLabel}</dd>
+              <dd>
+                <span>{nextTurnLabel}</span>
+                <span
+                  class="turn-countdown"
+                  data-next-turn-at={String(gameState.nextTurnAt)}
+                  hidden
+                ></span>
+              </dd>
             </div>
             <div>
               <dt>現在</dt>
@@ -146,6 +158,15 @@ export function GameHubPage({
           </dl>
 
           <div class="game-top-actions">
+            <button type="button" class="btn btn-primary btn-small" data-open-commands>
+              コマンド
+            </button>
+            <a class="btn btn-ghost btn-small" href="#feed-results">
+              結果{resultsCount > 0 ? ` (${resultsCount})` : ''}
+            </a>
+            <a class="btn btn-ghost btn-small" href="#feed-news">
+              知らせ{newsCount > 0 ? ` (${newsCount})` : ''}
+            </a>
             <a class="btn btn-ghost btn-small" href="/game/house">
               会議室
             </a>
@@ -191,8 +212,8 @@ export function GameHubPage({
                 <div>
                   <h2 class="card-title self-name">{character.name}</h2>
                   <p class="self-meta">
-                    {icon?.label ?? '武将'} · {archetype?.label ?? '均衡'} ·{' '}
-                    {rankName(character.rank)}
+                    {archetype?.label ?? '均衡'} · {rankName(character.rank)}
+                    <span class="hint-inline">給与上限 {formatMoney(salaryCap)}</span>
                   </p>
                   <p class="self-meta">{houseLine}</p>
                 </div>
@@ -293,12 +314,15 @@ export function GameHubPage({
                 />
               </div>
               {character.defending ? (
-                <p class="status-badge status-defending">守備中</p>
+                <p class="status-badge status-defending">あなたがこの都市を守備中</p>
               ) : null}
             </section>
 
             <section class="game-panel game-card game-card-city">
               <h2 class="card-title">都市 · {province.name}</h2>
+              <p class="hint">
+                守備武将: {defenderName ? defenderName : 'なし（城壁のみ）'}
+              </p>
               <div class="gauge-grid gauge-grid-2">
                 <StatGauge
                   label="農民"
@@ -363,50 +387,62 @@ export function GameHubPage({
                       <dd>{houseLine}</dd>
                     </div>
                   </dl>
-                  <div class="unit-actions">
-                    {unit ? (
-                      <form method="post" action="/actions/unit-leave">
-                        <button type="submit" class="btn btn-ghost btn-small">
-                          部隊を離脱
-                        </button>
-                      </form>
-                    ) : (
-                      <>
-                        <form class="stack-form" method="post" action="/actions/unit-create">
-                          <label class="field">
-                            <span class="field-label">新部隊</span>
-                            <input
-                              class="field-input"
-                              type="text"
-                              name="unitName"
-                              maxlength={12}
-                              required
-                              placeholder="部隊名"
-                            />
-                          </label>
-                          <button type="submit" class="btn btn-ghost btn-small">
-                            編成
-                          </button>
-                        </form>
-                        {houseUnits.length > 0 ? (
-                          <form class="stack-form" method="post" action="/actions/unit-join">
-                            <label class="field">
-                              <span class="field-label">参加</span>
-                              <select class="field-input" name="unitId" required>
-                                {houseUnits.map((u) => (
-                                  <option value={u.id} key={u.id}>
-                                    {u.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
+                  <div class="unit-block">
+                    <h3 class="unit-block-title">部隊</h3>
+                    <p class="hint">
+                      同じ部隊の武将は集合コマンドで合流できる。隊長が部隊を作る。
+                    </p>
+                    <div class="unit-actions">
+                      {unit ? (
+                        <>
+                          <p class="status-badge">
+                            所属「{unit.name}」{unit.isLeader ? '（隊長）' : '（隊員）'}
+                          </p>
+                          <form method="post" action="/actions/unit-leave">
                             <button type="submit" class="btn btn-ghost btn-small">
-                              参加
+                              部隊を離脱
                             </button>
                           </form>
-                        ) : null}
-                      </>
-                    )}
+                        </>
+                      ) : (
+                        <>
+                          <p class="hint">未所属。新編するか既存部隊へ参加。</p>
+                          <form class="stack-form" method="post" action="/actions/unit-create">
+                            <label class="field">
+                              <span class="field-label">新部隊</span>
+                              <input
+                                class="field-input"
+                                type="text"
+                                name="unitName"
+                                maxlength={12}
+                                required
+                                placeholder="部隊名"
+                              />
+                            </label>
+                            <button type="submit" class="btn btn-ghost btn-small">
+                              編成
+                            </button>
+                          </form>
+                          {houseUnits.length > 0 ? (
+                            <form class="stack-form" method="post" action="/actions/unit-join">
+                              <label class="field">
+                                <span class="field-label">参加</span>
+                                <select class="field-input" name="unitId" required>
+                                  {houseUnits.map((u) => (
+                                    <option value={u.id} key={u.id}>
+                                      {u.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <button type="submit" class="btn btn-ghost btn-small">
+                                参加
+                              </button>
+                            </form>
+                          ) : null}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </>
               ) : (
@@ -442,29 +478,50 @@ export function GameHubPage({
               provinces={provinces}
               houses={houses}
               focusProvinceId={character.provinceId}
+              highlightProvinceIds={warTargets.map((t) => t.id)}
             />
-            <EventFeed title="出来事" events={news} empty="まだ知らせはない" />
+            <p class="hint">隣接の攻撃可能国は地図上で強調表示される。</p>
+            <div id="feed-news">
+              <EventFeed title="知らせ" events={news} empty="まだ知らせはない" />
+            </div>
+            <div id="feed-results">
+              <EventFeed title="あなたの結果" events={results} empty="まだ結果はない" />
+            </div>
           </section>
 
-          <section class="game-panel game-commands">
-            <CommandPanel
-              queue={queue}
-              currentYear={gameState.year}
-              currentMonth={gameState.month}
-              results={results}
-              error={commandError}
-              inHomeLand={inHomeLand}
-              canShikan={canShikan}
-              adjacentProvinces={adjacentProvinces}
-              warTargets={warTargets}
-              recruitTargets={recruitTargets}
-              marketRate={province.marketRate}
-              provinceNameById={provinceNameById}
-              characterNameById={characterNameById}
-              troopCap={character.toso}
-              maintenance={Boolean(gameState.maintenance)}
-            />
-          </section>
+          <div class="command-fab-bar">
+            <button type="button" class="btn btn-primary" data-open-commands>
+              コマンドを開く
+            </button>
+          </div>
+
+          <dialog id="command-sheet" class="command-sheet">
+            <div class="command-sheet-inner">
+              <header class="command-sheet-head">
+                <h2>コマンド</h2>
+                <button type="button" class="btn btn-ghost btn-small" data-close-commands>
+                  閉じる
+                </button>
+              </header>
+              <CommandPanel
+                queue={queue}
+                currentYear={gameState.year}
+                currentMonth={gameState.month}
+                results={results}
+                error={commandError}
+                inHomeLand={inHomeLand}
+                canShikan={canShikan}
+                adjacentProvinces={adjacentProvinces}
+                warTargets={warTargets}
+                recruitTargets={recruitTargets}
+                marketRate={province.marketRate}
+                provinceNameById={provinceNameById}
+                characterNameById={characterNameById}
+                troopCap={character.toso}
+                maintenance={Boolean(gameState.maintenance)}
+              />
+            </div>
+          </dialog>
         </div>
       </div>
     </SiteShell>

@@ -10,6 +10,8 @@ type ProvinceMapViewProps = {
   focusProvinceId?: string
   /** Hub向け: 都市名と色だけ・小さめ表示 */
   compact?: boolean
+  /** 戦争の攻撃候補など、地図上で強調する国 */
+  highlightProvinceIds?: string[]
 }
 
 type ProvinceMapPickProps = {
@@ -41,6 +43,9 @@ export function ProvinceMap(props: ProvinceMapProps) {
   const pickSwapPath = pickMode ? props.pickSwapPath : undefined
   const focusProvinceId = !pickMode ? props.focusProvinceId : undefined
   const compact = !pickMode && props.compact === true
+  const highlightIds = new Set(
+    !pickMode && props.highlightProvinceIds ? props.highlightProvinceIds : [],
+  )
 
   const cells: Array<{ key: string; province: Province | null }> = []
   for (let y = 0; y < height; y++) {
@@ -66,6 +71,7 @@ export function ProvinceMap(props: ProvinceMapProps) {
 
         const house = cell.province.houseId ? houseById[cell.province.houseId] : null
         const focused = cell.province.id === focusProvinceId
+        const highlighted = highlightIds.has(cell.province.id)
         const fill = house?.color ?? NEUTRAL_COLOR
 
         if (pickMode && inputName) {
@@ -108,13 +114,13 @@ export function ProvinceMap(props: ProvinceMapProps) {
 
         return (
           <div
-            class={`province-cell${house ? ' is-owned' : ' is-neutral'}${focused ? ' is-focus' : ''}`}
+            class={`province-cell${house ? ' is-owned' : ' is-neutral'}${focused ? ' is-focus' : ''}${highlighted ? ' is-war-target' : ''}`}
             key={cell.key}
             style={`background-color:${fill}`}
             title={
               house
-                ? `${cell.province.name}（${house.name}）`
-                : `${cell.province.name}（中立・守備${cell.province.garrison}）`
+                ? `${cell.province.name}（${house.name}${highlighted ? '・攻撃可' : ''}）`
+                : `${cell.province.name}（中立・守備${cell.province.garrison}${highlighted ? '・攻撃可' : ''}）`
             }
           >
             <span class="province-name">{cell.province.name}</span>

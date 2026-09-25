@@ -19,6 +19,7 @@ export default defineConfig(async () => {
             WEBAUTHN_ORIGIN: 'http://localhost:5173',
             WEBAUTHN_RP_NAME: '戦国日本史.net',
             SESSION_TTL_SECONDS: '15552000',
+            TURN_INTERVAL_SECONDS: '60',
           },
         },
       }),
