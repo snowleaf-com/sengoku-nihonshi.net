@@ -7,6 +7,8 @@ import {
   appointHouseRole,
   listHouseMessages,
   listRanking,
+  listRankingByHouse,
+  listTitleBoards,
 } from '../src/services/social'
 import { listRecentWarInvasions, recordWorldEvent } from '../src/services/events'
 import { ensureGameState } from '../src/services/turns'
@@ -101,6 +103,39 @@ describe('ranking / war map / appoint', () => {
     expect(mine?.troops).toBe(42)
     expect(mine?.roleLabel).toBe(HOUSE_ROLES.lord)
     expect(mine?.houseId).toBe(lord.character.houseId)
+  })
+
+  it('groups ranking by house with officers and provinces', async () => {
+    const provinceId = await findNeutralProvince(['owari', 'mikawa', 'ise'])
+    const lord = await seedHouse(provinceId)
+    const houseId = lord.character.houseId!
+    await seedRetainer(provinceId, houseId)
+
+    const { houses, total } = await listRankingByHouse(env.DB)
+    const block = houses.find((h) => h.houseId === houseId)
+    expect(block).toBeTruthy()
+    expect(block?.lordName).toBe(lord.character.name)
+    expect(block?.memberCount).toBeGreaterThanOrEqual(2)
+    expect(block?.provinceCount).toBeGreaterThanOrEqual(1)
+    expect(block?.provinceNames.length).toBe(block?.provinceCount)
+    expect(total).toBeGreaterThanOrEqual(2)
+  })
+
+  it('title boards expose top entries per metric', async () => {
+    const provinceId = await findNeutralProvince(['yamato', 'yamashiro', 'settsu'])
+    const lord = await seedHouse(provinceId)
+    await new CharacterRepository(env.DB).updateResources(lord.character.id, {
+      buyu: 99,
+      money: 500,
+      rice: 300,
+      updatedAt: nowSeconds(),
+    })
+
+    const { boards, highlight } = await listTitleBoards(env.DB)
+    expect(boards.length).toBeGreaterThanOrEqual(5)
+    const buyu = boards.find((b) => b.id === 'buyu')
+    expect(buyu?.entries[0]?.name).toBe(lord.character.name)
+    expect(highlight.some((h) => h.name.includes(lord.character.name))).toBe(true)
   })
 
   it('lists recent war invasions from from_province_id', async () => {

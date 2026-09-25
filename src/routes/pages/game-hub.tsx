@@ -51,7 +51,6 @@ type GameHubPageProps = {
   unit: UnitSummary | null
   houseUnits: HouseUnitOption[]
   warInvasions?: Array<{ fromProvinceId: string; toProvinceId: string }>
-  defendingProvinceIds?: string[]
   defenderName?: string | null
   commandError?: string | null
   error?: string | null
@@ -78,7 +77,6 @@ export function GameHubPage({
   unit,
   houseUnits,
   warInvasions = [],
-  defendingProvinceIds = [],
   defenderName = null,
   commandError = null,
   error,
@@ -194,7 +192,10 @@ export function GameHubPage({
               手紙
             </a>
             <a class="btn btn-ghost btn-small btn-touch" href="/game/ranking">
-              一覧
+              武将一覧
+            </a>
+            <a class="btn btn-ghost btn-small btn-touch" href="/game/titles">
+              名称一覧
             </a>
             <a class="btn btn-ghost btn-small btn-touch" href="/game">
               更新
@@ -361,8 +362,8 @@ export function GameHubPage({
 
             <section class="game-panel game-card game-card-city">
               <h2 class="card-title">都市 · {province.name}</h2>
-              <p class="hint">
-                守備武将: {defenderName ? defenderName : 'なし（城壁のみ）'}
+              <p class="city-defend">
+                都市の守備：{defenderName ? defenderName : 'なし（城壁のみ）'}
               </p>
               <div class="gauge-grid gauge-grid-2">
                 <StatGauge
@@ -526,10 +527,9 @@ export function GameHubPage({
               focusProvinceId={character.provinceId}
               highlightProvinceIds={warTargets.map((t) => t.id)}
               warInvasions={warInvasions}
-              defendingProvinceIds={defendingProvinceIds}
             />
             <p class="hint">
-              隣接の攻撃可能国は強調。守備中は「守」。最近の侵攻は矢印。
+              隣接の攻撃可能国は強調。最近の侵攻は矢印。守備は所在都市のパネルで確認。
             </p>
             <div id="feed-news">
               <EventFeed

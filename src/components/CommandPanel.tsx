@@ -234,7 +234,9 @@ export function CommandPanel({
                 formaction="/actions/clear-commands"
                 data-needs-selection
               >
-                <strong class="command-card-label">削除</strong>
+                <span class="command-card-head">
+                  <strong class="command-card-label">削除</strong>
+                </span>
                 <span class="command-card-hint">選んだ枠を空にする</span>
               </button>
               <button
@@ -243,7 +245,9 @@ export function CommandPanel({
                 formaction="/actions/repeat-commands"
                 data-needs-selection
               >
-                <strong class="command-card-label">繰返</strong>
+                <span class="command-card-head">
+                  <strong class="command-card-label">繰返</strong>
+                </span>
                 <span class="command-card-hint">選んだ並びを後ろへ繰り返す</span>
               </button>
 
@@ -435,7 +439,9 @@ export function CommandPanel({
                       key={command.id}
                       data-needs-selection
                     >
-                      <strong class="command-card-label">{command.label}</strong>
+                      <span class="command-card-head">
+                        <strong class="command-card-label">{command.label}</strong>
+                      </span>
                       <span class="command-card-hint">{command.blurb}</span>
                       <EffectChips command={command} />
                     </button>

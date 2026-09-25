@@ -1,16 +1,18 @@
-/** 武将一覧の家フィルタ */
+/** 武将一覧の家（国）ブロック絞り込み */
 function bootRankingFilter() {
   const select = document.querySelector('[data-ranking-filter]') as HTMLSelectElement | null
-  const table = document.querySelector('[data-ranking-table]') as HTMLTableElement | null
-  if (!select || !table) return
+  if (!select) return
 
-  const rows = Array.from(table.querySelectorAll('tbody tr[data-house]')) as HTMLTableRowElement[]
+  const blocks = Array.from(
+    document.querySelectorAll('[data-house-block]'),
+  ) as HTMLElement[]
+  if (blocks.length === 0) return
 
   const apply = () => {
     const value = select.value
-    for (const row of rows) {
-      const house = row.dataset.house ?? ''
-      row.hidden = value !== '' && house !== value
+    for (const block of blocks) {
+      const house = block.dataset.houseBlock ?? ''
+      block.hidden = value !== '' && house !== value
     }
   }
 
