@@ -66,8 +66,8 @@ export function CharacterCreatePage({
                       height="64"
                       loading="lazy"
                     />
-                    <span class="icon-option-label">{icon.label}</span>
                   </span>
+                  <span class="icon-option-caption">{icon.label}</span>
                 </label>
               ))}
             </div>

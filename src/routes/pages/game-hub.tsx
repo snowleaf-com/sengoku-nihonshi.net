@@ -131,6 +131,8 @@ export function GameHubPage({
   const salaryCap = salaryCapForClassPoints(character.classPoints)
   const newsCount = news.length
   const resultsCount = results.length
+  const latestNewsAt = news[0]?.createdAt ?? 0
+  const latestResultsAt = results[0]?.createdAt ?? 0
 
   return (
     <SiteShell title={`${character.name} — 戦国日本史.net`}>
@@ -162,39 +164,70 @@ export function GameHubPage({
           </dl>
 
           <div class="game-top-actions">
-            <button type="button" class="btn btn-primary btn-small" data-open-commands>
+            <button type="button" class="btn btn-primary btn-small btn-touch" data-open-commands>
               コマンド
             </button>
-            <a class="btn btn-ghost btn-small" href="#feed-results">
+            <a
+              class="btn btn-ghost btn-small btn-touch"
+              href="#feed-results"
+              data-feed-badge="results"
+              data-feed-latest={String(latestResultsAt)}
+            >
               結果{resultsCount > 0 ? ` (${resultsCount})` : ''}
             </a>
-            <a class="btn btn-ghost btn-small" href="#feed-news">
+            <a
+              class="btn btn-ghost btn-small btn-touch"
+              href="#feed-news"
+              data-feed-badge="news"
+              data-feed-latest={String(latestNewsAt)}
+            >
               知らせ{newsCount > 0 ? ` (${newsCount})` : ''}
             </a>
-            <a class="btn btn-ghost btn-small" href="/game/house">
+            <a class="btn btn-ghost btn-small btn-touch" href="/game/house">
               会議室
             </a>
-            <a class="btn btn-ghost btn-small" href="/game/letters">
+            <a class="btn btn-ghost btn-small btn-touch" href="/game/letters">
               手紙
             </a>
-            <a class="btn btn-ghost btn-small" href="/game/ranking">
+            <a class="btn btn-ghost btn-small btn-touch" href="/game/ranking">
               一覧
             </a>
-            <a class="btn btn-ghost btn-small" href="/game">
+            <a class="btn btn-ghost btn-small btn-touch" href="/game">
               更新
             </a>
             <form method="post" action="/actions/advance-turn">
-              <button type="submit" class="btn btn-ghost btn-small">
+              <button type="submit" class="btn btn-ghost btn-small btn-touch">
                 ターン進行
               </button>
             </form>
             <form method="post" action="/auth/logout">
-              <button type="submit" class="btn btn-ghost btn-small">
+              <button type="submit" class="btn btn-ghost btn-small btn-touch">
                 ログアウト
               </button>
             </form>
           </div>
         </header>
+
+        <div class="vital-strip" aria-label="所持">
+          <div class="vital-item">
+            <span class="vital-label">金</span>
+            <strong class="vital-value">{formatMoney(character.money)}</strong>
+          </div>
+          <div class="vital-item">
+            <span class="vital-label">米</span>
+            <strong class="vital-value">{formatRice(character.rice)}</strong>
+          </div>
+          <div class="vital-item">
+            <span class="vital-label">兵</span>
+            <strong class="vital-value">
+              {character.troops}
+              <span class="vital-sub">/{character.toso}</span>
+            </strong>
+          </div>
+          {character.defending ? (
+            <span class="vital-flag">守備中</span>
+          ) : null}
+        </div>
 
         {gameState.maintenance ? (
           <p class="hero-error game-error">メンテナンス中です。コマンドの入力はできません。</p>
@@ -268,15 +301,15 @@ export function GameHubPage({
                   <ExGauge value={character.tokuboEx} tone="tokubo" />
                 </div>
               </dl>
-              <dl class="resource-list">
-                <div>
+              <dl class="resource-list resource-list-primary">
+                <div class="is-primary">
                   <dt>
                     <StatIcon target="money" />
                     金
                   </dt>
                   <dd>{formatMoney(character.money)}</dd>
                 </div>
-                <div>
+                <div class="is-primary">
                   <dt>
                     <StatIcon target="rice" />
                     米
@@ -497,7 +530,7 @@ export function GameHubPage({
           </section>
 
           <div class="command-fab-bar">
-            <button type="button" class="btn btn-primary" data-open-commands>
+            <button type="button" class="btn btn-primary btn-touch" data-open-commands>
               コマンドを開く
             </button>
           </div>
