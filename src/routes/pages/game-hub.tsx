@@ -99,7 +99,6 @@ export function GameHubPage({
     hour12: false,
   }
   const nextTurnLabel = new Date(gameState.nextTurnAt * 1000).toLocaleString('ja-JP', timeFmt)
-  const nowLabel = new Date().toLocaleString('ja-JP', timeFmt)
   const locationLabel = province.houseId
     ? `${province.name}（${houseById[province.houseId]?.name ?? '他家'}）`
     : `${province.name}（中立）`
@@ -140,7 +139,7 @@ export function GameHubPage({
 
   return (
     <SiteShell title={`${character.name} — 戦国日本史.net`}>
-      <div class="game-layout" data-season={season}>
+      <div class="game-layout">
         <header class="game-top">
           <dl class="meta meta-inline game-top-meta">
             <div>
@@ -163,7 +162,11 @@ export function GameHubPage({
             </div>
             <div>
               <dt>現在</dt>
-              <dd>{nowLabel}</dd>
+              <dd>
+                <span data-live-clock class="live-clock">
+                  —
+                </span>
+              </dd>
             </div>
           </dl>
 
@@ -517,7 +520,7 @@ export function GameHubPage({
             </section>
           </div>
 
-          <section class="game-panel game-map-section">
+          <section class="game-panel game-map-section" data-season={season}>
             <h2>全国</h2>
             <ProvinceMap
               compact
