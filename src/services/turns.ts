@@ -1,14 +1,14 @@
 import {
   START_MONTH,
   START_YEAR,
-  TURN_INTERVAL_SECONDS,
+  DEFAULT_TURN_INTERVAL_SECONDS,
   advanceMonth,
   formatGameDate,
   isTaxMonth,
   isTributeMonth,
   type GameDate,
 } from '../config/calendar'
-import { CHARACTER_RANKS } from '../config/game'
+import { CHARACTER_RANKS, formatMoney, formatRice } from '../config/game'
 import { CLASS_PER_RANK, SALARY_RANK_MAX } from '../config/net'
 import { getCommand } from '../config/commands'
 import { nowSeconds } from '../lib/id'
@@ -31,11 +31,15 @@ import {
   DISASTER_LABELS,
   pickDisasterType,
   shouldTriggerDisaster,
+  type DisasterType,
 } from './disaster'
 import { recordWorldEvents } from './events'
 import { nextIdleStreakAfterNashi, shouldDeleteForIdle } from './idle'
 
-export async function ensureGameState(db: D1Database): Promise<GameState> {
+export async function ensureGameState(
+  db: D1Database,
+  turnIntervalSeconds: number = DEFAULT_TURN_INTERVAL_SECONDS,
+): Promise<GameState> {
   const repo = new GameStateRepository(db)
   const state = await repo.get()
   if (state.nextTurnAt === 0) {
@@ -43,7 +47,7 @@ export async function ensureGameState(db: D1Database): Promise<GameState> {
     return repo.save({
       date: { year: state.year || START_YEAR, month: state.month || START_MONTH },
       turnIndex: state.turnIndex,
-      nextTurnAt: now + TURN_INTERVAL_SECONDS,
+      nextTurnAt: now + turnIntervalSeconds,
       updatedAt: now,
     })
   }
@@ -52,14 +56,20 @@ export async function ensureGameState(db: D1Database): Promise<GameState> {
 
 export async function advanceDueTurns(
   db: D1Database,
-  options: { force?: boolean; now?: number } = {},
+  options: {
+    force?: boolean
+    now?: number
+    turnIntervalSeconds?: number
+  } = {},
 ): Promise<{ advanced: number; state: GameState }> {
-  let state = await ensureGameState(db)
+  const turnIntervalSeconds =
+    options.turnIntervalSeconds ?? DEFAULT_TURN_INTERVAL_SECONDS
+  let state = await ensureGameState(db, turnIntervalSeconds)
   const now = options.now ?? nowSeconds()
   let advanced = 0
 
   while (options.force || state.nextTurnAt <= now) {
-    state = await advanceOneTurn(db, state, now)
+    state = await advanceOneTurn(db, state, now, turnIntervalSeconds)
     advanced += 1
     if (options.force) break
     if (advanced >= 24) break
@@ -88,7 +98,10 @@ async function paySeasonalIncome(
   nextDate: GameDate,
   wallClock: number,
   kind: 'tax' | 'tribute',
-): Promise<number> {
+): Promise<{
+  paidCount: number
+  personal: Array<{ characterId: string; houseId: string | null; message: string }>
+}> {
   const characters = new CharacterRepository(db)
   const provinces = new ProvinceRepository(db)
   const all = await characters.listAll()
@@ -109,7 +122,10 @@ async function paySeasonalIncome(
     )
   }
 
-  let paid = 0
+  let paidCount = 0
+  const personal: Array<{ characterId: string; houseId: string | null; message: string }> =
+    []
+
   for (const listed of all) {
     let character = await characters.findById(listed.id)
     if (!character) continue
@@ -152,10 +168,22 @@ async function paySeasonalIncome(
       toso: character.toso,
       updatedAt: wallClock,
     })
-    paid += 1
+
+    if (amount > 0) {
+      paidCount += 1
+      const label =
+        kind === 'tax'
+          ? `税金として ${formatMoney(amount)} を受け取った`
+          : `年貢として ${formatRice(amount)} を受け取った`
+      personal.push({
+        characterId: character.id,
+        houseId: character.houseId,
+        message: `${formatGameDate(nextDate)}、${label}。`,
+      })
+    }
   }
 
-  return paid
+  return { paidCount, personal }
 }
 
 async function applySeasonalPopulation(db: D1Database, wallClock: number): Promise<void> {
@@ -179,14 +207,34 @@ export async function applySeasonalDisaster(
   nextDate: GameDate,
   wallClock: number,
   options: { random01?: number; typeRandom01?: number } = {},
-): Promise<{ triggered: boolean; type?: string; label?: string }> {
+): Promise<{
+  triggered: boolean
+  type?: DisasterType
+  label?: string
+  personal: Array<{
+    characterId: string
+    houseId: string | null
+    provinceId: string
+    message: string
+  }>
+}> {
   if (!shouldTriggerDisaster(options.random01 ?? Math.random())) {
-    return { triggered: false }
+    return { triggered: false, personal: [] }
   }
   const type = pickDisasterType(options.typeRandom01 ?? Math.random())
+  const label = DISASTER_LABELS[type]
   const provinces = new ProvinceRepository(db)
+  const characters = new CharacterRepository(db)
   const all = await provinces.listAll()
+  const effectByProvince = new Map<string, string>()
+
   for (const province of all) {
+    const before = {
+      agriculture: province.agriculture,
+      commerce: province.commerce,
+      defense: province.defense,
+      population: province.population,
+    }
     const next = applyDisasterToProvince(province, type)
     await provinces.updateStats(province.id, {
       agriculture: next.agriculture,
@@ -195,8 +243,43 @@ export async function applySeasonalDisaster(
       population: next.population,
       updatedAt: wallClock,
     })
+    const parts: string[] = []
+    if (next.agriculture !== before.agriculture) {
+      parts.push(`農業 ${before.agriculture}→${next.agriculture}`)
+    }
+    if (next.commerce !== before.commerce) {
+      parts.push(`商業 ${before.commerce}→${next.commerce}`)
+    }
+    if (next.defense !== before.defense) {
+      parts.push(`城壁 ${before.defense}→${next.defense}`)
+    }
+    if (next.population !== before.population) {
+      parts.push(`農民 ${before.population}→${next.population}`)
+    }
+    if (parts.length > 0) {
+      effectByProvince.set(province.id, parts.join('、'))
+    }
   }
-  return { triggered: true, type, label: DISASTER_LABELS[type] }
+
+  const personal: Array<{
+    characterId: string
+    houseId: string | null
+    provinceId: string
+    message: string
+  }> = []
+  for (const listed of await characters.listAll()) {
+    const effect = effectByProvince.get(listed.provinceId)
+    if (!effect) continue
+    const province = all.find((p) => p.id === listed.provinceId)
+    personal.push({
+      characterId: listed.id,
+      houseId: listed.houseId,
+      provinceId: listed.provinceId,
+      message: `${formatGameDate(nextDate)}、所在の${province?.name ?? '国'}で${label}（${effect}）。`,
+    })
+  }
+
+  return { triggered: true, type, label, personal }
 }
 
 /** 毎月: 兵1人につき米1。不足時は脱走 */
@@ -270,6 +353,7 @@ async function advanceOneTurn(
   db: D1Database,
   state: GameState,
   wallClock: number,
+  turnIntervalSeconds: number,
 ): Promise<GameState> {
   const characters = new CharacterRepository(db)
   const commands = new CharacterCommandRepository(db)
@@ -278,7 +362,7 @@ async function advanceOneTurn(
     year: number
     month: number
     channel: 'result' | 'news'
-    kind: 'command' | 'income' | 'system' | 'disaster' | 'social'
+    kind: 'command' | 'income' | 'system' | 'disaster' | 'social' | 'war'
     message: string
     provinceId?: string | null
     characterId?: string | null
@@ -388,10 +472,23 @@ async function advanceOneTurn(
         message: `${formatGameDate(nextDate)}、全国に${disaster.label}の災厄が起きた。`,
         createdAt: wallClock,
       })
+      for (const row of disaster.personal) {
+        eventBatch.push({
+          year: nextDate.year,
+          month: nextDate.month,
+          channel: 'result',
+          kind: 'disaster',
+          message: row.message,
+          provinceId: row.provinceId,
+          characterId: row.characterId,
+          houseId: row.houseId,
+          createdAt: wallClock,
+        })
+      }
     }
     if (isTaxMonth(nextDate.month)) {
       const taxed = await paySeasonalIncome(db, nextDate, wallClock, 'tax')
-      if (taxed > 0) {
+      if (taxed.paidCount > 0) {
         eventBatch.push({
           year: nextDate.year,
           month: nextDate.month,
@@ -401,16 +498,40 @@ async function advanceOneTurn(
           createdAt: wallClock,
         })
       }
+      for (const row of taxed.personal) {
+        eventBatch.push({
+          year: nextDate.year,
+          month: nextDate.month,
+          channel: 'result',
+          kind: 'income',
+          message: row.message,
+          characterId: row.characterId,
+          houseId: row.houseId,
+          createdAt: wallClock,
+        })
+      }
     }
     if (isTributeMonth(nextDate.month)) {
       const tributed = await paySeasonalIncome(db, nextDate, wallClock, 'tribute')
-      if (tributed > 0) {
+      if (tributed.paidCount > 0) {
         eventBatch.push({
           year: nextDate.year,
           month: nextDate.month,
           channel: 'news',
           kind: 'income',
           message: `${formatGameDate(nextDate)}、収穫で各武将に米が支払われた。`,
+          createdAt: wallClock,
+        })
+      }
+      for (const row of tributed.personal) {
+        eventBatch.push({
+          year: nextDate.year,
+          month: nextDate.month,
+          channel: 'result',
+          kind: 'income',
+          message: row.message,
+          characterId: row.characterId,
+          houseId: row.houseId,
           createdAt: wallClock,
         })
       }
@@ -430,13 +551,13 @@ async function advanceOneTurn(
 
   const nextTurnAt =
     state.nextTurnAt > 0
-      ? state.nextTurnAt + TURN_INTERVAL_SECONDS
-      : wallClock + TURN_INTERVAL_SECONDS
+      ? state.nextTurnAt + turnIntervalSeconds
+      : wallClock + turnIntervalSeconds
 
   return new GameStateRepository(db).save({
     date: nextDate,
     turnIndex: state.turnIndex + 1,
-    nextTurnAt: Math.max(nextTurnAt, wallClock + TURN_INTERVAL_SECONDS),
+    nextTurnAt: Math.max(nextTurnAt, wallClock + turnIntervalSeconds),
     updatedAt: wallClock,
   })
 }

@@ -10,7 +10,8 @@
     "WEBAUTHN_RP_NAME": "戦国日本史.net",
     "WEBAUTHN_RP_ID": "sengoku.snow-leaf.com",
     "WEBAUTHN_ORIGIN": "https://sengoku.snow-leaf.com",
-    "SESSION_TTL_SECONDS": "15552000"
+    "SESSION_TTL_SECONDS": "15552000",
+    "TURN_INTERVAL_SECONDS": "1800"
   },
   // Cloudflare ダッシュボードで付けた本番ホストを構成としても固定する
   "routes": [
@@ -41,7 +42,8 @@
         "WEBAUTHN_RP_NAME": "戦国日本史.net (staging)",
         "WEBAUTHN_RP_ID": "sengoku-nihonshi-net-staging.yy-dec5.workers.dev",
         "WEBAUTHN_ORIGIN": "https://sengoku-nihonshi-net-staging.yy-dec5.workers.dev",
-        "SESSION_TTL_SECONDS": "15552000"
+        "SESSION_TTL_SECONDS": "15552000",
+        "TURN_INTERVAL_SECONDS": "60"
       },
       "d1_databases": [
         {

@@ -1793,3 +1793,107 @@ textarea.field-input {
   font: inherit;
 }
 
+
+.turn-countdown {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.85em;
+  color: var(--muted);
+}
+
+.hint-inline {
+  display: inline-block;
+  margin-left: 0.4rem;
+  font-size: 0.8em;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.province-cell.is-war-target {
+  box-shadow: inset 0 0 0 2px #c45c26;
+  outline: 1px solid rgba(196, 92, 38, 0.55);
+}
+
+.unit-block {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--line);
+}
+
+.unit-block-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.command-fab-bar {
+  position: sticky;
+  bottom: 0.75rem;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem;
+  pointer-events: none;
+}
+
+.command-fab-bar .btn {
+  pointer-events: auto;
+  min-width: 12rem;
+  min-height: 2.75rem;
+  box-shadow: 0 0.35rem 1rem rgba(0, 0, 0, 0.28);
+}
+
+.command-sheet {
+  width: min(96vw, 42rem);
+  max-height: min(92vh, 52rem);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--bg, #1a1814);
+  color: inherit;
+}
+
+.command-sheet::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.command-sheet-inner {
+  display: flex;
+  flex-direction: column;
+  max-height: min(92vh, 52rem);
+}
+
+.command-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: inherit;
+  z-index: 1;
+}
+
+.command-sheet-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.command-sheet .command-panel {
+  padding: 0.75rem 1rem 1.25rem;
+  overflow: auto;
+}
+
+@media (max-width: 719px) {
+  .command-sheet {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 92vh;
+    margin: 0;
+    border-radius: 0.75rem 0.75rem 0 0;
+    align-self: end;
+  }
+}
+

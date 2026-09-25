@@ -55,8 +55,9 @@ export const CHARACTER_NAME_MAX = 12
 export const HOUSE_NAME_MIN = 1
 export const HOUSE_NAME_MAX = 8
 
-export const STARTING_MONEY = 1000
-export const STARTING_RICE = 1000
+/** 原本 NET は金1000/米500。序盤の手触りのため米・金を少し厚めにする */
+export const STARTING_MONEY = 2000
+export const STARTING_RICE = 1500
 export const STARTING_TROOPS = 0
 export const STARTING_LOYALTY = 50
 

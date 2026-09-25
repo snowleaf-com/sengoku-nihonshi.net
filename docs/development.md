@@ -11,8 +11,8 @@
 | 環境 | URL / 場所 | DB | 反映タイミング |
 |------|------------|-----|----------------|
 | local | http://localhost:5173/ | ローカル D1（`.wrangler/state`） | `npm run dev` で即時 |
-| **staging** | https://sengoku-nihonshi-net-staging.yy-dec5.workers.dev | D1 `sengoku-nihonshi-staging` | `main` へ push / マージ後に CI が自動 |
-| production | https://sengoku.snow-leaf.com | D1 `sengoku-nihonshi` | **手動** `npm run deploy:production` |
+| **staging** | https://sengoku-nihonshi-net-staging.yy-dec5.workers.dev | D1 `sengoku-nihonshi-staging` | `main` へ push / マージ後に CI が自動。ターン間隔 **60秒** |
+| production | https://sengoku.snow-leaf.com | D1 `sengoku-nihonshi` | **手動** `npm run deploy:production`。ターン間隔 **1800秒（30分）** |
 
 staging と production の DB は別物。デプロイで中身は消さない（未適用 migration だけ適用）。
 

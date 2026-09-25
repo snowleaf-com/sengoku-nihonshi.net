@@ -14,6 +14,8 @@ export const renderer = jsxRenderer(({ children }) => {
         <Script src="/src/client/passkey.ts" />
         <Script src="/src/client/stat-adjust.ts" />
         <Script src="/src/client/command-queue.ts" />
+        <Script src="/src/client/turn-countdown.ts" />
+        <Script src="/src/client/command-sheet.ts" />
       </head>
       <body>{children}</body>
     </html>

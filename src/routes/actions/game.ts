@@ -14,6 +14,7 @@ import {
 import { enterWorld } from '../../services/enter-world'
 import { raiseHouse } from '../../services/house'
 import { advanceDueTurns, ensureGameState } from '../../services/turns'
+import { getTurnIntervalSeconds } from '../../config/calendar'
 import { createUnit, joinUnit, leaveUnit } from '../../services/units'
 import { ensureProvincesSeeded } from '../../services/world'
 import { CharacterRepository } from '../../repositories/characters'
@@ -109,7 +110,7 @@ gameActionRoutes.post('/apply-commands', async (c) => {
   const user = c.get('user')
   if (!user) return c.redirect('/')
 
-  const gameState = await ensureGameState(c.env.DB)
+  const gameState = await ensureGameState(c.env.DB, getTurnIntervalSeconds(c.env))
   if (gameState.maintenance) {
     return c.redirect(`/game?cmdError=${encodeURIComponent('メンテナンス中のためコマンドを入力できません')}`)
   }
@@ -178,7 +179,7 @@ gameActionRoutes.post('/clear-commands', async (c) => {
   const user = c.get('user')
   if (!user) return c.redirect('/')
 
-  const gameState = await ensureGameState(c.env.DB)
+  const gameState = await ensureGameState(c.env.DB, getTurnIntervalSeconds(c.env))
   if (gameState.maintenance) {
     return c.redirect(`/game?cmdError=${encodeURIComponent('メンテナンス中です')}`)
   }
@@ -201,7 +202,7 @@ gameActionRoutes.post('/repeat-commands', async (c) => {
   const user = c.get('user')
   if (!user) return c.redirect('/')
 
-  const gameState = await ensureGameState(c.env.DB)
+  const gameState = await ensureGameState(c.env.DB, getTurnIntervalSeconds(c.env))
   if (gameState.maintenance) {
     return c.redirect(`/game?cmdError=${encodeURIComponent('メンテナンス中です')}`)
   }
@@ -225,7 +226,7 @@ gameActionRoutes.post('/advance-turn', async (c) => {
   if (!user) return c.redirect('/')
 
   try {
-    await advanceDueTurns(c.env.DB, { force: true })
+    await advanceDueTurns(c.env.DB, { force: true, turnIntervalSeconds: getTurnIntervalSeconds(c.env) })
     return c.redirect('/game')
   } catch (error) {
     console.error(error)

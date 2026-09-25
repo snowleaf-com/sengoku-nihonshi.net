@@ -35,6 +35,7 @@ import {
 import { ensureProvincesSeeded } from './services/world'
 import { listActionResults, listWorldNews } from './services/events'
 import { advanceDueTurns, ensureGameState } from './services/turns'
+import { getTurnIntervalSeconds } from './config/calendar'
 import { nowSeconds } from './lib/id'
 import type { AppEnv } from './types'
 import { AdminPage } from './routes/pages/admin'
@@ -103,8 +104,9 @@ app.get('/game', requireAuth, async (c) => {
   }
 
   await ensureProvincesSeeded(c.env.DB)
-  await advanceDueTurns(c.env.DB)
-  const gameState = await ensureGameState(c.env.DB)
+  const turnIntervalSeconds = getTurnIntervalSeconds(c.env)
+  await advanceDueTurns(c.env.DB, { turnIntervalSeconds })
+  const gameState = await ensureGameState(c.env.DB, turnIntervalSeconds)
 
   const error = c.req.query('error') ?? null
   const cmdError = c.req.query('cmdError') ?? null
@@ -152,6 +154,10 @@ app.get('/game', requireAuth, async (c) => {
   }
 
   const house = character.houseId ? await housesRepo.findById(character.houseId) : null
+  const defender =
+    province.houseId != null
+      ? await characters.findDefender(province.id, province.houseId)
+      : null
   const houseById = Object.fromEntries(houses.map((h) => [h.id, h]))
   const recruitTargets = locals
     .filter((row) => row.id !== character.id)
@@ -196,6 +202,7 @@ app.get('/game', requireAuth, async (c) => {
       characterNameById={characterNameById}
       unit={unit}
       houseUnits={houseUnits}
+      defenderName={defender?.name ?? null}
       commandError={cmdError}
       error={error}
       notice={notice}
@@ -349,7 +356,9 @@ app.get('/admin', async (c) => {
     querySecret: secret || null,
     headerSecret: c.req.header('x-admin-secret'),
   })
-  const state = authorized ? await ensureGameState(c.env.DB) : null
+  const state = authorized
+    ? await ensureGameState(c.env.DB, getTurnIntervalSeconds(c.env))
+    : null
   return c.render(
     <AdminPage
       authorized={authorized}
@@ -381,7 +390,7 @@ app.post('/admin', async (c) => {
   const now = nowSeconds()
 
   if (intent === 'toggle_maintenance') {
-    const state = await ensureGameState(c.env.DB)
+    const state = await ensureGameState(c.env.DB, getTurnIntervalSeconds(c.env))
     await repo.setMaintenance(state.maintenance ? 0 : 1, now)
     return c.redirect(
       `/admin?secret=${encodeURIComponent(formSecret)}&notice=${encodeURIComponent(
@@ -391,7 +400,10 @@ app.post('/admin', async (c) => {
   }
 
   if (intent === 'advance_turn') {
-    await advanceDueTurns(c.env.DB, { force: true })
+    await advanceDueTurns(c.env.DB, {
+      force: true,
+      turnIntervalSeconds: getTurnIntervalSeconds(c.env),
+    })
     return c.redirect(
       `/admin?secret=${encodeURIComponent(formSecret)}&notice=${encodeURIComponent('ターンを進行した')}`,
     )
@@ -409,7 +421,11 @@ const worker = {
     env: AppEnv['Bindings'],
     ctx: ExecutionContext,
   ) {
-    ctx.waitUntil(advanceDueTurns(env.DB))
+    ctx.waitUntil(
+      advanceDueTurns(env.DB, {
+        turnIntervalSeconds: getTurnIntervalSeconds(env),
+      }),
+    )
   },
 }
 
