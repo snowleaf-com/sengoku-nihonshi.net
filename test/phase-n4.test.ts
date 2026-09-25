@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:test'
 import { describe, expect, it } from 'vitest'
-import { calcAttackPower, resolveBattle, wallDefender } from '../src/services/battle'
+import { calcAttackPower, formatBattleLog, resolveBattle, wallDefender } from '../src/services/battle'
 import {
   applyCommandsToPositions,
   executeCharacterCommand,
@@ -100,6 +100,22 @@ describe('phase N4 battle math', () => {
     expect(result.winner).toBe('attacker')
     expect(result.defenderTroops).toBe(0)
     expect(result.attackerTroops).toBeGreaterThan(0)
+    expect(result.log.length).toBe(result.rounds)
+    expect(result.log[0]?.attackerDamage).toBeGreaterThan(0)
+  })
+
+  it('formatBattleLog includes round lines', () => {
+    let i = 0
+    const rng = () => [0.99, 0.01, 0.99][i++] ?? 0.5
+    const result = resolveBattle(
+      { troops: 20, buyu: 80, training: 40 },
+      { troops: 8, buyu: 20, training: 40 },
+      rng,
+    )
+    const text = formatBattleLog(result)
+    expect(text).toContain('【戦況】')
+    expect(text).toContain('ラウンド')
+    expect(text).toMatch(/\d 攻-/)
   })
 
   it('wallDefender uses defense as troops', () => {
@@ -218,6 +234,10 @@ describe('phase N4 war', () => {
     const before = await characters.findById(attacker.character.id)
     const result = await executeCharacterCommand(env.DB, before!, queued)
     expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.message).toContain('【戦況】')
+      expect(result.message).toContain('ラウンド')
+    }
 
     const occupied = await new ProvinceRepository(env.DB).findById(to)
     expect(occupied?.houseId).toBe(attacker.character.houseId)
