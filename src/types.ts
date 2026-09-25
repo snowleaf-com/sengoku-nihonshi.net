@@ -131,6 +131,34 @@ export type RankingRow = {
   merit: number
   classPoints: number
   rank: number
+  money: number
+  rice: number
+}
+
+export type HouseRankingBlock = {
+  houseId: string
+  houseName: string
+  lordName: string | null
+  strategistName: string | null
+  generalName: string | null
+  memberCount: number
+  provinceCount: number
+  provinceNames: string[]
+  members: RankingRow[]
+}
+
+export type TitleEntry = {
+  rank: number
+  name: string
+  houseName: string
+  value: number
+  valueLabel: string
+}
+
+export type TitleBoard = {
+  id: string
+  title: string
+  entries: TitleEntry[]
 }
 
 export type Province = {

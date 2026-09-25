@@ -19,8 +19,6 @@ type ProvinceMapViewProps = {
   highlightProvinceIds?: string[]
   /** 最近の侵攻方向（from→to） */
   warInvasions?: WarInvasionArrow[]
-  /** 守備武将がいる国 */
-  defendingProvinceIds?: string[]
 }
 
 type ProvinceMapPickProps = {
@@ -58,9 +56,6 @@ export function ProvinceMap(props: ProvinceMapProps) {
   const warInvasions = !pickMode && props.warInvasions ? props.warInvasions : []
   const invasionFromIds = new Set(warInvasions.map((a) => a.fromProvinceId))
   const invasionToIds = new Set(warInvasions.map((a) => a.toProvinceId))
-  const defendingIds = new Set(
-    !pickMode && props.defendingProvinceIds ? props.defendingProvinceIds : [],
-  )
 
   const cells: Array<{ key: string; province: Province | null }> = []
   for (let y = 0; y < height; y++) {
@@ -104,7 +99,6 @@ export function ProvinceMap(props: ProvinceMapProps) {
         const highlighted = highlightIds.has(cell.province.id)
         const invasionFrom = invasionFromIds.has(cell.province.id)
         const invasionTo = invasionToIds.has(cell.province.id)
-        const defending = defendingIds.has(cell.province.id)
         const fill = house?.color ?? NEUTRAL_COLOR
 
         if (pickMode && inputName) {
@@ -149,24 +143,22 @@ export function ProvinceMap(props: ProvinceMapProps) {
         if (highlighted) extras.push('攻撃可')
         if (invasionFrom) extras.push('出兵')
         if (invasionTo) extras.push('侵攻先')
-        if (defending) extras.push('守備中')
 
         return (
           <div
-            class={`province-cell${house ? ' is-owned' : ' is-neutral'}${focused ? ' is-focus' : ''}${highlighted ? ' is-war-target' : ''}${invasionFrom ? ' is-war-from' : ''}${invasionTo ? ' is-war-to' : ''}${defending ? ' is-defending' : ''}`}
+            class={`province-cell${house ? ' is-owned' : ' is-neutral'}${focused ? ' is-focus' : ''}${highlighted ? ' is-war-target' : ''}${invasionFrom ? ' is-war-from' : ''}${invasionTo ? ' is-war-to' : ''}`}
             key={cell.key}
             style={`background-color:${fill}`}
             title={
               house
                 ? `${cell.province.name}（${house.name}${extras.length ? `・${extras.join('・')}` : ''}）`
-                : `${cell.province.name}（中立・守備${cell.province.garrison}${extras.length ? `・${extras.join('・')}` : ''}）`
+                : `${cell.province.name}（中立${extras.length ? `・${extras.join('・')}` : ''}）`
             }
           >
             <span class="province-name">{cell.province.name}</span>
             {compact ? null : (
               <span class="province-owner">{house ? house.name : '中立'}</span>
             )}
-            {defending ? <span class="province-defend-mark" aria-hidden="true">守</span> : null}
           </div>
         )
       })}

@@ -11,6 +11,7 @@ import { HomePage } from './routes/pages/home'
 import { LettersPage } from './routes/pages/letters'
 import { LoginPage } from './routes/pages/login'
 import { RankingPage } from './routes/pages/ranking'
+import { TitlesPage } from './routes/pages/titles'
 import { CharacterCommandRepository } from './repositories/character-commands'
 import { CharacterRepository } from './repositories/characters'
 import { GameStateRepository } from './repositories/game-state'
@@ -28,7 +29,8 @@ import {
   appointHouseRole,
   listHouseMessages,
   listInbox,
-  listRanking,
+  listRankingByHouse,
+  listTitleBoards,
   postHouseMessage,
   sendLetter,
   updateHouseLaw,
@@ -134,7 +136,7 @@ app.get('/game', requireAuth, async (c) => {
     )
   }
 
-  const [province, provinces, houses, queue, news, results, locals, warInvasions, defendingProvinceIds] =
+  const [province, provinces, houses, queue, news, results, locals, warInvasions] =
     await Promise.all([
       provincesRepo.findById(character.provinceId),
       provincesRepo.listAll(),
@@ -144,7 +146,6 @@ app.get('/game', requireAuth, async (c) => {
       listActionResults(c.env.DB, character.id),
       characters.listByProvinceId(character.provinceId),
       listRecentWarInvasions(c.env.DB),
-      characters.listDefendingProvinceIds(),
     ])
 
   if (!province) {
@@ -162,10 +163,7 @@ app.get('/game', requireAuth, async (c) => {
   const houseRole = character.houseId
     ? await new HouseRoleRepository(c.env.DB).findByCharacterId(character.id)
     : null
-  const defender =
-    province.houseId != null
-      ? await characters.findDefender(province.id, province.houseId)
-      : null
+  const defender = await characters.findDefenderInProvince(province.id)
   const houseById = Object.fromEntries(houses.map((h) => [h.id, h]))
   const recruitTargets = locals
     .filter((row) => row.id !== character.id)
@@ -216,7 +214,6 @@ app.get('/game', requireAuth, async (c) => {
       unit={unit}
       houseUnits={houseUnits}
       warInvasions={warInvasions}
-      defendingProvinceIds={defendingProvinceIds}
       defenderName={defender?.name ?? null}
       commandError={cmdError}
       error={error}
@@ -356,8 +353,21 @@ app.get('/game/ranking', requireAuth, async (c) => {
     return c.redirect(`/game?error=${encodeURIComponent('先に武将を作成してください')}`)
   }
 
-  const rows = await listRanking(c.env.DB)
-  return c.render(<RankingPage rows={rows} />)
+  const { houses, ronin, total } = await listRankingByHouse(c.env.DB)
+  return c.render(<RankingPage houses={houses} ronin={ronin} total={total} />)
+})
+
+app.get('/game/titles', requireAuth, async (c) => {
+  const user = c.get('user')
+  if (!user) return c.redirect('/')
+
+  const character = await new CharacterRepository(c.env.DB).findByUserId(user.id)
+  if (!character) {
+    return c.redirect(`/game?error=${encodeURIComponent('先に武将を作成してください')}`)
+  }
+
+  const { highlight, boards } = await listTitleBoards(c.env.DB)
+  return c.render(<TitlesPage highlight={highlight} boards={boards} />)
 })
 
 function adminAuthorized(

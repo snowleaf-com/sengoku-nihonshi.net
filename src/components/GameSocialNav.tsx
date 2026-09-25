@@ -1,7 +1,7 @@
 import type { Child } from 'hono/jsx'
 
 type GameSocialNavProps = {
-  active: 'hub' | 'house' | 'letters' | 'ranking'
+  active: 'hub' | 'house' | 'letters' | 'ranking' | 'titles'
 }
 
 export function GameSocialNav({ active }: GameSocialNavProps) {
@@ -17,7 +17,10 @@ export function GameSocialNav({ active }: GameSocialNavProps) {
         手紙
       </a>
       <a class={active === 'ranking' ? 'is-active' : undefined} href="/game/ranking">
-        一覧
+        武将一覧
+      </a>
+      <a class={active === 'titles' ? 'is-active' : undefined} href="/game/titles">
+        名称一覧
       </a>
     </nav>
   )
@@ -25,7 +28,7 @@ export function GameSocialNav({ active }: GameSocialNavProps) {
 
 type GameSubpageShellProps = {
   title: string
-  active: 'house' | 'letters' | 'ranking'
+  active: 'house' | 'letters' | 'ranking' | 'titles'
   error?: string | null
   notice?: string | null
   children?: Child
