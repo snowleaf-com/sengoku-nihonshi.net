@@ -134,7 +134,7 @@ app.get('/game', requireAuth, async (c) => {
     )
   }
 
-  const [province, provinces, houses, queue, news, results, locals, warInvasions] =
+  const [province, provinces, houses, queue, news, results, locals, warInvasions, defendingProvinceIds] =
     await Promise.all([
       provincesRepo.findById(character.provinceId),
       provincesRepo.listAll(),
@@ -144,6 +144,7 @@ app.get('/game', requireAuth, async (c) => {
       listActionResults(c.env.DB, character.id),
       characters.listByProvinceId(character.provinceId),
       listRecentWarInvasions(c.env.DB),
+      characters.listDefendingProvinceIds(),
     ])
 
   if (!province) {
@@ -215,6 +216,7 @@ app.get('/game', requireAuth, async (c) => {
       unit={unit}
       houseUnits={houseUnits}
       warInvasions={warInvasions}
+      defendingProvinceIds={defendingProvinceIds}
       defenderName={defender?.name ?? null}
       commandError={cmdError}
       error={error}

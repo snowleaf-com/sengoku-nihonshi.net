@@ -210,6 +210,16 @@ export class CharacterRepository {
     return row ? mapCharacter(row) : null
   }
 
+  /** 守備中フラグが立っている国（地図印用） */
+  async listDefendingProvinceIds(): Promise<string[]> {
+    const result = await this.db
+      .prepare(
+        `SELECT DISTINCT province_id FROM characters WHERE defending = 1`,
+      )
+      .all<{ province_id: string }>()
+    return (result.results ?? []).map((row) => row.province_id)
+  }
+
   async assignHouse(characterId: string, houseId: string | null, updatedAt: number): Promise<void> {
     await this.db
       .prepare(
