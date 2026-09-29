@@ -76,6 +76,32 @@ export function dateAtQueueOffset(date: GameDate, offset: number): GameDate {
   }
 }
 
+/** 予約枠 index（0始まり）が実行される実時刻（Unix 秒）。枠0＝次ターン時刻 */
+export function realtimeAtQueueOffset(
+  nextTurnAt: number,
+  offset: number,
+  turnIntervalSeconds: number,
+): number {
+  const safeOffset = Math.max(0, Math.floor(offset))
+  const interval = Math.max(1, Math.floor(turnIntervalSeconds))
+  return nextTurnAt + safeOffset * interval
+}
+
+const REALTIME_FMT: Intl.DateTimeFormatOptions = {
+  timeZone: 'Asia/Tokyo',
+  month: 'numeric',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+}
+
+/** Hub / キュー向けの実時刻表示（JST） */
+export function formatRealtime(unixSeconds: number): string {
+  return new Date(unixSeconds * 1000).toLocaleString('ja-JP', REALTIME_FMT)
+}
+
 export function isTaxMonth(month: number): boolean {
   return month === TAX_MONTH
 }

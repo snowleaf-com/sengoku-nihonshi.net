@@ -11,7 +11,7 @@ export function GameSocialNav({ active }: GameSocialNavProps) {
         Hub
       </a>
       <a class={active === 'house' ? 'is-active' : undefined} href="/game/house">
-        会議室
+        作戦会議
       </a>
       <a class={active === 'letters' ? 'is-active' : undefined} href="/game/letters">
         手紙
@@ -20,7 +20,7 @@ export function GameSocialNav({ active }: GameSocialNavProps) {
         武将一覧
       </a>
       <a class={active === 'titles' ? 'is-active' : undefined} href="/game/titles">
-        名称一覧
+        名将一覧
       </a>
     </nav>
   )

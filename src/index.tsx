@@ -23,7 +23,7 @@ import {
   defaultStatsForArchetype,
   isArchetypeId,
 } from './config/archetypes'
-import { nextHouseColor } from './config/game'
+import { nextHouseColor, HOUSE_ROLES } from './config/game'
 import { DomainError } from './services/character'
 import {
   appointHouseRole,
@@ -41,6 +41,7 @@ import { advanceDueTurns, ensureGameState } from './services/turns'
 import { getTurnIntervalSeconds } from './config/calendar'
 import { nowSeconds } from './lib/id'
 import { HouseRoleRepository } from './repositories/house-roles'
+import { HouseMessageRepository } from './repositories/house-messages'
 import type { AppEnv } from './types'
 import { AdminPage } from './routes/pages/admin'
 
@@ -189,13 +190,57 @@ app.get('/game', requireAuth, async (c) => {
           .filter((name): name is string => Boolean(name)),
       }
     : null
-  const houseUnits =
-    character.houseId && !myUnit
-      ? (await unitsRepo.listByHouse(character.houseId)).map((u) => ({
-          id: u.id,
-          name: u.name,
-        }))
-      : []
+
+  const commandRepo = new CharacterCommandRepository(c.env.DB)
+  let houseOfficers: Array<{
+    characterId: string
+    name: string
+    iconId: string
+    roleLabel: string
+    provinceName: string
+    buyu: number
+    chiryaku: number
+    toso: number
+    tokubo: number
+    queue: Awaited<ReturnType<CharacterCommandRepository['listByCharacter']>>
+    nextDueIn: number
+  }> = []
+  let houseBoardMessages: Awaited<
+    ReturnType<import('./repositories/house-messages').HouseMessageRepository['listByHouse']>
+  > = []
+
+  if (house && character.houseId) {
+    const [peers, roles, board] = await Promise.all([
+      characters.listByHouseId(character.houseId),
+      new HouseRoleRepository(c.env.DB).listByHouseId(character.houseId),
+      new HouseMessageRepository(c.env.DB).listByHouse(character.houseId, 5),
+    ])
+    houseBoardMessages = board
+    const roleByChar = Object.fromEntries(roles.map((r) => [r.characterId, r.role]))
+    const queues = await Promise.all(peers.map((p) => commandRepo.listByCharacter(p.id)))
+    houseOfficers = peers.map((p, i) => {
+      const queue = queues[i] ?? []
+      const next = queue[0]
+      return {
+        characterId: p.id,
+        name: p.name,
+        iconId: p.iconId,
+        roleLabel:
+          p.id === house.leaderCharacterId
+            ? HOUSE_ROLES.lord
+            : (roleByChar[p.id] ?? HOUSE_ROLES.retainer),
+        provinceName: provinceNameByIdSafe(provinces, p.provinceId),
+        buyu: p.buyu,
+        chiryaku: p.chiryaku,
+        toso: p.toso,
+        tokubo: p.tokubo,
+        queue,
+        nextDueIn: next
+          ? next.position * turnIntervalSeconds
+          : Number.MAX_SAFE_INTEGER,
+      }
+    })
+  }
 
   return c.render(
     <GameHubPage
@@ -212,15 +257,24 @@ app.get('/game', requireAuth, async (c) => {
       recruitTargets={recruitTargets}
       characterNameById={characterNameById}
       unit={unit}
-      houseUnits={houseUnits}
       warInvasions={warInvasions}
       defenderName={defender?.name ?? null}
       commandError={cmdError}
       error={error}
       notice={notice}
+      turnIntervalSeconds={turnIntervalSeconds}
+      houseOfficers={houseOfficers}
+      houseBoardMessages={houseBoardMessages}
     />,
   )
 })
+
+function provinceNameByIdSafe(
+  provinces: Awaited<ReturnType<ProvinceRepository['listAll']>>,
+  provinceId: string,
+): string {
+  return provinces.find((p) => p.id === provinceId)?.name ?? provinceId
+}
 
 function parseBodyString(body: Record<string, unknown>, key: string): string {
   const value = body[key]
@@ -238,12 +292,37 @@ app.get('/game/house', requireAuth, async (c) => {
     const { house, character, messages, members } = await listHouseMessages(c.env.DB, {
       userId: user.id,
     })
+    const characters = new CharacterRepository(c.env.DB)
+    const allChars = await characters.listAll()
+    const characterNameById = Object.fromEntries(allChars.map((row) => [row.id, row.name]))
+    const unitsRepo = new UnitRepository(c.env.DB)
+    const myUnit = await unitsRepo.findByMember(character.id)
+    const unitMemberIds = myUnit ? await unitsRepo.listMemberIds(myUnit.id) : []
+    const unit = myUnit
+      ? {
+          id: myUnit.id,
+          name: myUnit.name,
+          isLeader: myUnit.leaderCharacterId === character.id,
+          memberNames: unitMemberIds
+            .map((id) => characterNameById[id])
+            .filter((name): name is string => Boolean(name)),
+        }
+      : null
+    const houseUnits =
+      !myUnit
+        ? (await unitsRepo.listByHouse(house.id)).map((u) => ({
+            id: u.id,
+            name: u.name,
+          }))
+        : []
     return c.render(
       <HouseCouncilPage
         character={character}
         house={house}
         messages={messages}
         members={members}
+        unit={unit}
+        houseUnits={houseUnits}
         error={error}
         notice={notice}
       />,
@@ -285,7 +364,7 @@ app.post('/game/house', requireAuth, async (c) => {
       userId: user.id,
       body: parseBodyString(body, 'body'),
     })
-    return c.redirect(`/game/house?notice=${encodeURIComponent('会議室に投稿した')}`)
+    return c.redirect(`/game/house?notice=${encodeURIComponent('作戦会議に投稿した')}`)
   } catch (err) {
     if (err instanceof DomainError) {
       return c.redirect(`/game/house?error=${encodeURIComponent(err.message)}`)

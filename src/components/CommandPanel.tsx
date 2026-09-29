@@ -11,11 +11,10 @@ import {
   type GameCommand,
 } from '../config/commands'
 import { formatQueueLabel } from '../config/command-payload'
-import { formatGameDate, dateAtQueueOffset } from '../config/calendar'
+import { formatGameDate, dateAtQueueOffset, formatRealtime, realtimeAtQueueOffset } from '../config/calendar'
 import { TRADE_MAX } from '../config/net'
-import type { CharacterCommand, WorldEvent } from '../types'
+import type { CharacterCommand } from '../types'
 import { IconTrendingDown, IconTrendingUp } from './icons'
-import { EventFeed } from './EventFeed'
 import { StatIcon } from './StatIcon'
 
 type AdjacentOption = { id: string; name: string }
@@ -28,7 +27,8 @@ type CommandPanelProps = {
   queue: CharacterCommand[]
   currentYear: number
   currentMonth: number
-  results?: WorldEvent[]
+  nextTurnAt: number
+  turnIntervalSeconds: number
   error?: string | null
   inHomeLand: boolean
   canShikan: boolean
@@ -80,7 +80,8 @@ export function CommandPanel({
   queue,
   currentYear,
   currentMonth,
-  results = [],
+  nextTurnAt,
+  turnIntervalSeconds,
   error = null,
   inHomeLand,
   canShikan,
@@ -186,8 +187,8 @@ export function CommandPanel({
           </div>
         </div>
 
-        <div class="command-board-scroll">
-          <div class="command-board-main">
+        <div class="command-board-body">
+          <div class="command-queue-scroll">
             <ol class="command-queue-list" data-queue-list>
               {slots.map((item, index) => {
                 const displayIndex = index + 1
@@ -204,6 +205,9 @@ export function CommandPanel({
                 const slotDate = dateAtQueueOffset(currentDate, index)
                 const slotMonth = slotDate.month
                 const dateLabel = formatGameDate(slotDate)
+                const realtimeLabel = formatRealtime(
+                  realtimeAtQueueOffset(nextTurnAt, index, turnIntervalSeconds),
+                )
                 return (
                   <li
                     class={`command-queue-item${empty ? ' is-empty' : ''}`}
@@ -219,15 +223,19 @@ export function CommandPanel({
                         data-queue-label={label}
                       />
                       <span class="queue-index">{displayIndex}</span>
-                      <span class="queue-date">{dateLabel}</span>
+                      <span class="queue-date">
+                        <span>{dateLabel}</span>
+                        <span class="queue-realtime">{realtimeLabel}</span>
+                      </span>
                       <span class={`queue-label${empty ? ' is-empty' : ''}`}>{label}</span>
                     </label>
                   </li>
                 )
               })}
             </ol>
+          </div>
 
-            <div class="command-picker-list">
+          <div class="command-picker-list">
               <button
                 type="submit"
                 class="command-card command-card-action"
@@ -447,10 +455,8 @@ export function CommandPanel({
                     </button>
                   ))
                 : null}
-            </div>
           </div>
         </div>
-        <EventFeed title="実行結果" events={results} empty="まだ実行結果はない" />
       </form>
     </section>
   )

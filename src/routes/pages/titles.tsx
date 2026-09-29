@@ -1,5 +1,6 @@
 import { GameSubpageShell } from '../../components/GameSocialNav'
 import { SiteShell } from '../../components/SiteShell'
+import { iconPublicPath } from '../../config/icons'
 import type { TitleBoard, TitleEntry } from '../../types'
 
 type TitlesPageProps = {
@@ -14,8 +15,8 @@ function RankMark({ rank }: { rank: number }) {
 
 export function TitlesPage({ highlight, boards }: TitlesPageProps) {
   return (
-    <SiteShell title="名称一覧 — 戦国日本史.net">
-      <GameSubpageShell title="名称一覧" active="titles">
+    <SiteShell title="名将一覧 — 戦国日本史.net">
+      <GameSubpageShell title="名将一覧" active="titles">
         <section class="game-panel titles-panel">
           <p class="hint">各指標の上位10名。原本の名称一覧（ranking2）に相当。</p>
 
@@ -23,10 +24,19 @@ export function TitlesPage({ highlight, boards }: TitlesPageProps) {
             <ul class="title-highlight" aria-label="各部門1位">
               {highlight.map((row) => (
                 <li class="title-highlight-item">
-                  <strong class="title-highlight-name">{row.name}</strong>
-                  <span class="title-highlight-meta">
-                    {row.houseName} · {row.valueLabel}
-                  </span>
+                  <img
+                    class="title-portrait"
+                    src={iconPublicPath(row.iconId)}
+                    alt=""
+                    width="40"
+                    height="40"
+                  />
+                  <div>
+                    <strong class="title-highlight-name">{row.name}</strong>
+                    <span class="title-highlight-meta">
+                      {row.houseName} · {row.valueLabel}
+                    </span>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -48,6 +58,13 @@ export function TitlesPage({ highlight, boards }: TitlesPageProps) {
                     {board.entries.map((entry) => (
                       <li class={`title-board-row${entry.rank <= 3 ? ' is-podium' : ''}`}>
                         <RankMark rank={entry.rank} />
+                        <img
+                          class="title-portrait"
+                          src={iconPublicPath(entry.iconId)}
+                          alt=""
+                          width="28"
+                          height="28"
+                        />
                         <div class="title-board-who">
                           <span class="title-board-name">{entry.name}</span>
                           <span class="title-board-house">{entry.houseName}</span>
