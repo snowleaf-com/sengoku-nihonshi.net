@@ -1,7 +1,7 @@
 # Phase N1 — NET内政
 
 目的: **三国志.NETと同じ内政式で、積んで放置すると国が育つ**ようにする。  
-地図は令制国のまま。詳細式は [`net-spec.md`](./net-spec.md)。全体は [`roadmap.md`](./roadmap.md)。
+地図は令制国のまま。詳細式は [`net-spec.md`](../net-spec.md)。全体は [`roadmap.md`](../roadmap.md)。
 
 ## 完了条件
 

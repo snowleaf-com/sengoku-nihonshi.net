@@ -118,6 +118,7 @@ export type PersonalLetter = {
 export type RankingRow = {
   characterId: string
   name: string
+  iconId: string
   houseName: string | null
   houseId: string | null
   provinceId: string
@@ -150,6 +151,7 @@ export type HouseRankingBlock = {
 export type TitleEntry = {
   rank: number
   name: string
+  iconId: string
   houseName: string
   value: number
   valueLabel: string

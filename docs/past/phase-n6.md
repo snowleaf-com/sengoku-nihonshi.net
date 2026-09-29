@@ -1,7 +1,7 @@
 # Phase N6 — 仕上げ・NET残り
 
 目的: 原本にあって未移植だった **鍛錬・登用・部隊・災厄・放置削除・忠誠・管理** を MVP で埋める。  
-式の詳細は [`net-spec.md`](./net-spec.md)。全体は [`roadmap.md`](./roadmap.md)。
+式の詳細は [`net-spec.md`](../net-spec.md)。全体は [`roadmap.md`](../roadmap.md)。
 
 ## 完了条件
 

@@ -1,7 +1,7 @@
 # Phase N2 — 移動と商人
 
 目的: **隣接国へ動き、浪人は仕官でき、相場で米と金を換えられる**ようにする。  
-式の詳細は [`net-spec.md`](./net-spec.md)。全体は [`roadmap.md`](./roadmap.md)。
+式の詳細は [`net-spec.md`](../net-spec.md)。全体は [`roadmap.md`](../roadmap.md)。
 
 ## 完了条件
 

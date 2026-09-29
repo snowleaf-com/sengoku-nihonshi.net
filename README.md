@@ -66,7 +66,9 @@ PR では typecheck / lint / test。`main` へマージすると staging へ自�
 | [docs/passkey.md](./docs/passkey.md) | Passkey / WebAuthn の流れ |
 | [docs/session.md](./docs/session.md) | 長期セッション設計 |
 | [docs/database.md](./docs/database.md) | D1 スキーマ |
-| [docs/phase0.md](./docs/phase0.md) | Phase 0 の範囲と完了条件 |
+| [docs/impl.md](./docs/impl.md) | 実装バックログ |
+| [docs/issue/](./docs/issue/) | Issue 対応方針 |
+| [docs/past/](./docs/past/) | 完了フェーズの記録 |
 
 ## 現在のマイルストーン
 

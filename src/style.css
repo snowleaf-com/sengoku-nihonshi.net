@@ -1057,8 +1057,6 @@ a {
   .game-info-stack {
     position: sticky;
     top: 0.75rem;
-    max-height: calc(100vh - 12rem);
-    overflow: auto;
   }
 
   .game-map-section {
@@ -1501,6 +1499,20 @@ a {
   background: var(--panel-soft);
 }
 
+.command-board-body {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--panel-soft);
+  padding: 0.35rem;
+}
+
+.command-queue-scroll {
+  --queue-row: 1.85rem;
+  max-height: calc(var(--queue-row) * 12);
+  overflow: auto;
+}
+
 .command-board-main {
   display: grid;
   gap: 0.75rem;
@@ -1511,6 +1523,13 @@ a {
   display: grid;
   gap: 0.55rem;
   align-content: start;
+  position: sticky;
+  bottom: 0;
+  max-height: min(42vh, 22rem);
+  overflow: auto;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--line);
+  background: var(--panel-soft);
 }
 
 .command-panel-status {
@@ -2156,7 +2175,7 @@ textarea.field-input {
 
 .title-board-row {
   display: grid;
-  grid-template-columns: 1.6rem 1fr auto;
+  grid-template-columns: 1.6rem 1.75rem minmax(0, 1fr) auto;
   gap: 0.55rem;
   align-items: center;
   padding: 0.35rem 0.25rem;
@@ -2451,4 +2470,214 @@ textarea.field-input {
     align-self: end;
   }
 }
+
+
+/* Issue #28 Slice A */
+.game-card-disclosure > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.game-card-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.game-card-disclosure > summary::after {
+  content: '▾';
+  float: right;
+  opacity: 0.55;
+}
+
+.game-card-disclosure:not([open]) > summary::after {
+  content: '▸';
+}
+
+.queue-date,
+.queue-summary-when,
+.event-when,
+.house-officer-when {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  line-height: 1.2;
+}
+
+.queue-realtime,
+.queue-summary-realtime,
+.event-realtime,
+.house-officer-realtime {
+  font-size: 0.72rem;
+  opacity: 0.72;
+  font-variant-numeric: tabular-nums;
+}
+
+.queue-summary-next {
+  margin: 0 0 0.45rem;
+  font-size: 0.88rem;
+}
+
+.queue-summary-next-when {
+  display: block;
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
+.next-command-label {
+  font-weight: 650;
+}
+
+.vital-flag-banner {
+  margin: 0 0 0.5rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--line);
+  background: var(--panel-soft);
+  width: fit-content;
+}
+
+.event-feed-titles {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.event-feed-subtitle {
+  margin: 0;
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
+
+.toast-stack {
+  position: fixed;
+  right: 0.85rem;
+  bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px));
+  z-index: 80;
+  display: grid;
+  gap: 0.45rem;
+  width: min(22rem, calc(100vw - 1.5rem));
+  pointer-events: none;
+}
+
+.toast {
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.45rem;
+  background: var(--panel);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  animation: toast-in 0.22s ease-out;
+}
+
+.toast.is-leaving {
+  opacity: 0;
+  transform: translateY(0.35rem);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.house-officers {
+  margin-top: 0.85rem;
+}
+
+.house-officers-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.house-officers-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.house-officer {
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  padding: 0.55rem 0.65rem;
+  background: var(--panel-soft);
+}
+
+.house-officer-head {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+}
+
+.house-officer-icon {
+  border-radius: 0.25rem;
+  object-fit: cover;
+}
+
+.house-officer-who {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.house-officer-name {
+  font-size: 0.92rem;
+}
+
+.house-officer-meta,
+.house-officer-stats {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.house-officer-queue {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.78rem;
+}
+
+.house-officer-empty {
+  margin: 0.35rem 0 0;
+}
+
+.hub-board-preview {
+  margin: 0.65rem 0;
+}
+
+.hub-board-list {
+  list-style: none;
+  margin: 0.35rem 0 0.5rem;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.hub-board-item {
+  display: grid;
+  gap: 0.1rem;
+  font-size: 0.82rem;
+}
+
+.ranking-name-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ranking-portrait,
+.title-portrait {
+  border-radius: 0.2rem;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.title-highlight-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
 

@@ -1,6 +1,7 @@
 import { GameSubpageShell } from '../../components/GameSocialNav'
 import { SiteShell } from '../../components/SiteShell'
 import { rankName } from '../../config/game'
+import { iconPublicPath } from '../../config/icons'
 import type { HouseRankingBlock, RankingRow } from '../../types'
 
 type RankingPageProps = {
@@ -39,7 +40,18 @@ function MemberTable({ rows }: { rows: RankingRow[] }) {
             rows.map((row, i) => (
               <tr>
                 <td>{i + 1}</td>
-                <td>{row.name}</td>
+                <td>
+                  <span class="ranking-name-cell">
+                    <img
+                      class="ranking-portrait"
+                      src={iconPublicPath(row.iconId)}
+                      alt=""
+                      width="24"
+                      height="24"
+                    />
+                    {row.name}
+                  </span>
+                </td>
                 <td>{row.roleLabel ?? '—'}</td>
                 <td>{row.provinceName}</td>
                 <td>{row.troops}</td>

@@ -1,7 +1,7 @@
 # Phase N5 — 社会（会議室・手紙・国法・一覧）
 
 目的: NET の情報系を載せ、**家の連携と武将比較**ができるようにする。  
-式の詳細は [`net-spec.md`](./net-spec.md)。全体は [`roadmap.md`](./roadmap.md)。
+式の詳細は [`net-spec.md`](../net-spec.md)。全体は [`roadmap.md`](../roadmap.md)。
 
 ## 完了条件
 

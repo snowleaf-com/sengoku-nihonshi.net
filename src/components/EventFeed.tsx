@@ -1,4 +1,4 @@
-import { formatGameDate } from '../config/calendar'
+import { formatGameDate, formatRealtime } from '../config/calendar'
 import { worldEventKindLabel } from '../services/events'
 import type { WorldEvent, WorldEventKind } from '../types'
 
@@ -8,6 +8,7 @@ type EventFeedProps = {
   empty?: string
   /** 戦/災/収などで絞り込める（知らせ向け） */
   filterable?: boolean
+  subtitle?: string
 }
 
 const FILTER_OPTIONS: Array<{ kind: '' | WorldEventKind; label: string }> = [
@@ -23,11 +24,15 @@ export function EventFeed({
   events,
   empty = '—',
   filterable = false,
+  subtitle,
 }: EventFeedProps) {
   return (
     <section class="event-feed" data-event-feed={filterable ? '1' : undefined}>
       <div class="event-feed-head">
-        <h3 class="event-feed-title">{title}</h3>
+        <div class="event-feed-titles">
+          <h3 class="event-feed-title">{title}</h3>
+          {subtitle ? <p class="event-feed-subtitle">{subtitle}</p> : null}
+        </div>
         {filterable ? (
           <div class="event-feed-filters" role="group" aria-label="知らせの種類">
             {FILTER_OPTIONS.map((opt) => (
@@ -53,8 +58,9 @@ export function EventFeed({
               data-event-kind={event.kind}
               key={event.id}
             >
-              <time class="event-when">
-                {formatGameDate({ year: event.year, month: event.month })}
+              <time class="event-when" datetime={new Date(event.createdAt * 1000).toISOString()}>
+                <span>{formatGameDate({ year: event.year, month: event.month })}</span>
+                <span class="event-realtime">{formatRealtime(event.createdAt)}</span>
               </time>
               <span class="event-kind">{worldEventKindLabel(event.kind)}</span>
               <p class="event-message">{event.message}</p>

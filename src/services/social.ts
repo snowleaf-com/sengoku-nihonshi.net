@@ -270,7 +270,7 @@ export async function listInbox(
 export async function listRanking(db: D1Database): Promise<RankingRow[]> {
   const result = await db
     .prepare(
-      `SELECT c.id AS character_id, c.name, h.name AS house_name, c.house_id AS house_id,
+      `SELECT c.id AS character_id, c.name, c.icon_id AS icon_id, h.name AS house_name, c.house_id AS house_id,
               c.province_id AS province_id, p.name AS province_name, c.troops AS troops,
               hr.role AS role_label,
               c.buyu, c.chiryaku, c.toso, c.tokubo,
@@ -284,6 +284,7 @@ export async function listRanking(db: D1Database): Promise<RankingRow[]> {
     .all<{
       character_id: string
       name: string
+      icon_id: string
       house_name: string | null
       house_id: string | null
       province_id: string
@@ -304,6 +305,7 @@ export async function listRanking(db: D1Database): Promise<RankingRow[]> {
   return (result.results ?? []).map((row) => ({
     characterId: row.character_id,
     name: row.name,
+    iconId: row.icon_id,
     houseName: row.house_name,
     houseId: row.house_id,
     provinceId: row.province_id,
@@ -400,6 +402,7 @@ function topBy(
       return {
         rank: i + 1,
         name: row.name,
+        iconId: row.iconId,
         houseName: row.houseName ?? '浪人',
         value,
         valueLabel: format(value),

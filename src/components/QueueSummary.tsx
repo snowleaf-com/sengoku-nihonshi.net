@@ -1,4 +1,9 @@
-import { formatGameDate, dateAtQueueOffset } from '../config/calendar'
+import {
+  formatGameDate,
+  dateAtQueueOffset,
+  formatRealtime,
+  realtimeAtQueueOffset,
+} from '../config/calendar'
 import { formatQueueLabel } from '../config/command-payload'
 import {
   COMMAND_QUEUE_MAX,
@@ -11,15 +16,19 @@ type QueueSummaryProps = {
   queue: CharacterCommand[]
   currentYear: number
   currentMonth: number
+  nextTurnAt: number
+  turnIntervalSeconds: number
   provinceNameById: Record<string, string>
   characterNameById: Record<string, string>
 }
 
-/** シートを閉じても見える予約キュー要約（#16 B） */
+/** シートを閉じても見える予約キュー要約 */
 export function QueueSummary({
   queue,
   currentYear,
   currentMonth,
+  nextTurnAt,
+  turnIntervalSeconds,
   provinceNameById,
   characterNameById,
 }: QueueSummaryProps) {
@@ -37,11 +46,19 @@ export function QueueSummary({
         (id) => provinceNameById[id] ?? null,
         (id) => characterNameById[id] ?? null,
       )
-      const when = formatGameDate(dateAtQueueOffset(currentDate, position))
-      return { position, when, label }
+      const gameWhen = formatGameDate(dateAtQueueOffset(currentDate, position))
+      const realWhen = formatRealtime(
+        realtimeAtQueueOffset(nextTurnAt, position, turnIntervalSeconds),
+      )
+      return { position, gameWhen, realWhen, label }
     })
-    .filter((row): row is { position: number; when: string; label: string } => row != null)
+    .filter(
+      (row): row is { position: number; gameWhen: string; realWhen: string; label: string } =>
+        row != null,
+    )
     .slice(0, 8)
+
+  const next = upcoming[0] ?? null
 
   return (
     <section class="queue-summary" aria-label="コマンド予約">
@@ -51,16 +68,27 @@ export function QueueSummary({
           {filled}/{COMMAND_QUEUE_MAX}
         </span>
         <button type="button" class="btn btn-ghost btn-small btn-touch" data-open-commands>
-          編集
+          コマンド
         </button>
       </div>
+      {next ? (
+        <p class="queue-summary-next">
+          次: <strong>{next.label}</strong>
+          <span class="queue-summary-next-when">
+            {next.gameWhen} · {next.realWhen}
+          </span>
+        </p>
+      ) : null}
       {upcoming.length === 0 ? (
         <p class="hint queue-summary-empty">まだ予約はない。コマンドを開いて入れる。</p>
       ) : (
         <ol class="queue-summary-list">
           {upcoming.map((row) => (
             <li class="queue-summary-item" key={`q-${row.position}`}>
-              <time class="queue-summary-when">{row.when}</time>
+              <time class="queue-summary-when">
+                <span>{row.gameWhen}</span>
+                <span class="queue-summary-realtime">{row.realWhen}</span>
+              </time>
               <span class="queue-summary-label">{row.label}</span>
             </li>
           ))}
