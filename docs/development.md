@@ -1,5 +1,9 @@
 # 開発・デプロイ
 
+> **予定:** Cloudflare は Wrangler 後継として `cf` CLI をオープンベータ中。  
+> 方針は [`issue/30.md`](./issue/30.md)、進捗は [`impl.md`](./impl.md) の Slice T。  
+> 移行完了までは本ページの `wrangler` 手順が正。
+
 ## 前提
 
 - Node.js 22+（`nvm use` で `.nvmrc` に合わせる）

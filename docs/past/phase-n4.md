@@ -1,7 +1,7 @@
 # Phase N4 — 戦争・占領
 
 目的: **隣接国を攻め、守備または城壁を破り、占領できる**ようにする。  
-式の詳細は [`net-spec.md`](./net-spec.md)。全体は [`roadmap.md`](./roadmap.md)。
+式の詳細は [`net-spec.md`](../net-spec.md)。全体は [`roadmap.md`](../roadmap.md)。
 
 ## 完了条件
 
