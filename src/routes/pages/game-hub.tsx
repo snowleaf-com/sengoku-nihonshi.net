@@ -23,14 +23,7 @@ import { getCommand } from '../../config/commands'
 import { formatMoney, formatRice, rankName } from '../../config/game'
 import { salaryCapForClassPoints } from '../../config/net'
 import { iconPublicPath } from '../../config/icons'
-import {
-  CITY_RANK_LABEL,
-  cityRankOf,
-  getProvinceMaster,
-  isPortProvince,
-  PROVINCES,
-  troopCapForCity,
-} from '../../config/provinces'
+import { cityRankOf, getProvinceMaster, PROVINCES, troopCapForCity } from '../../config/provinces'
 import { adjacentCount, listAdjacentIds } from '../../domain/province/adjacency'
 import { isInHomeLand } from '../../services/commands'
 import type {
@@ -103,8 +96,6 @@ export function GameHubPage({
 }: GameHubPageProps) {
   const master = getProvinceMaster(province.id)
   const cityRank = master ? cityRankOf(master) : 'town'
-  const cityRankLabel = CITY_RANK_LABEL[cityRank]
-  const portLabel = master && isPortProvince(master) ? ' · 港' : ''
   const troopCap = troopCapForCity(character.toso, cityRank)
   const adj = master ? adjacentCount(master, PROVINCES) : 0
   const houseById = Object.fromEntries(houses.map((h) => [h.id, h]))
@@ -380,11 +371,7 @@ export function GameHubPage({
                   label="兵"
                   value={character.troops}
                   max={softMax(troopCap, 1)}
-                  sub={
-                    cityRank === 'town'
-                      ? `上限 統率 ${character.toso}`
-                      : `上限 ${troopCap}（${cityRankLabel}）`
-                  }
+                  sub={`上限 ${troopCap}`}
                   tone="toso"
                   icon={<StatIcon target="troops" />}
                 />
@@ -402,10 +389,7 @@ export function GameHubPage({
             </details>
 
             <details class="game-panel game-card game-card-city game-card-disclosure" open>
-              <summary class="card-title">
-                {cityRankLabel}
-                {portLabel} · {province.name}
-              </summary>
+              <summary class="card-title">{province.name}</summary>
               <p class="city-defend">
                 都市の守備：{defenderName ? defenderName : 'なし（城壁のみ）'}
               </p>
@@ -556,7 +540,7 @@ export function GameHubPage({
               warInvasions={warInvasions}
             />
             <p class="hint">
-              城の形が大都市・中都市、家並みが都市。右下の錨は港。隣接の攻撃可能国は強調。最近の侵攻は矢印。
+              隣接の攻撃可能国は強調。最近の侵攻は矢印。
             </p>
             <div id="feed-news">
               <EventFeed
