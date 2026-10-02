@@ -1,4 +1,11 @@
-import { mapBounds, PROVINCE_BY_ID } from '../config/provinces'
+import { CityGlyph, PortAnchor } from './CityMark'
+import {
+  CITY_RANK_LABEL,
+  cityRankOf,
+  isPortProvince,
+  mapBounds,
+  PROVINCE_BY_ID,
+} from '../config/provinces'
 import type { House, Province } from '../types'
 
 const NEUTRAL_COLOR = '#6e6e6e'
@@ -101,10 +108,15 @@ export function ProvinceMap(props: ProvinceMapProps) {
         const invasionTo = invasionToIds.has(cell.province.id)
         const fill = house?.color ?? NEUTRAL_COLOR
 
+        const master = PROVINCE_BY_ID[cell.province.id]
+        const rank = master ? cityRankOf(master) : 'town'
+        const port = master ? isPortProvince(master) : false
+        const rankLabel = `${CITY_RANK_LABEL[rank]}${port ? '・港' : ''}`
+
         if (pickMode && inputName) {
           const title = house
-            ? `${cell.province.name}（${house.name}・クリックで仕官）`
-            : `${cell.province.name}（中立・クリックで建国）`
+            ? `${cell.province.name}（${rankLabel}・${house.name}・クリックで仕官）`
+            : `${cell.province.name}（${rankLabel}・中立・クリックで建国）`
 
           const hxGet =
             pickSwapPath && pickSwapTarget
@@ -133,7 +145,11 @@ export function ProvinceMap(props: ProvinceMapProps) {
                     }
                   : {})}
               />
-              <span class="province-name">{cell.province.name}</span>
+              <span class="province-head">
+                <CityGlyph rank={rank} />
+                <span class="province-name">{cell.province.name}</span>
+              </span>
+              {port ? <PortAnchor /> : null}
               <span class="province-owner">{house ? house.name : '中立'}</span>
             </label>
           )
@@ -151,11 +167,15 @@ export function ProvinceMap(props: ProvinceMapProps) {
             style={`background-color:${fill}`}
             title={
               house
-                ? `${cell.province.name}（${house.name}${extras.length ? `・${extras.join('・')}` : ''}）`
-                : `${cell.province.name}（中立${extras.length ? `・${extras.join('・')}` : ''}）`
+                ? `${cell.province.name}（${rankLabel}・${house.name}${extras.length ? `・${extras.join('・')}` : ''}）`
+                : `${cell.province.name}（${rankLabel}・中立${extras.length ? `・${extras.join('・')}` : ''}）`
             }
           >
-            <span class="province-name">{cell.province.name}</span>
+            <span class="province-head">
+              <CityGlyph rank={rank} />
+              <span class="province-name">{cell.province.name}</span>
+            </span>
+            {port ? <PortAnchor /> : null}
             {compact ? null : (
               <span class="province-owner">{house ? house.name : '中立'}</span>
             )}

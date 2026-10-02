@@ -38,8 +38,39 @@ export function salaryCapForClassPoints(classPoints: number): number {
   return SALARY_BASE_CAP + sNum * SALARY_CAP_PER_RANK
 }
 
-/** 初期相場 */
+/** 初期相場（商業ティア B の中心） */
 export const DEFAULT_MARKET_RATE = 1.0
+
+/** 商業ティアごとの相場中心のずれ。B は 0 で原本帯のまま */
+export const MARKET_TIER_BIAS = {
+  S: 0.08,
+  A: 0.04,
+  B: 0,
+  C: -0.06,
+} as const
+
+export type MarketTier = keyof typeof MARKET_TIER_BIAS
+
+/** 中心からの上下幅。B は 0.8〜1.2 */
+export const MARKET_BAND_HALF = 0.2
+
+function roundMarket(value: number): number {
+  return Math.round(value * 100) / 100
+}
+
+/** 商業ティアごとの相場の中心と上下限 */
+export function marketBandForTier(tier: MarketTier): {
+  center: number
+  min: number
+  max: number
+} {
+  const center = roundMarket(DEFAULT_MARKET_RATE + MARKET_TIER_BIAS[tier])
+  return {
+    center,
+    min: roundMarket(center - MARKET_BAND_HALF),
+    max: roundMarket(center + MARKET_BAND_HALF),
+  }
+}
 
 /** 米売買の1回上限（原本） */
 export const TRADE_MAX = 3000
@@ -88,10 +119,9 @@ export const FUSHIN_MIN_GAIN = 8
 export const TRAIN_STAT_GOLD_COST = 50
 
 /**
- * 鍛錬の貢献。国への貢献には数えない（税金・年貢の対象外）。
- * 半期間（1–6 / 7–12）の merit が 0 なら支給なし。
+ * 鍛錬の階級値（merit）。国貢献（countryMerit）には入れないので税金・年貢の対象外。
  */
-export const TRAIN_STAT_CONTRIBUTION = 0
+export const TRAIN_STAT_CONTRIBUTION = 10
 
 /** 鍛錬: EX 加算（+1 を2回） */
 export const TRAIN_STAT_EX_GAIN = 2

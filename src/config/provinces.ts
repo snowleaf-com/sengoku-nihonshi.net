@@ -10,6 +10,86 @@ export type ProvinceId = string
 
 export type ProvinceTier = 'S' | 'A' | 'B' | 'C'
 
+/** プレイヤーに見える都市規模。人口・商業の S/A/B/C とは別 */
+export type CityRank = 'great' | 'mid' | 'town'
+
+export const CITY_RANK_LABEL: Record<CityRank, string> = {
+  great: '大都市',
+  mid: '中都市',
+  town: '都市',
+}
+
+/**
+ * 上限と徴兵枠だけの倍率。
+ * 初期値（収入に効く現在値）は変えない。
+ */
+export const CITY_RANK_CAP_SCALE: Record<CityRank, number> = {
+  great: 1.1,
+  mid: 1.05,
+  town: 1,
+}
+
+/** 徴兵上限 = floor(統率 × この値)。都市は統率のまま */
+export const CITY_RANK_RECRUIT_SCALE: Record<CityRank, number> = {
+  great: 1.1,
+  mid: 1.05,
+  town: 1,
+}
+
+/** 畿内に寄せない初期の大都市 */
+export const GREAT_CITY_IDS = [
+  'mutsu',
+  'musashi',
+  'sagami',
+  'suruga',
+  'owari',
+  'echizen',
+  'settsu',
+  'aki',
+  'hizen',
+  'satsuma',
+] as const
+
+/**
+ * 港属性。海路の接続は E2。
+ * 上総は港にしない。土佐は港だが初期接続は伊予のみ。
+ */
+export const PORT_PROVINCE_IDS = [
+  'dewa',
+  'noto',
+  'echizen',
+  'izu',
+  'shima',
+  'kii',
+  'awaji',
+  'awa_shikoku',
+  'sanuki',
+  'iyo',
+  'tosa',
+  'nagato',
+  'chikuzen',
+  'hizen',
+  'satsuma',
+  'awa_kanto',
+] as const
+
+const GREAT_CITY_ID_SET = new Set<string>(GREAT_CITY_IDS)
+const PORT_PROVINCE_ID_SET = new Set<string>(PORT_PROVINCE_IDS)
+
+export function cityRankOf(master: ProvinceMaster): CityRank {
+  if (GREAT_CITY_ID_SET.has(master.id)) return 'great'
+  if (master.populationTier === 'A' || master.commerceTier === 'A') return 'mid'
+  return 'town'
+}
+
+export function isPortProvince(master: ProvinceMaster): boolean {
+  return PORT_PROVINCE_ID_SET.has(master.id)
+}
+
+export function troopCapForCity(toso: number, rank: CityRank): number {
+  return Math.floor(Math.max(0, toso) * CITY_RANK_RECRUIT_SCALE[rank])
+}
+
 export type ProvinceMaster = {
   id: ProvinceId
   name: string
@@ -148,14 +228,15 @@ export function initialStats(master: ProvinceMaster) {
   const agriculture = TIER_BASE[master.agricultureTier]
   const commerce = TIER_BASE[master.commerceTier]
   const defense = TIER_BASE[master.defenseTier]
+  const scale = CITY_RANK_CAP_SCALE[cityRankOf(master)]
   return {
     population,
     agriculture,
     commerce,
     defense,
-    populationCap: POPULATION_MAX,
-    agricultureCap: Math.floor(agriculture * 1.5),
-    commerceCap: Math.floor(commerce * 1.5),
-    defenseCap: Math.floor(defense * 1.5),
+    populationCap: Math.floor(POPULATION_MAX * scale),
+    agricultureCap: Math.floor(agriculture * 1.5 * scale),
+    commerceCap: Math.floor(commerce * 1.5 * scale),
+    defenseCap: Math.floor(defense * 1.5 * scale),
   }
 }

@@ -18,6 +18,7 @@ type CharacterRow = {
   province_id: string
   rank: number
   merit: number
+  country_merit: number
   class_points: number
   money: number
   rice: number
@@ -32,7 +33,7 @@ type CharacterRow = {
 
 const CHARACTER_COLUMNS = `id, user_id, name, icon_id, archetype_id, buyu, chiryaku, toso, tokubo,
   buyu_ex, chiryaku_ex, toso_ex, tokubo_ex,
-  house_id, province_id, rank, merit, class_points, money, rice, troops, training, defending,
+  house_id, province_id, rank, merit, country_merit, class_points, money, rice, troops, training, defending,
   idle_streak, loyalty,
   created_at, updated_at`
 
@@ -55,6 +56,7 @@ function mapCharacter(row: CharacterRow): Character {
     provinceId: row.province_id,
     rank: row.rank,
     merit: row.merit,
+    countryMerit: row.country_merit ?? 0,
     classPoints: row.class_points,
     money: row.money,
     rice: row.rice,
@@ -137,6 +139,7 @@ export class CharacterRepository {
       provinceId: input.provinceId,
       rank: input.rank,
       merit: input.merit,
+      countryMerit: 0,
       classPoints: 0,
       money: input.money,
       rice: input.rice,
@@ -299,6 +302,7 @@ export class CharacterRepository {
       training?: number
       defending?: number
       merit?: number
+      countryMerit?: number
       classPoints?: number
       rank?: number
       buyu?: number
@@ -321,7 +325,7 @@ export class CharacterRepository {
       .prepare(
         `UPDATE characters SET
            money = ?, rice = ?, troops = ?, training = ?, defending = ?,
-           merit = ?, class_points = ?, rank = ?,
+           merit = ?, country_merit = ?, class_points = ?, rank = ?,
            buyu = ?, chiryaku = ?, toso = ?, tokubo = ?,
            buyu_ex = ?, chiryaku_ex = ?, toso_ex = ?, tokubo_ex = ?,
            idle_streak = ?, loyalty = ?,
@@ -335,6 +339,7 @@ export class CharacterRepository {
         patch.training ?? current.training,
         patch.defending ?? current.defending,
         patch.merit ?? current.merit,
+        patch.countryMerit ?? current.countryMerit,
         patch.classPoints ?? current.classPoints,
         patch.rank ?? current.rank,
         patch.buyu ?? current.buyu,

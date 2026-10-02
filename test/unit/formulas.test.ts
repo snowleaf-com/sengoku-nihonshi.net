@@ -14,7 +14,13 @@ import {
   shouldTriggerDisaster,
 } from '../../src/services/disaster'
 import { nextIdleStreakAfterNashi, shouldDeleteForIdle } from '../../src/services/idle'
-import { netStatGainWithRandom } from '../../src/config/net'
+import {
+  MARKET_RATE_MAX,
+  MARKET_RATE_MIN,
+  marketBandForTier,
+  netStatGainWithRandom,
+} from '../../src/config/net'
+import { nextMarketRate } from '../../src/services/commands'
 import type { Province } from '../../src/types'
 
 function stubProvince(overrides: Partial<Province> = {}): Province {
@@ -80,6 +86,19 @@ describe('unit: economy and loyalty', () => {
     expect(applyLoyaltyPopulationDelta(stubProvince({ loyalty: 40, population: 1000 }))).toBe(
       -800,
     )
+  })
+
+  it('market bands keep commerce B on the old range', () => {
+    expect(marketBandForTier('B')).toEqual({ center: 1, min: MARKET_RATE_MIN, max: MARKET_RATE_MAX })
+    expect(MARKET_RATE_MIN).toBe(0.8)
+    expect(MARKET_RATE_MAX).toBe(1.2)
+    const high = marketBandForTier('S')
+    const low = marketBandForTier('C')
+    expect(high.center).toBeGreaterThan(low.center)
+    expect(high.min).toBeGreaterThan(low.min)
+    expect(nextMarketRate(1.2, 'C', 1, 0)).toBe(low.max)
+    expect(nextMarketRate(0.5, 'S', 0, 0.9)).toBe(high.min)
+    expect(nextMarketRate(1, 'B', 0.5, 0)).toBe(1.2)
   })
 
   it('netStatGainWithRandom is deterministic', () => {

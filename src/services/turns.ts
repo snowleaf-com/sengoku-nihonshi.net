@@ -10,6 +10,7 @@ import {
 } from '../config/calendar'
 import { CHARACTER_RANKS, formatMoney, formatRice, rankName } from '../config/game'
 import { CLASS_PER_RANK, SALARY_RANK_MAX } from '../config/net'
+import { getProvinceMaster } from '../config/provinces'
 import { getCommand } from '../config/commands'
 import { nowSeconds } from '../lib/id'
 import { CharacterCommandRepository } from '../repositories/character-commands'
@@ -88,17 +89,25 @@ function maybePromoteStats(
   character: Character,
   meritAdded: number,
   beforeClass: number,
-): { character: Character; stat: 'buyu' | 'chiryaku' | 'toso' | null } {
-  if (meritAdded <= 0) return { character, stat: null }
+): { character: Character; statLabel: string | null } {
+  if (meritAdded <= 0) return { character, statLabel: null }
   if (beforeClass % CLASS_PER_RANK + meritAdded <= CLASS_PER_RANK) {
-    return { character, stat: null }
+    return { character, statLabel: null }
   }
   const roll = Math.floor(Math.random() * 3)
-  if (roll === 0) return { character: { ...character, buyu: character.buyu + 1 }, stat: 'buyu' }
+  if (roll === 0) return { character: { ...character, buyu: character.buyu + 1 }, statLabel: '武勇' }
   if (roll === 1) {
-    return { character: { ...character, chiryaku: character.chiryaku + 1 }, stat: 'chiryaku' }
+    return { character: { ...character, chiryaku: character.chiryaku + 1 }, statLabel: '知略' }
   }
-  return { character: { ...character, toso: character.toso + 1 }, stat: 'toso' }
+  return { character: { ...character, toso: character.toso + 1 }, statLabel: '統率' }
+}
+
+type IncomeNotice = {
+  characterId: string
+  houseId: string | null
+  message: string
+  kind: 'income' | 'social'
+  newsMessage?: string
 }
 
 async function paySeasonalIncome(
@@ -108,7 +117,7 @@ async function paySeasonalIncome(
   kind: 'tax' | 'tribute',
 ): Promise<{
   paidCount: number
-  personal: Array<{ characterId: string; houseId: string | null; message: string }>
+  personal: IncomeNotice[]
 }> {
   const characters = new CharacterRepository(db)
   const provinces = new ProvinceRepository(db)
@@ -120,50 +129,53 @@ async function paySeasonalIncome(
   }
 
   const houseOwned = new Map<string, Province[]>()
-  const houseMerit = new Map<string, number>()
+  const houseCountryMerit = new Map<string, number>()
   for (const houseId of houseIds) {
     houseOwned.set(houseId, await provinces.listByHouseId(houseId))
     const members = await characters.listByHouseId(houseId)
-    houseMerit.set(
+    houseCountryMerit.set(
       houseId,
-      members.reduce((sum, m) => sum + m.merit, 0),
+      members.reduce((sum, m) => sum + m.countryMerit, 0),
     )
   }
 
   let paidCount = 0
-  const personal: Array<{ characterId: string; houseId: string | null; message: string }> =
-    []
+  const personal: IncomeNotice[] = []
+  const payLabel = kind === 'tax' ? '税金' : '年貢'
 
   for (const listed of all) {
     let character = await characters.findById(listed.id)
     if (!character) continue
 
+    const countryMerit = character.countryMerit
     let amount = 0
-    if (character.houseId) {
-      const owned = houseOwned.get(character.houseId) ?? []
-      const pool = houseIncomePool(owned, kind)
-      const totalMerit = houseMerit.get(character.houseId) ?? 0
-      amount = characterIncomeShare(pool, character.merit, totalMerit, character.classPoints)
-    } else {
-      const province = await provinces.findById(character.provinceId)
-      if (province) {
-        const pool = houseIncomePool([province], kind)
-        amount = characterIncomeShare(pool, character.merit, character.merit || 1, character.classPoints)
+    if (countryMerit > 0) {
+      if (character.houseId) {
+        const owned = houseOwned.get(character.houseId) ?? []
+        const pool = houseIncomePool(owned, kind)
+        const totalMerit = houseCountryMerit.get(character.houseId) ?? 0
+        amount = characterIncomeShare(pool, countryMerit, totalMerit, character.classPoints)
+      } else {
+        const province = await provinces.findById(character.provinceId)
+        if (province) {
+          const pool = houseIncomePool([province], kind)
+          amount = characterIncomeShare(pool, countryMerit, countryMerit, character.classPoints)
+        }
       }
     }
 
     const beforeClass = character.classPoints
-    const beforeRank = character.rank
     const meritAdded = character.merit
+    const rankBefore = rankFromClassPoints(beforeClass)
     const nextClass = beforeClass + meritAdded
-    const nextRank = rankFromClassPoints(nextClass)
     character = {
       ...character,
       money: kind === 'tax' ? character.money + amount : character.money,
       rice: kind === 'tribute' ? character.rice + amount : character.rice,
       classPoints: nextClass,
       merit: 0,
-      rank: nextRank,
+      countryMerit: 0,
+      rank: rankFromClassPoints(nextClass),
     }
     const promoted = maybePromoteStats(character, meritAdded, beforeClass)
     character = promoted.character
@@ -172,6 +184,7 @@ async function paySeasonalIncome(
       money: character.money,
       rice: character.rice,
       merit: 0,
+      countryMerit: 0,
       classPoints: character.classPoints,
       rank: character.rank,
       buyu: character.buyu,
@@ -189,27 +202,30 @@ async function paySeasonalIncome(
       personal.push({
         characterId: character.id,
         houseId: character.houseId,
+        kind: 'income',
         message: `${formatGameDate(nextDate)}、${label}。`,
       })
-    } else if (character.houseId && meritAdded <= 0) {
+    } else if (countryMerit <= 0 && meritAdded > 0) {
       personal.push({
         characterId: character.id,
         houseId: character.houseId,
-        message: `${formatGameDate(nextDate)}、半期間の国への貢献がなく${kind === 'tax' ? '税金' : '年貢'}は支給されなかった。`,
+        kind: 'income',
+        message: `${formatGameDate(nextDate)}、この半期は国への貢献がなかったため${payLabel}は支給されなかった。`,
       })
     }
 
-    const statLabel =
-      promoted.stat === 'buyu' ? '武勇' : promoted.stat === 'chiryaku' ? '知略' : promoted.stat === 'toso' ? '統率' : null
-    if (nextRank > beforeRank || statLabel) {
-      const bits = [
-        nextRank > beforeRank ? `官位が${rankName(nextRank)}になった` : null,
-        statLabel ? `${statLabel}が1上がった` : null,
-      ].filter(Boolean)
+    if (character.rank > rankBefore) {
+      const rankMove = `${rankName(rankBefore)}から${rankName(character.rank)}へ`
       personal.push({
         characterId: character.id,
         houseId: character.houseId,
-        message: `${formatGameDate(nextDate)}、昇進した。${bits.join('、')}。`,
+        kind: 'social',
+        message: promoted.statLabel
+          ? `${formatGameDate(nextDate)}、${rankMove}昇進し、${promoted.statLabel}が上がった。`
+          : `${formatGameDate(nextDate)}、${rankMove}昇進した。`,
+        newsMessage: promoted.statLabel
+          ? `${character.name}が${rankName(character.rank)}に昇進し、${promoted.statLabel}が上がった。`
+          : `${character.name}が${rankName(character.rank)}に昇進した。`,
       })
     }
   }
@@ -222,7 +238,8 @@ async function applySeasonalPopulation(db: D1Database, wallClock: number): Promi
   const all = await provinces.listAll()
   for (const province of all) {
     const delta = applyLoyaltyPopulationDelta(province)
-    const marketRate = nextMarketRate(province.marketRate)
+    const tier = getProvinceMaster(province.id)?.commerceTier ?? 'B'
+    const marketRate = nextMarketRate(province.marketRate, tier)
     if (delta === 0 && marketRate === province.marketRate) continue
     await provinces.updateStats(province.id, {
       population: province.population + delta,
@@ -311,6 +328,59 @@ export async function applySeasonalDisaster(
   }
 
   return { triggered: true, type, label, personal }
+}
+
+function pushSeasonalIncomeEvents(
+  eventBatch: Array<{
+    year: number
+    month: number
+    channel: 'result' | 'news'
+    kind: 'command' | 'income' | 'system' | 'disaster' | 'social' | 'war'
+    message: string
+    provinceId?: string | null
+    characterId?: string | null
+    houseId?: string | null
+    createdAt: number
+  }>,
+  nextDate: GameDate,
+  wallClock: number,
+  paid: { paidCount: number; personal: IncomeNotice[] },
+  headline: string,
+): void {
+  if (paid.paidCount > 0) {
+    eventBatch.push({
+      year: nextDate.year,
+      month: nextDate.month,
+      channel: 'news',
+      kind: 'income',
+      message: headline,
+      createdAt: wallClock,
+    })
+  }
+  for (const row of paid.personal) {
+    eventBatch.push({
+      year: nextDate.year,
+      month: nextDate.month,
+      channel: 'result',
+      kind: row.kind,
+      message: row.message,
+      characterId: row.characterId,
+      houseId: row.houseId,
+      createdAt: wallClock,
+    })
+    if (row.newsMessage) {
+      eventBatch.push({
+        year: nextDate.year,
+        month: nextDate.month,
+        channel: 'news',
+        kind: 'social',
+        message: row.newsMessage,
+        characterId: row.characterId,
+        houseId: row.houseId,
+        createdAt: wallClock,
+      })
+    }
+  }
 }
 
 /** 毎月: 兵1人につき米1。不足時は脱走 */
@@ -519,53 +589,23 @@ async function advanceOneTurn(
     }
     if (isTaxMonth(nextDate.month)) {
       const taxed = await paySeasonalIncome(db, nextDate, wallClock, 'tax')
-      if (taxed.paidCount > 0) {
-        eventBatch.push({
-          year: nextDate.year,
-          month: nextDate.month,
-          channel: 'news',
-          kind: 'income',
-          message: `${formatGameDate(nextDate)}、税金で各武将に給与が支払われた。`,
-          createdAt: wallClock,
-        })
-      }
-      for (const row of taxed.personal) {
-        eventBatch.push({
-          year: nextDate.year,
-          month: nextDate.month,
-          channel: 'result',
-          kind: 'income',
-          message: row.message,
-          characterId: row.characterId,
-          houseId: row.houseId,
-          createdAt: wallClock,
-        })
-      }
+      pushSeasonalIncomeEvents(
+        eventBatch,
+        nextDate,
+        wallClock,
+        taxed,
+        `${formatGameDate(nextDate)}、税金で各武将に給与が支払われた。`,
+      )
     }
     if (isTributeMonth(nextDate.month)) {
       const tributed = await paySeasonalIncome(db, nextDate, wallClock, 'tribute')
-      if (tributed.paidCount > 0) {
-        eventBatch.push({
-          year: nextDate.year,
-          month: nextDate.month,
-          channel: 'news',
-          kind: 'income',
-          message: `${formatGameDate(nextDate)}、収穫で各武将に米が支払われた。`,
-          createdAt: wallClock,
-        })
-      }
-      for (const row of tributed.personal) {
-        eventBatch.push({
-          year: nextDate.year,
-          month: nextDate.month,
-          channel: 'result',
-          kind: 'income',
-          message: row.message,
-          characterId: row.characterId,
-          houseId: row.houseId,
-          createdAt: wallClock,
-        })
-      }
+      pushSeasonalIncomeEvents(
+        eventBatch,
+        nextDate,
+        wallClock,
+        tributed,
+        `${formatGameDate(nextDate)}、収穫で各武将に米が支払われた。`,
+      )
     }
   }
 

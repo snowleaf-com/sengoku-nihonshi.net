@@ -139,6 +139,34 @@ export class ProvinceRepository {
     return (result.results ?? []).map(mapProvince)
   }
 
+  async updateCaps(
+    provinceId: string,
+    caps: {
+      populationMax: number
+      agricultureMax: number
+      commerceMax: number
+      defenseMax: number
+      updatedAt: number
+    },
+  ): Promise<void> {
+    await this.db
+      .prepare(
+        `UPDATE provinces SET
+           population_max = ?, agriculture_max = ?, commerce_max = ?, defense_max = ?,
+           updated_at = ?
+         WHERE id = ?`,
+      )
+      .bind(
+        caps.populationMax,
+        caps.agricultureMax,
+        caps.commerceMax,
+        caps.defenseMax,
+        caps.updatedAt,
+        provinceId,
+      )
+      .run()
+  }
+
   async updateOwner(
     provinceId: string,
     houseId: string | null,

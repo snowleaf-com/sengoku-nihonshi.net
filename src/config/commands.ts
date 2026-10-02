@@ -16,6 +16,7 @@ import {
   RICE_GIVE_COST,
   STAT_EX_PER_LEVEL,
   TRAIN_CONTRIBUTION,
+  TRAIN_STAT_CONTRIBUTION,
   TRAIN_STAT_GOLD_COST,
   WAR_CONTRIBUTION,
 } from './net'
@@ -270,11 +271,12 @@ export const COMMANDS: GameCommand[] = [
   {
     id: 'tanren',
     label: '鍛錬',
-    blurb: '能力を鍛える。国への貢献にはならず、税金・年貢の対象外',
+    blurb: '能力を鍛える。貢献は増えるが国貢献にはならず、税金・年貢の対象外',
     category: 'domestic',
     needsPayload: 'train_stat',
     effects: [
       { target: 'buyu', magnitude: 'up', amount: 2 },
+      { target: 'merit', magnitude: 'up', amount: TRAIN_STAT_CONTRIBUTION },
       { target: 'money', magnitude: 'down', amount: TRAIN_STAT_GOLD_COST },
     ],
   },
