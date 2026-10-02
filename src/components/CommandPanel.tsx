@@ -32,6 +32,7 @@ type CommandPanelProps = {
   error?: string | null
   inHomeLand: boolean
   canShikan: boolean
+  canGezan: boolean
   adjacentProvinces: AdjacentOption[]
   warTargets: WarTargetOption[]
   recruitTargets: RecruitTargetOption[]
@@ -70,8 +71,14 @@ function EffectChip({ effect }: { effect: CommandEffect }) {
   )
 }
 
-function commandAvailable(command: GameCommand, inHomeLand: boolean, canShikan: boolean): boolean {
+function commandAvailable(
+  command: GameCommand,
+  inHomeLand: boolean,
+  canShikan: boolean,
+  canGezan: boolean,
+): boolean {
   if (command.id === 'shikan') return canShikan
+  if (command.id === 'gezan') return canGezan
   if (command.foreignOk) return true
   return inHomeLand
 }
@@ -85,6 +92,7 @@ export function CommandPanel({
   error = null,
   inHomeLand,
   canShikan,
+  canGezan,
   adjacentProvinces,
   warTargets,
   recruitTargets,
@@ -436,7 +444,8 @@ export function CommandPanel({
               {!maintenance
                 ? COMMANDS.filter(
                     (command) =>
-                      !command.needsPayload && commandAvailable(command, inHomeLand, canShikan),
+                      !command.needsPayload &&
+                      commandAvailable(command, inHomeLand, canShikan, canGezan),
                   ).map((command) => (
                     <button
                       type="submit"

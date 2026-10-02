@@ -68,6 +68,8 @@ export type Character = {
   rank: number
   /** 貢献（1月・7月でリセット。NET の kcex） */
   merit: number
+  /** 給与・年貢按分に使う貢献（鍛錬のみの分は含めない） */
+  payMerit: number
   /** 階級値（蓄積。NET の kclass） */
   classPoints: number
   money: number

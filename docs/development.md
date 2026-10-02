@@ -109,6 +109,19 @@ production の `*.workers.dev` は残っていても、Passkey はカスタム�
 
 注意: `routes`（custom domain）は Wrangler で **env に inherit される**。staging 側で `routes: []` を明示しないと、staging デプロイが本番ドメインを奪い、RP ID 不一致で Passkey が壊れる。
 
+## ターン進行（運用）
+
+| 環境 | 間隔 | 進め方 |
+|------|------|--------|
+| local | `wrangler.jsonc` / dev の `TURN_INTERVAL_SECONDS` | `npm run dev` 起動中、cron 相当の処理が期限到来で進む |
+| staging | **60 秒**（CI デプロイ env） | 基本は自動。検証時は `/admin` で強制 1 ターン |
+| production | **1800 秒（30 分）** | 自動のみ（プレイヤー向けに手動進行 UI は出さない） |
+
+- **ゲーム日付**は Worker の cron / リクエスト処理内で `advanceDueTurns` が `nextTurnAt` を過ぎた分だけ進める。
+- **1 月・7 月**は相場・人口・給与/年貢・災厄判定が走る（[`net-spec.md`](./net-spec.md)）。
+- **強制進行**: `/admin` に `ADMIN_SECRET` を付けて「ターンを 1 進める」。staging でコマンド実行〜給与まで通すときに使う。
+- production でターンを手で進める必要がある場合も admin のみ（通常運用では不要）。
+
 ## トラブルシュート
 
 | 症状 | 確認 |

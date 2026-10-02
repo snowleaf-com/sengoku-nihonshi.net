@@ -3,6 +3,8 @@
  * 詳細は docs/net-spec.md。
  */
 
+import type { ProvinceTier } from './provinces'
+
 /** 先行入力枠（原本 $MAX_COM） */
 export const COMMAND_QUEUE_MAX = 100
 
@@ -50,6 +52,14 @@ export const MOVE_CONTRIBUTION = 20
 /** 相場の上下限 */
 export const MARKET_RATE_MIN = 0.8
 export const MARKET_RATE_MAX = 1.2
+
+/** 商業 tier ごとの相場変動幅（1月・7月）。大都市ほど動きやすい */
+export const MARKET_DELTA_BY_COMMERCE_TIER: Record<ProvinceTier, { min: number; max: number }> = {
+  S: { min: 0.03, max: 0.08 },
+  A: { min: 0.02, max: 0.06 },
+  B: { min: 0.01, max: 0.05 },
+  C: { min: 0.005, max: 0.035 },
+}
 
 /** 徴兵: 雑兵の雇用金（原本 $SOL_PRICE[0]） */
 export const RECRUIT_GOLD_PER = 10

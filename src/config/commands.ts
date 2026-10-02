@@ -296,6 +296,14 @@ export const COMMANDS: GameCommand[] = [
     effects: [],
   },
   {
+    id: 'gezan',
+    label: '下野',
+    blurb: '家を離れ浪人になる（当主は不可）',
+    category: 'social',
+    foreignOk: true,
+    effects: [],
+  },
+  {
     id: 'nashi',
     label: '何もしない',
     blurb: '待機する（連続60で削除）',

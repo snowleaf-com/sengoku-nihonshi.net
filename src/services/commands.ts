@@ -20,6 +20,7 @@ import {
   COMMAND_CONTRIBUTION,
   DEFEND_CONTRIBUTION,
   DOMESTIC_GOLD_COST,
+  MARKET_DELTA_BY_COMMERCE_TIER,
   MARKET_RATE_MAX,
   MARKET_RATE_MIN,
   MOVE_CONTRIBUTION,
@@ -42,7 +43,7 @@ import {
   netTrainGain,
   salaryCapForClassPoints,
 } from '../config/net'
-import { getProvinceMaster } from '../config/provinces'
+import { getProvinceMaster, type ProvinceTier } from '../config/provinces'
 import { areAdjacent } from '../domain/province/adjacency'
 import { createId, nowSeconds } from '../lib/id'
 import { CharacterCommandRepository } from '../repositories/character-commands'
@@ -61,6 +62,11 @@ import { recruitOfficerSucceeds } from './recruit-officer'
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
+}
+
+function addMerit(personal: MutableCharacter, amount: number, countsForPay = true): void {
+  personal.merit += amount
+  if (countsForPay) personal.payMerit += amount
 }
 
 async function requireOwnedCharacter(db: D1Database, userId: string) {
@@ -393,6 +399,7 @@ type MutableCharacter = {
   training: number
   defending: number
   merit: number
+  payMerit: number
   buyu: number
   chiryaku: number
   toso: number
@@ -514,6 +521,7 @@ export async function executeCharacterCommand(
     training: character.training,
     defending: character.defending,
     merit: character.merit,
+    payMerit: character.payMerit,
     buyu: character.buyu,
     chiryaku: character.chiryaku,
     toso: character.toso,
@@ -555,7 +563,7 @@ export async function executeCharacterCommand(
     if (!dest) return { ok: false, reason: '移動先がありません' }
 
     gainTosoEx(personal)
-    if (character.houseId) personal.merit += MOVE_CONTRIBUTION
+    if (character.houseId) addMerit(personal, MOVE_CONTRIBUTION)
     personal.defending = 0
 
     const now = nowSeconds()
@@ -642,7 +650,7 @@ export async function executeCharacterCommand(
     }
     personal.money -= DOMESTIC_GOLD_COST
     const gain = netStatGain(personal.chiryaku)
-    personal.merit += COMMAND_CONTRIBUTION
+    addMerit(personal, COMMAND_CONTRIBUTION)
     gainChiryakuEx(personal)
 
     let message = ''
@@ -671,7 +679,7 @@ export async function executeCharacterCommand(
     personal.rice -= RICE_GIVE_COST
     const gain = netStatGain(personal.tokubo)
     local.loyalty = clamp(local.loyalty + gain, 0, 100)
-    personal.merit += COMMAND_CONTRIBUTION
+    addMerit(personal, COMMAND_CONTRIBUTION)
     gainTokuboEx(personal)
     await finishCommand(db, character, queued, personal, local)
     return { ok: true, message: `${province.name}の民忠が+${gain}上がった。` }
@@ -699,7 +707,7 @@ export async function executeCharacterCommand(
     personal.money -= goldCost
     personal.troops += amount
     personal.training = Math.max(0, personal.training - amount)
-    personal.merit += RECRUIT_CONTRIBUTION
+    addMerit(personal, RECRUIT_CONTRIBUTION)
     local.population -= popCost
     local.loyalty = Math.max(0, local.loyalty - loyaltyCost)
     gainBuyuEx(personal)
@@ -714,7 +722,7 @@ export async function executeCharacterCommand(
   if (commandId === 'kunren') {
     const gain = netTrainGain(personal.toso)
     personal.training = clamp(personal.training + gain, 0, TRAINING_MAX)
-    personal.merit += TRAIN_CONTRIBUTION
+    addMerit(personal, TRAIN_CONTRIBUTION)
     gainTosoEx(personal)
     const now = nowSeconds()
     await new CharacterRepository(db).updateResources(character.id, {
@@ -733,7 +741,7 @@ export async function executeCharacterCommand(
     const characters = new CharacterRepository(db)
     await characters.clearDefendingInProvince(character.provinceId, character.id, now)
     personal.defending = 1
-    personal.merit += DEFEND_CONTRIBUTION
+    addMerit(personal, DEFEND_CONTRIBUTION)
     gainTosoEx(personal)
     await characters.updateResources(character.id, {
       ...personal,
@@ -808,7 +816,7 @@ export async function executeCharacterCommand(
     const now = nowSeconds()
 
     personal.troops = battle.attackerTroops
-    personal.merit += WAR_CONTRIBUTION
+    addMerit(personal, WAR_CONTRIBUTION)
     gainBuyuEx(personal)
 
     if (battle.winner === 'attacker') {
@@ -922,7 +930,7 @@ export async function executeCharacterCommand(
       return { ok: false, reason: '金が足りません' }
     }
     personal.money -= TRAIN_STAT_GOLD_COST
-    personal.merit += TRAIN_STAT_CONTRIBUTION
+    addMerit(personal, TRAIN_STAT_CONTRIBUTION, false)
     const statLabel =
       payload.stat === 'buyu' ? '武勇' : payload.stat === 'chiryaku' ? '知略' : '統率'
     if (payload.stat === 'buyu') {
@@ -1069,13 +1077,43 @@ export async function executeCharacterCommand(
     return { ok: true, message: '何もしなかった。' }
   }
 
+  if (commandId === 'gezan') {
+    if (!character.houseId) {
+      return { ok: false, reason: '無所属です' }
+    }
+    const houses = new HouseRepository(db)
+    const house = await houses.findById(character.houseId)
+    if (!house) {
+      return { ok: false, reason: '所属の家がありません' }
+    }
+    if (house.leaderCharacterId === character.id) {
+      return { ok: false, reason: '当主は下野できません' }
+    }
+    const now = nowSeconds()
+    const characters = new CharacterRepository(db)
+    await new HouseRoleRepository(db).deleteByCharacterId(character.id)
+    await characters.assignHouse(character.id, null, now)
+    await characters.updateResources(character.id, {
+      defending: 0,
+      updatedAt: now,
+    })
+    await consumeQueuedCommand(db, character.id, queued)
+    return { ok: true, message: `${house.name}を下野し、浪人となった。` }
+  }
+
   return { ok: false, reason: '未対応のコマンド' }
 }
 
-/** 1月・7月の相場変動 */
-export function nextMarketRate(current: number): number {
-  const delta = Math.round(Math.random() * 50) / 100
-  const next = Math.random() < 0.5 ? current + delta : current - delta
+/** 1月・7月の相場変動（商業 tier で幅を変える） */
+export function nextMarketRate(
+  current: number,
+  commerceTier: ProvinceTier = 'B',
+  random01 = Math.random(),
+  direction01 = Math.random(),
+): number {
+  const band = MARKET_DELTA_BY_COMMERCE_TIER[commerceTier]
+  const delta = band.min + random01 * (band.max - band.min)
+  const next = direction01 < 0.5 ? current + delta : current - delta
   return clamp(Math.round(next * 100) / 100, MARKET_RATE_MIN, MARKET_RATE_MAX)
 }
 

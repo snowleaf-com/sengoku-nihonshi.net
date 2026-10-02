@@ -123,6 +123,7 @@ export function GameHubPage({
   const season = seasonOfMonth(gameState.month)
   const inHomeLand = isInHomeLand(character, province)
   const canShikan = !character.houseId && Boolean(province.houseId)
+  const canGezan = Boolean(house && house.leaderCharacterId !== character.id)
   const adjacentProvinces = master
     ? listAdjacentIds(master, PROVINCES).map((id) => {
         const m = getProvinceMaster(id)!
@@ -578,6 +579,7 @@ export function GameHubPage({
                 error={commandError}
                 inHomeLand={inHomeLand}
                 canShikan={canShikan}
+                canGezan={canGezan}
                 adjacentProvinces={adjacentProvinces}
                 warTargets={warTargets}
                 recruitTargets={recruitTargets}

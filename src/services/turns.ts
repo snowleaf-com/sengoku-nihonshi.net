@@ -8,7 +8,7 @@ import {
   isTributeMonth,
   type GameDate,
 } from '../config/calendar'
-import { CHARACTER_RANKS, formatMoney, formatRice } from '../config/game'
+import { CHARACTER_RANKS, formatMoney, formatRice, rankName } from '../config/game'
 import { CLASS_PER_RANK, SALARY_RANK_MAX } from '../config/net'
 import { getCommand } from '../config/commands'
 import { nowSeconds } from '../lib/id'
@@ -17,6 +17,7 @@ import { CharacterRepository } from '../repositories/characters'
 import { GameStateRepository } from '../repositories/game-state'
 import { ProvinceRepository } from '../repositories/provinces'
 import type { Character, GameState, Province } from '../types'
+import { getProvinceMaster } from '../config/provinces'
 import {
   applyLoyaltyPopulationDelta,
   characterIncomeShare,
@@ -118,7 +119,7 @@ async function paySeasonalIncome(
     const members = await characters.listByHouseId(houseId)
     houseMerit.set(
       houseId,
-      members.reduce((sum, m) => sum + m.merit, 0),
+      members.reduce((sum, m) => sum + m.payMerit, 0),
     )
   }
 
@@ -131,29 +132,38 @@ async function paySeasonalIncome(
     if (!character) continue
 
     let amount = 0
+    const payMerit = character.payMerit
     if (character.houseId) {
       const owned = houseOwned.get(character.houseId) ?? []
       const pool = houseIncomePool(owned, kind)
       const totalMerit = houseMerit.get(character.houseId) ?? 0
-      amount = characterIncomeShare(pool, character.merit, totalMerit, character.classPoints)
+      amount = characterIncomeShare(pool, payMerit, totalMerit, character.classPoints)
     } else {
       const province = await provinces.findById(character.provinceId)
       if (province) {
         const pool = houseIncomePool([province], kind)
-        amount = characterIncomeShare(pool, character.merit, character.merit || 1, character.classPoints)
+        amount = characterIncomeShare(
+          pool,
+          payMerit,
+          payMerit || 1,
+          character.classPoints,
+        )
       }
     }
 
     const beforeClass = character.classPoints
+    const beforeRank = character.rank
     const meritAdded = character.merit
     const nextClass = beforeClass + meritAdded
+    const nextRank = rankFromClassPoints(nextClass)
     character = {
       ...character,
       money: kind === 'tax' ? character.money + amount : character.money,
       rice: kind === 'tribute' ? character.rice + amount : character.rice,
       classPoints: nextClass,
       merit: 0,
-      rank: rankFromClassPoints(nextClass),
+      payMerit: 0,
+      rank: nextRank,
     }
     character = maybePromoteStats(character, meritAdded, beforeClass)
 
@@ -161,6 +171,7 @@ async function paySeasonalIncome(
       money: character.money,
       rice: character.rice,
       merit: 0,
+      payMerit: 0,
       classPoints: character.classPoints,
       rank: character.rank,
       buyu: character.buyu,
@@ -168,6 +179,14 @@ async function paySeasonalIncome(
       toso: character.toso,
       updatedAt: wallClock,
     })
+
+    if (nextRank > beforeRank) {
+      personal.push({
+        characterId: character.id,
+        houseId: character.houseId,
+        message: `${formatGameDate(nextDate)}、階級が${rankName(beforeRank)}から${rankName(nextRank)}に上がった。`,
+      })
+    }
 
     if (amount > 0) {
       paidCount += 1
@@ -180,6 +199,12 @@ async function paySeasonalIncome(
         houseId: character.houseId,
         message: `${formatGameDate(nextDate)}、${label}。`,
       })
+    } else if (character.houseId && payMerit <= 0) {
+      personal.push({
+        characterId: character.id,
+        houseId: character.houseId,
+        message: `${formatGameDate(nextDate)}、半期の国貢献がなかったため${kind === 'tax' ? '給与' : '年貢'}は支給されなかった。`,
+      })
     }
   }
 
@@ -191,7 +216,8 @@ async function applySeasonalPopulation(db: D1Database, wallClock: number): Promi
   const all = await provinces.listAll()
   for (const province of all) {
     const delta = applyLoyaltyPopulationDelta(province)
-    const marketRate = nextMarketRate(province.marketRate)
+    const master = getProvinceMaster(province.id)
+    const marketRate = nextMarketRate(province.marketRate, master?.commerceTier ?? 'B')
     if (delta === 0 && marketRate === province.marketRate) continue
     await provinces.updateStats(province.id, {
       population: province.population + delta,

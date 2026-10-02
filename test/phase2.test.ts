@@ -83,6 +83,7 @@ describe('phase N1 NET domestic', () => {
       'tanren',
       'touyou',
       'syuugou',
+      'gezan',
       'nashi',
     ])
     expect(COMMAND_QUEUE_MAX).toBe(100)
