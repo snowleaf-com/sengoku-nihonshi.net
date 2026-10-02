@@ -8,7 +8,7 @@ import {
   isTributeMonth,
   type GameDate,
 } from '../config/calendar'
-import { CHARACTER_RANKS, formatMoney, formatRice } from '../config/game'
+import { CHARACTER_RANKS, formatMoney, formatRice, rankName } from '../config/game'
 import { CLASS_PER_RANK, SALARY_RANK_MAX } from '../config/net'
 import { getCommand } from '../config/commands'
 import { nowSeconds } from '../lib/id'
@@ -84,13 +84,21 @@ function rankFromClassPoints(classPoints: number): number {
   return Math.min(maxId, Math.max(1, sNum + 1))
 }
 
-function maybePromoteStats(character: Character, meritAdded: number, beforeClass: number) {
-  if (meritAdded <= 0) return character
-  if (beforeClass % CLASS_PER_RANK + meritAdded <= CLASS_PER_RANK) return character
+function maybePromoteStats(
+  character: Character,
+  meritAdded: number,
+  beforeClass: number,
+): { character: Character; stat: 'buyu' | 'chiryaku' | 'toso' | null } {
+  if (meritAdded <= 0) return { character, stat: null }
+  if (beforeClass % CLASS_PER_RANK + meritAdded <= CLASS_PER_RANK) {
+    return { character, stat: null }
+  }
   const roll = Math.floor(Math.random() * 3)
-  if (roll === 0) return { ...character, buyu: character.buyu + 1 }
-  if (roll === 1) return { ...character, chiryaku: character.chiryaku + 1 }
-  return { ...character, toso: character.toso + 1 }
+  if (roll === 0) return { character: { ...character, buyu: character.buyu + 1 }, stat: 'buyu' }
+  if (roll === 1) {
+    return { character: { ...character, chiryaku: character.chiryaku + 1 }, stat: 'chiryaku' }
+  }
+  return { character: { ...character, toso: character.toso + 1 }, stat: 'toso' }
 }
 
 async function paySeasonalIncome(
@@ -145,17 +153,20 @@ async function paySeasonalIncome(
     }
 
     const beforeClass = character.classPoints
+    const beforeRank = character.rank
     const meritAdded = character.merit
     const nextClass = beforeClass + meritAdded
+    const nextRank = rankFromClassPoints(nextClass)
     character = {
       ...character,
       money: kind === 'tax' ? character.money + amount : character.money,
       rice: kind === 'tribute' ? character.rice + amount : character.rice,
       classPoints: nextClass,
       merit: 0,
-      rank: rankFromClassPoints(nextClass),
+      rank: nextRank,
     }
-    character = maybePromoteStats(character, meritAdded, beforeClass)
+    const promoted = maybePromoteStats(character, meritAdded, beforeClass)
+    character = promoted.character
 
     await characters.updateResources(character.id, {
       money: character.money,
@@ -179,6 +190,26 @@ async function paySeasonalIncome(
         characterId: character.id,
         houseId: character.houseId,
         message: `${formatGameDate(nextDate)}、${label}。`,
+      })
+    } else if (character.houseId && meritAdded <= 0) {
+      personal.push({
+        characterId: character.id,
+        houseId: character.houseId,
+        message: `${formatGameDate(nextDate)}、半期間の国への貢献がなく${kind === 'tax' ? '税金' : '年貢'}は支給されなかった。`,
+      })
+    }
+
+    const statLabel =
+      promoted.stat === 'buyu' ? '武勇' : promoted.stat === 'chiryaku' ? '知略' : promoted.stat === 'toso' ? '統率' : null
+    if (nextRank > beforeRank || statLabel) {
+      const bits = [
+        nextRank > beforeRank ? `官位が${rankName(nextRank)}になった` : null,
+        statLabel ? `${statLabel}が1上がった` : null,
+      ].filter(Boolean)
+      personal.push({
+        characterId: character.id,
+        houseId: character.houseId,
+        message: `${formatGameDate(nextDate)}、昇進した。${bits.join('、')}。`,
       })
     }
   }

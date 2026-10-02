@@ -20,6 +20,9 @@ import {
   COMMAND_CONTRIBUTION,
   DEFEND_CONTRIBUTION,
   DOMESTIC_GOLD_COST,
+  FUSHIN_GOLD_COST,
+  FUSHIN_MAX_CAP,
+  FUSHIN_MIN_GAIN,
   MARKET_RATE_MAX,
   MARKET_RATE_MIN,
   MOVE_CONTRIBUTION,
@@ -473,8 +476,11 @@ async function finishCommand(
   await characters.updateResources(character.id, { ...personal, updatedAt: now })
   await provinces.updateStats(character.provinceId, {
     agriculture: local.agriculture,
+    agricultureMax: local.agricultureMax,
     commerce: local.commerce,
+    commerceMax: local.commerceMax,
     defense: local.defense,
+    defenseMax: local.defenseMax,
     loyalty: local.loyalty,
     population: local.population,
     tech: local.tech,
@@ -629,6 +635,63 @@ export async function executeCharacterCommand(
     })
     await consumeQueuedCommand(db, character.id, queued)
     return { ok: true, message: `${house.name}へ仕官した。` }
+  }
+
+  if (commandId === 'geya') {
+    if (!character.houseId) {
+      return { ok: false, reason: 'すでに無所属です' }
+    }
+    const houses = new HouseRepository(db)
+    const house = await houses.findById(character.houseId)
+    if (house && house.leaderCharacterId === character.id) {
+      return { ok: false, reason: '当主は下野できません' }
+    }
+    const now = nowSeconds()
+    const units = new UnitRepository(db)
+    const unit = await units.findByMember(character.id)
+    if (unit) {
+      if (unit.leaderCharacterId === character.id) await units.delete(unit.id)
+      else await units.removeMember(character.id)
+    }
+    if (personal.defending) {
+      personal.defending = 0
+      await new CharacterRepository(db).updateResources(character.id, {
+        ...personal,
+        updatedAt: now,
+      })
+    }
+    await new CharacterRepository(db).assignHouse(character.id, null, now)
+    await new HouseRoleRepository(db).deleteByCharacterId(character.id)
+    await consumeQueuedCommand(db, character.id, queued)
+    return { ok: true, message: `${house?.name ?? '家'}を下野し、浪人となった。` }
+  }
+
+  if (commandId === 'fushin') {
+    if (personal.money < FUSHIN_GOLD_COST) {
+      return { ok: false, reason: '金が足りません' }
+    }
+    const targets = [
+      { key: 'agricultureMax' as const, label: '農業' },
+      { key: 'commerceMax' as const, label: '商業' },
+      { key: 'defenseMax' as const, label: '城壁' },
+    ].filter((row) => local[row.key] < FUSHIN_MAX_CAP)
+    if (targets.length === 0) {
+      return { ok: false, reason: 'これ以上普請できません' }
+    }
+    personal.money -= FUSHIN_GOLD_COST
+    const gain = Math.max(FUSHIN_MIN_GAIN, netStatGain(personal.chiryaku))
+    const raised: string[] = []
+    for (const row of targets) {
+      const next = Math.min(FUSHIN_MAX_CAP, local[row.key] + gain)
+      const delta = next - local[row.key]
+      if (delta <= 0) continue
+      local[row.key] = next
+      raised.push(`${row.label}+${delta}`)
+    }
+    personal.merit += COMMAND_CONTRIBUTION
+    gainChiryakuEx(personal)
+    await finishCommand(db, character, queued, personal, local)
+    return { ok: true, message: `${province.name}を普請した（${raised.join('、')}）。` }
   }
 
   if (

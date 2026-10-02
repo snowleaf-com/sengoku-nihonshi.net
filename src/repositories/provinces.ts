@@ -162,6 +162,9 @@ export class ProvinceRepository {
       loyalty?: number
       population?: number
       defense?: number
+      defenseMax?: number
+      agricultureMax?: number
+      commerceMax?: number
       garrison?: number
       tech?: number
       marketRate?: number
@@ -174,16 +177,19 @@ export class ProvinceRepository {
     await this.db
       .prepare(
         `UPDATE provinces SET
-           agriculture = ?, commerce = ?, loyalty = ?, population = ?,
-           defense = ?, garrison = ?, tech = ?, market_rate = ?, updated_at = ?
+           agriculture = ?, agriculture_max = ?, commerce = ?, commerce_max = ?, loyalty = ?, population = ?,
+           defense = ?, defense_max = ?, garrison = ?, tech = ?, market_rate = ?, updated_at = ?
          WHERE id = ?`,
       )
       .bind(
         patch.agriculture ?? current.agriculture,
+        patch.agricultureMax ?? current.agricultureMax,
         patch.commerce ?? current.commerce,
+        patch.commerceMax ?? current.commerceMax,
         patch.loyalty ?? current.loyalty,
         patch.population ?? current.population,
         patch.defense ?? current.defense,
+        patch.defenseMax ?? current.defenseMax,
         patch.garrison ?? current.garrison,
         patch.tech ?? current.tech,
         patch.marketRate ?? current.marketRate,
