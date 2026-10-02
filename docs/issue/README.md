@@ -52,3 +52,5 @@ Issue を切ったら、必要なら同番号の md を追加して方針を書�
 |-------|----------|------|
 | [#28](https://github.com/snowleaf-com/sengoku-nihonshi.net/issues/28) | [28.md](./28.md) | 気づいたこと（UI・人事・盤面など） |
 | [#30](https://github.com/snowleaf-com/sengoku-nihonshi.net/issues/30) | [30.md](./30.md) | Wrangler → `cf` CLI 移行 |
+| [#32](https://github.com/snowleaf-com/sengoku-nihonshi.net/issues/32) | [32.md](./32.md) | 開発用メモ |
+| [#33](https://github.com/snowleaf-com/sengoku-nihonshi.net/issues/33) | [33.md](./33.md) | 計画（港・海路は見送り） |
