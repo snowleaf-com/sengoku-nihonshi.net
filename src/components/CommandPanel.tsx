@@ -14,6 +14,7 @@ import { formatQueueLabel } from '../config/command-payload'
 import { formatGameDate, dateAtQueueOffset, formatRealtime, realtimeAtQueueOffset } from '../config/calendar'
 import { TRADE_MAX } from '../config/net'
 import type { CharacterCommand } from '../types'
+import type { CommandPresetView } from '../services/command-presets'
 import { IconTrendingDown, IconTrendingUp } from './icons'
 import { StatIcon } from './StatIcon'
 
@@ -39,6 +40,7 @@ type CommandPanelProps = {
   provinceNameById: Record<string, string>
   characterNameById: Record<string, string>
   troopCap: number
+  presets?: CommandPresetView[]
   maintenance?: boolean
 }
 
@@ -92,6 +94,7 @@ export function CommandPanel({
   provinceNameById,
   characterNameById,
   troopCap,
+  presets = [],
   maintenance = false,
 }: CommandPanelProps) {
   const slots = buildCommandSlots(queue)
@@ -188,6 +191,50 @@ export function CommandPanel({
                 選択
               </button>
             </div>
+          </div>
+
+          <div class="command-presets">
+            <p class="hint">定型は選んだ枠の並びです。入力は選んだ先頭から末尾まで繰り返します。</p>
+            {Array.from({ length: 3 }, (_, index) => {
+              const slot = index + 1
+              const preset = presets.find((row) => row.slot === slot)
+              const saved = (preset?.steps.length ?? 0) > 0
+              return (
+                <div class="command-preset-row" key={`preset-${slot}`}>
+                  <input
+                    class="field-input command-preset-name"
+                    type="text"
+                    name={`presetName${slot}`}
+                    maxlength={8}
+                    value={preset?.name ?? ''}
+                    placeholder={`定型${slot}`}
+                    autocomplete="off"
+                  />
+                  <button
+                    type="submit"
+                    class="btn btn-ghost btn-small"
+                    formaction="/actions/save-preset"
+                    formnovalidate
+                    name="presetSlot"
+                    value={String(slot)}
+                    disabled={maintenance}
+                  >
+                    保存
+                  </button>
+                  <button
+                    type="submit"
+                    class="btn btn-ghost btn-small"
+                    formaction="/actions/apply-preset"
+                    formnovalidate
+                    name="presetSlot"
+                    value={String(slot)}
+                    disabled={maintenance || !saved}
+                  >
+                    入力
+                  </button>
+                </div>
+              )
+            })}
           </div>
 
           <div

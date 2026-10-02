@@ -1800,6 +1800,27 @@ a {
   gap: 0.4rem;
 }
 
+.command-presets {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.command-preset-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.command-preset-name {
+  min-width: 0;
+  min-height: 2.25rem;
+}
+
+.game-bottom-nav {
+  display: none;
+}
+
 .queue-select-row {
   display: flex;
   flex-wrap: wrap;
@@ -2502,8 +2523,48 @@ textarea.field-input {
   }
 
   .command-fab-bar {
-    position: static;
-    padding-bottom: 0.35rem;
+    display: none;
+  }
+
+  .game-layout {
+    padding-bottom: calc(3.6rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .game-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-top: 1px solid var(--line);
+    background: var(--panel);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .game-bottom-nav a,
+  .game-bottom-nav button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 3.1rem;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.82rem;
+    text-decoration: none;
+  }
+
+  .game-layout:has(.command-sheet[open]) .game-bottom-nav {
+    display: none;
+  }
+
+  #hub-map,
+  #hub-self,
+  #feed-news {
+    scroll-margin-top: 0.75rem;
   }
 
   .command-dock {
@@ -2545,7 +2606,8 @@ textarea.field-input {
 
   .command-panel[data-command-pane='pick'] .command-queue-pane,
   .command-panel[data-command-pane='pick'] .queue-toolbar,
-  .command-panel[data-command-pane='pick'] .queue-select-tools {
+  .command-panel[data-command-pane='pick'] .queue-select-tools,
+  .command-panel[data-command-pane='pick'] .command-presets {
     display: none;
   }
 

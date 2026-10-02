@@ -11,6 +11,10 @@ import {
   clearCommandPositions,
   repeatSelectedCommands,
 } from '../../services/commands'
+import {
+  applyCommandPreset,
+  saveCommandPreset,
+} from '../../services/command-presets'
 import { enterWorld } from '../../services/enter-world'
 import { raiseHouse } from '../../services/house'
 import { advanceDueTurns, ensureGameState } from '../../services/turns'
@@ -218,6 +222,63 @@ gameActionRoutes.post('/repeat-commands', async (c) => {
     }
     console.error(error)
     return c.redirect(`/game?cmdError=${encodeURIComponent('コマンド繰返に失敗しました')}`)
+  }
+})
+
+gameActionRoutes.post('/save-preset', async (c) => {
+  const user = c.get('user')
+  if (!user) return c.redirect('/')
+
+  const gameState = await ensureGameState(c.env.DB, getTurnIntervalSeconds(c.env))
+  if (gameState.maintenance) {
+    return c.redirect(`/game?cmdError=${encodeURIComponent('メンテナンス中です')}`)
+  }
+
+  const body = await c.req.parseBody({ all: true })
+  const slot = parseBodyString(body, 'presetSlot')
+  const positions = parseBodyIds(body, 'positions')
+
+  try {
+    const saved = await saveCommandPreset(c.env.DB, {
+      userId: user.id,
+      slot,
+      name: parseBodyString(body, `presetName${slot}`),
+      positions,
+    })
+    return c.redirect(`/game?notice=${encodeURIComponent(`定型「${saved.name}」を保存した`)}`)
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return c.redirect(`/game?cmdError=${encodeURIComponent(error.message)}`)
+    }
+    console.error(error)
+    return c.redirect(`/game?cmdError=${encodeURIComponent('定型の保存に失敗しました')}`)
+  }
+})
+
+gameActionRoutes.post('/apply-preset', async (c) => {
+  const user = c.get('user')
+  if (!user) return c.redirect('/')
+
+  const gameState = await ensureGameState(c.env.DB, getTurnIntervalSeconds(c.env))
+  if (gameState.maintenance) {
+    return c.redirect(`/game?cmdError=${encodeURIComponent('メンテナンス中です')}`)
+  }
+
+  const body = await c.req.parseBody({ all: true })
+
+  try {
+    await applyCommandPreset(c.env.DB, {
+      userId: user.id,
+      slot: parseBodyString(body, 'presetSlot'),
+      positions: parseBodyIds(body, 'positions'),
+    })
+    return c.redirect(`/game?notice=${encodeURIComponent('定型を入力した')}`)
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return c.redirect(`/game?cmdError=${encodeURIComponent(error.message)}`)
+    }
+    console.error(error)
+    return c.redirect(`/game?cmdError=${encodeURIComponent('定型の入力に失敗しました')}`)
   }
 })
 

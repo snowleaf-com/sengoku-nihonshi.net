@@ -12,6 +12,7 @@ import {
 import { HouseRoleRepository } from '../repositories/house-roles'
 import { HouseRepository } from '../repositories/houses'
 import { ProvinceRepository } from '../repositories/provinces'
+import { UnitRepository } from '../repositories/units'
 import {
   PersonalLetterRepository,
   type InboxLetter,
@@ -207,6 +208,72 @@ export async function appointHouseRole(
   })
 
   return { targetName: target.name, roleLabel }
+}
+
+/** 当主または軍師が家臣を浪人にする。当主は対象にできない。 */
+export async function exileHouseMember(
+  db: D1Database,
+  input: { userId: string; targetCharacterId: string },
+): Promise<{ targetName: string }> {
+  const { character, house } = await requireHouseMember(db, input.userId)
+  const roles = new HouseRoleRepository(db)
+  const actorRole = await roles.findByCharacterId(character.id)
+  const isLord = house.leaderCharacterId === character.id
+  const isStrategist = actorRole?.role === HOUSE_ROLES.strategist
+  if (!isLord && !isStrategist) {
+    throw new DomainError('追放できるのは当主と軍師だけです')
+  }
+  if (input.targetCharacterId === character.id) {
+    throw new DomainError('自分を追放するときは下野を使ってください')
+  }
+
+  const characters = new CharacterRepository(db)
+  const target = await characters.findById(input.targetCharacterId)
+  if (!target || target.houseId !== house.id) {
+    throw new DomainError('追放先の武将が見つかりません')
+  }
+  if (target.id === house.leaderCharacterId) {
+    throw new DomainError('当主は追放できません')
+  }
+
+  const now = nowSeconds()
+  const units = new UnitRepository(db)
+  const unit = await units.findByMember(target.id)
+  if (unit) {
+    if (unit.leaderCharacterId === target.id) await units.delete(unit.id)
+    else await units.removeMember(target.id)
+  }
+  if (target.defending) {
+    await characters.updateResources(target.id, { defending: 0, updatedAt: now })
+  }
+  await characters.assignHouse(target.id, null, now)
+  await roles.deleteByCharacterId(target.id)
+
+  const gameState = await ensureGameState(db)
+  await recordWorldEvent(db, {
+    year: gameState.year,
+    month: gameState.month,
+    channel: 'news',
+    kind: 'social',
+    message: `${character.name}が${target.name}を追放し、浪人とした。`,
+    provinceId: target.provinceId,
+    characterId: character.id,
+    houseId: house.id,
+    createdAt: now,
+  })
+  await recordWorldEvent(db, {
+    year: gameState.year,
+    month: gameState.month,
+    channel: 'result',
+    kind: 'social',
+    message: `${character.name}に追放され、${house.name}を離れて浪人となった。`,
+    provinceId: target.provinceId,
+    characterId: target.id,
+    houseId: null,
+    createdAt: now,
+  })
+
+  return { targetName: target.name }
 }
 
 export async function updateHouseLaw(

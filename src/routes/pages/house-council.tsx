@@ -24,6 +24,7 @@ type HouseCouncilPageProps = {
   members: HouseMemberRow[]
   unit: UnitSummary | null
   houseUnits: HouseUnitOption[]
+  canExile?: boolean
   error?: string | null
   notice?: string | null
 }
@@ -35,11 +36,13 @@ export function HouseCouncilPage({
   members,
   unit,
   houseUnits,
+  canExile = false,
   error = null,
   notice = null,
 }: HouseCouncilPageProps) {
   const isLord = house.leaderCharacterId === character.id
   const appointTargets = members.filter((m) => !m.isLord)
+  const exileTargets = members.filter((m) => !m.isLord && m.characterId !== character.id)
   const timeFmt: Intl.DateTimeFormatOptions = {
     timeZone: 'Asia/Tokyo',
     month: 'numeric',
@@ -177,6 +180,31 @@ export function HouseCouncilPage({
                   disabled={appointTargets.length === 0}
                 >
                   任命する
+                </button>
+              </form>
+            ) : null}
+            {canExile ? (
+              <form class="stack-form appoint-form" method="post" action="/game/house">
+                <input type="hidden" name="intent" value="exile" />
+                <h3 class="card-subtitle">追放</h3>
+                <p class="hint">当主と軍師が家臣を浪人にできます。当主は追放できません。</p>
+                <label class="field">
+                  <span class="field-label">武将</span>
+                  <select class="field-input" name="targetCharacterId" required>
+                    <option value="">選択</option>
+                    {exileTargets.map((m) => (
+                      <option value={m.characterId}>
+                        {m.name}（{m.roleLabel}）
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="submit"
+                  class="btn btn-ghost"
+                  disabled={exileTargets.length === 0}
+                >
+                  追放する
                 </button>
               </form>
             ) : null}

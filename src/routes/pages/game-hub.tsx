@@ -26,6 +26,7 @@ import { iconPublicPath } from '../../config/icons'
 import { cityRankOf, getProvinceMaster, PROVINCES, troopCapForCity } from '../../config/provinces'
 import { adjacentCount, listAdjacentIds } from '../../domain/province/adjacency'
 import { isInHomeLand } from '../../services/commands'
+import type { CommandPresetView } from '../../services/command-presets'
 import type {
   Character,
   CharacterCommand,
@@ -63,6 +64,7 @@ type GameHubPageProps = {
   error?: string | null
   notice?: string | null
   turnIntervalSeconds: number
+  commandPresets?: CommandPresetView[]
   houseOfficers?: HouseOfficerRow[]
   houseBoardMessages?: HouseMessageWithAuthor[]
 }
@@ -91,6 +93,7 @@ export function GameHubPage({
   error,
   notice = null,
   turnIntervalSeconds,
+  commandPresets = [],
   houseOfficers = [],
   houseBoardMessages = [],
 }: GameHubPageProps) {
@@ -258,7 +261,7 @@ export function GameHubPage({
         {notice ? <p class="hint game-notice">{notice}</p> : null}
 
         <div class="game-board">
-          <div class="game-info-stack">
+          <div class="game-info-stack" id="hub-self">
             <details class="game-panel game-card game-card-self game-card-disclosure" open>
               <summary class="card-title self-summary">自身</summary>
               <div class="self-identity">
@@ -529,7 +532,7 @@ export function GameHubPage({
             </details>
           </div>
 
-          <section class="game-panel game-map-section" data-season={season}>
+          <section class="game-panel game-map-section" id="hub-map" data-season={season}>
             <h2>全国</h2>
             <ProvinceMap
               compact
@@ -598,10 +601,19 @@ export function GameHubPage({
                 characterNameById={characterNameById}
                 troopCap={character.toso}
                 maintenance={Boolean(gameState.maintenance)}
+                presets={commandPresets}
               />
             </div>
           </dialog>
         </div>
+        <nav class="game-bottom-nav" aria-label="画面移動">
+          <a href="#hub-map">地図</a>
+          <a href="#hub-self">自身</a>
+          <button type="button" data-open-commands>
+            コマンド
+          </button>
+          <a href="#feed-news">知らせ</a>
+        </nav>
       </div>
     </SiteShell>
   )
