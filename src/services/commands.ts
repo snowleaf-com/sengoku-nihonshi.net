@@ -42,7 +42,12 @@ import {
   salaryCapForClassPoints,
   type MarketTier,
 } from '../config/net'
-import { getProvinceMaster } from '../config/provinces'
+import {
+  CITY_RANK_LABEL,
+  cityRankOf,
+  getProvinceMaster,
+  troopCapForCity,
+} from '../config/provinces'
 import { areAdjacent } from '../domain/province/adjacency'
 import { createId, nowSeconds } from '../lib/id'
 import { CharacterCommandRepository } from '../repositories/character-commands'
@@ -693,9 +698,13 @@ export async function executeCharacterCommand(
     if (!Number.isFinite(amount) || amount <= 0) {
       return { ok: false, reason: '徴兵する人数を入力してください' }
     }
-    const room = Math.max(0, personal.toso - personal.troops)
+    const cityMaster = getProvinceMaster(character.provinceId)
+    const cityRank = cityMaster ? cityRankOf(cityMaster) : 'town'
+    const troopCap = troopCapForCity(personal.toso, cityRank)
+    const room = Math.max(0, troopCap - personal.troops)
     if (amount > room) {
-      return { ok: false, reason: `統率の上限（あと${room}人）を超えます` }
+      const capLabel = cityRank === 'town' ? '統率の上限' : `${CITY_RANK_LABEL[cityRank]}での徴兵上限`
+      return { ok: false, reason: `${capLabel}（あと${room}人）を超えます` }
     }
     const goldCost = amount * RECRUIT_GOLD_PER
     const popCost = amount * RECRUIT_POP_PER

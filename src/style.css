@@ -1151,6 +1151,7 @@ a {
 }
 
 .province-cell {
+  position: relative;
   min-height: 2.6rem;
   border: 1px solid rgba(0, 0, 0, 0.35);
   padding: 0.25rem;
@@ -1163,11 +1164,51 @@ a {
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.55);
 }
 
+.province-head {
+  display: flex;
+  align-items: center;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.city-glyph {
+  width: 0.8rem;
+  height: 0.8rem;
+  flex: none;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.45));
+}
+
+.city-glyph.is-great {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.port-anchor {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 0.62rem;
+  height: 0.62rem;
+  pointer-events: none;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.85));
+}
+
 .province-map.is-compact .province-cell {
   min-height: 1.45rem;
   padding: 0.1rem 0.12rem;
   font-size: 0.6rem;
   gap: 0;
+}
+
+.province-map.is-compact .city-glyph,
+.province-map.is-compact .city-glyph.is-great {
+  width: 0.62rem;
+  height: 0.62rem;
+}
+
+.province-map.is-compact .port-anchor {
+  width: 0.48rem;
+  height: 0.48rem;
 }
 
 .province-cell-empty {
@@ -1205,6 +1246,10 @@ a {
 
 .province-name {
   font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .province-owner {

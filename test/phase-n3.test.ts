@@ -19,6 +19,7 @@ import {
   DEFEND_CONTRIBUTION,
   TRAIN_CONTRIBUTION,
 } from '../src/config/net'
+import { cityRankOf, getProvinceMaster, troopCapForCity } from '../src/config/provinces'
 
 async function seedHomeCharacter(opts?: { provinceId?: string }) {
   await ensureProvincesSeeded(env.DB)
@@ -141,11 +142,13 @@ describe('phase N3 military', () => {
     expect(afterProvince?.loyalty).toBe((beforeProvince?.loyalty ?? 0) - Math.floor(amount / 10))
   })
 
-  it('rejects recruit over toso cap', async () => {
+  it('rejects recruit over the city troop cap', async () => {
     const { userId, character } = await seedHomeCharacter()
+    const master = getProvinceMaster(character.provinceId)
+    const cap = troopCapForCity(character.toso, master ? cityRankOf(master) : 'town')
     await new CharacterRepository(env.DB).updateResources(character.id, {
       money: 99999,
-      troops: character.toso,
+      troops: cap,
       updatedAt: nowSeconds(),
     })
     await applyCommandsToPositions(env.DB, {
@@ -158,7 +161,7 @@ describe('phase N3 military', () => {
     const current = await new CharacterRepository(env.DB).findById(character.id)
     const result = await executeCharacterCommand(env.DB, current!, queued)
     expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.reason).toContain('統率')
+    if (!result.ok) expect(result.reason).toContain('上限')
   })
 
   it('trains troops and gains toso EX', async () => {
