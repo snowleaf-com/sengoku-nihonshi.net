@@ -996,6 +996,43 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
+.event-message-summary {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.battle-log-head {
+  margin: 0.35rem 0 0;
+  font-weight: 650;
+}
+
+.battle-log {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.battle-log-row {
+  margin: 0;
+  padding: 0.2rem 0.45rem;
+  border-left: 2px solid rgba(224, 160, 160, 0.45);
+  background: rgba(0, 0, 0, 0.12);
+  white-space: normal;
+}
+
+.battle-log-row.is-end {
+  border-left-color: #f0c27a;
+}
+
+.battle-log-row.is-skip {
+  border-left-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  padding-inline: 0.45rem;
+}
+
 .event-kind-war .event-message,
 .event-kind-command .event-message {
   max-height: 14rem;

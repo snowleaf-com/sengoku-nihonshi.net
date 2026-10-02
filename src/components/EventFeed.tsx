@@ -19,6 +19,41 @@ const FILTER_OPTIONS: Array<{ kind: '' | WorldEventKind; label: string }> = [
   { kind: 'social', label: '人事' },
 ]
 
+function EventMessage({ message }: { message: string }) {
+  const lines = message.split('\n')
+  const battleAt = lines.findIndex((line) => line.startsWith('【戦況】'))
+  if (battleAt < 0) {
+    return <p class="event-message">{message}</p>
+  }
+
+  const summary = lines.slice(0, battleAt).join('\n').trim()
+  const header = lines[battleAt] ?? ''
+  const rounds = lines.slice(battleAt + 1).filter((line) => line.trim().length > 0)
+
+  return (
+    <div class="event-message">
+      {summary ? <p class="event-message-summary">{summary}</p> : null}
+      <p class="battle-log-head">{header.replace(/^【戦況】/, '')}</p>
+      {rounds.length > 0 ? (
+        <ol class="battle-log">
+          {rounds.map((line, index) => {
+            const end = /攻略|撃退/.test(line)
+            const skip = line.includes('中略')
+            return (
+              <li
+                class={`battle-log-row${end ? ' is-end' : ''}${skip ? ' is-skip' : ''}`}
+                key={`${index}-${line}`}
+              >
+                {line}
+              </li>
+            )
+          })}
+        </ol>
+      ) : null}
+    </div>
+  )
+}
+
 export function EventFeed({
   title,
   events,
@@ -63,7 +98,7 @@ export function EventFeed({
                 <span class="event-realtime">{formatRealtime(event.createdAt)}</span>
               </time>
               <span class="event-kind">{worldEventKindLabel(event.kind)}</span>
-              <p class="event-message">{event.message}</p>
+              <EventMessage message={event.message} />
             </li>
           ))}
         </ol>
