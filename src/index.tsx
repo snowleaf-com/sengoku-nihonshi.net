@@ -265,6 +265,7 @@ app.get('/game', requireAuth, async (c) => {
       commandError={cmdError}
       error={error}
       notice={notice}
+      commandNotice={c.req.query('commands') === '1' ? notice : null}
       turnIntervalSeconds={turnIntervalSeconds}
       commandPresets={commandPresets}
       houseOfficers={houseOfficers}

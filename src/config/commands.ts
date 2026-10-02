@@ -332,6 +332,32 @@ export const COMMANDS: GameCommand[] = [
 
 export type CommandId = (typeof COMMANDS)[number]['id']
 
+/** 入力カードの並び。普段使う内政・普請・鍛錬を上、移動や戦争は下 */
+const PICKER_RANK: Record<CommandId, number> = {
+  nougyou: 10,
+  syougyou: 20,
+  gijutsu: 30,
+  fushin: 40,
+  shiro: 50,
+  tanren: 60,
+  kunren: 70,
+  komehodokoshi: 80,
+  beibai: 90,
+  chouhei: 100,
+  shubi: 110,
+  idou: 200,
+  sensou: 210,
+  touyou: 220,
+  shikan: 230,
+  syuugou: 240,
+  geya: 250,
+  nashi: 260,
+}
+
+export function commandPickerRank(id: CommandId): number {
+  return PICKER_RANK[id]
+}
+
 const COMMAND_BY_ID = new Map(COMMANDS.map((c) => [c.id, c]))
 
 export function isCommandId(value: string): value is CommandId {

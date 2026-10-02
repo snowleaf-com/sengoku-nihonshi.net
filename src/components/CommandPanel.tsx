@@ -2,6 +2,7 @@ import {
   COMMAND_QUEUE_MAX,
   COMMANDS,
   buildCommandSlots,
+  commandPickerRank,
   getCommand,
   formatEffectAmount,
   effectLabel,
@@ -42,6 +43,7 @@ type CommandPanelProps = {
   troopCap: number
   presets?: CommandPresetView[]
   maintenance?: boolean
+  notice?: string | null
 }
 
 function EffectChips({ command }: { command: GameCommand }) {
@@ -96,6 +98,7 @@ export function CommandPanel({
   troopCap,
   presets = [],
   maintenance = false,
+  notice = null,
 }: CommandPanelProps) {
   const slots = buildCommandSlots(queue)
   const filled = slots.filter(Boolean).length
@@ -113,7 +116,6 @@ export function CommandPanel({
       <form class="command-board" method="post" data-command-form>
         <div class="command-panel-top">
           <div class="command-panel-bar">
-            <h2>コマンド</h2>
             <span class="queue-capacity">
               {filled}/{COMMAND_QUEUE_MAX}
             </span>
@@ -127,11 +129,20 @@ export function CommandPanel({
               class="btn btn-ghost btn-small is-active"
               data-command-pane-tab="queue"
               role="tab"
+              aria-selected="true"
             >
-              予約枠
+              一覧
+            </button>
+            <button
+              type="button"
+              class="btn btn-ghost btn-small"
+              data-command-pane-tab="select"
+              role="tab"
+            >
+              選択
             </button>
             <button type="button" class="btn btn-ghost btn-small" data-command-pane-tab="pick" role="tab">
-              コマンド入力
+              コマンド
             </button>
           </div>
 
@@ -145,110 +156,124 @@ export function CommandPanel({
             </p>
           ) : null}
 
-          <div class="queue-toolbar" role="toolbar" aria-label="予約枠の選択">
-            <button type="button" class="btn btn-ghost btn-small" data-queue-select="all">
-              全選択
-            </button>
-            <button type="button" class="btn btn-ghost btn-small" data-queue-select="odd">
-              奇数
-            </button>
-            <button type="button" class="btn btn-ghost btn-small" data-queue-select="even">
-              偶数
-            </button>
-            <button type="button" class="btn btn-ghost btn-small" data-queue-select="none">
-              選択解除
-            </button>
+          <div
+            class={`command-panel-status${error ? ' is-visible' : notice ? ' is-visible is-notice' : ''}`}
+            data-command-status
+            role="status"
+            aria-live="polite"
+          >
+            {error || notice || ''}
           </div>
+        </div>
 
-          <div class="queue-select-tools">
-            <div class="queue-select-row" title="枠0＝現在月として、同じ月の枠を選ぶ">
-              <span class="queue-select-label">月</span>
+        <div class="command-board-body">
+          <div class="command-side">
+          <div class="command-select-pane">
+            <h3 class="command-pane-title">選択</h3>
+
+            <section class="select-group">
+              <h4>枠</h4>
+              <div class="select-actions" role="toolbar" aria-label="予約枠の選択">
+                <button type="button" class="btn btn-ghost btn-small" data-queue-select="all">
+                  すべて
+                </button>
+                <button type="button" class="btn btn-ghost btn-small" data-queue-select="odd">
+                  奇数
+                </button>
+                <button type="button" class="btn btn-ghost btn-small" data-queue-select="even">
+                  偶数
+                </button>
+                <button type="button" class="btn btn-ghost btn-small" data-queue-select="none">
+                  解除
+                </button>
+              </div>
+            </section>
+
+            <section class="select-group">
+              <h4>月</h4>
+              <p class="select-note">同じ月の枠を選ぶ。複数の月を押せる</p>
               <div class="queue-month-grid" role="group" aria-label="月で選択">
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
                   <button
                     type="button"
-                    class="btn btn-ghost btn-small queue-month-btn"
+                    class={`btn btn-ghost btn-small queue-month-btn${month === currentMonth ? ' is-now' : ''}`}
                     data-queue-select-month={String(month)}
+                    aria-pressed="false"
                     key={`month-${month}`}
                   >
                     {month}
                   </button>
                 ))}
               </div>
-            </div>
+            </section>
 
-            <div class="queue-select-row">
-              <span class="queue-select-label">検索</span>
-              <input
-                type="search"
-                class="queue-tool-input queue-tool-search"
-                data-queue-search
-                placeholder="農業 など"
-                autocomplete="off"
-                enterkeyhint="search"
-              />
-              <button type="button" class="btn btn-ghost btn-small" data-queue-select-search>
-                選択
-              </button>
-            </div>
+            <section class="select-group">
+              <h4>名前</h4>
+              <div class="select-search">
+                <input
+                  type="search"
+                  class="queue-tool-input queue-tool-search"
+                  data-queue-search
+                  placeholder="農業 など"
+                  autocomplete="off"
+                  enterkeyhint="search"
+                  aria-label="コマンド名で選択"
+                />
+                <button type="button" class="btn btn-ghost btn-small" data-queue-select-search>
+                  選ぶ
+                </button>
+              </div>
+            </section>
+
+            <section class="select-group">
+              <h4>定型</h4>
+              <p class="select-note">選んだ並びを保存し、先頭の枠から繰り返す</p>
+              {Array.from({ length: 3 }, (_, index) => {
+                const slot = index + 1
+                const preset = presets.find((row) => row.slot === slot)
+                const saved = (preset?.steps.length ?? 0) > 0
+                return (
+                  <div class="command-preset-row" key={`preset-${slot}`}>
+                    <input
+                      class="field-input command-preset-name"
+                      type="text"
+                      name={`presetName${slot}`}
+                      maxlength={8}
+                      value={preset?.name ?? ''}
+                      placeholder={`定型${slot}`}
+                      autocomplete="off"
+                      aria-label={`定型${slot}の名前`}
+                    />
+                    <button
+                      type="submit"
+                      class="btn btn-ghost btn-small"
+                      formaction="/actions/save-preset"
+                      formnovalidate
+                      name="presetSlot"
+                      value={String(slot)}
+                      disabled={maintenance}
+                    >
+                      保存
+                    </button>
+                    <button
+                      type="submit"
+                      class="btn btn-ghost btn-small"
+                      formaction="/actions/apply-preset"
+                      formnovalidate
+                      name="presetSlot"
+                      value={String(slot)}
+                      disabled={maintenance || !saved}
+                    >
+                      入れる
+                    </button>
+                  </div>
+                )
+              })}
+            </section>
           </div>
 
-          <div class="command-presets">
-            <p class="hint">定型は選んだ枠の並びです。入力は選んだ先頭から末尾まで繰り返します。</p>
-            {Array.from({ length: 3 }, (_, index) => {
-              const slot = index + 1
-              const preset = presets.find((row) => row.slot === slot)
-              const saved = (preset?.steps.length ?? 0) > 0
-              return (
-                <div class="command-preset-row" key={`preset-${slot}`}>
-                  <input
-                    class="field-input command-preset-name"
-                    type="text"
-                    name={`presetName${slot}`}
-                    maxlength={8}
-                    value={preset?.name ?? ''}
-                    placeholder={`定型${slot}`}
-                    autocomplete="off"
-                  />
-                  <button
-                    type="submit"
-                    class="btn btn-ghost btn-small"
-                    formaction="/actions/save-preset"
-                    formnovalidate
-                    name="presetSlot"
-                    value={String(slot)}
-                    disabled={maintenance}
-                  >
-                    保存
-                  </button>
-                  <button
-                    type="submit"
-                    class="btn btn-ghost btn-small"
-                    formaction="/actions/apply-preset"
-                    formnovalidate
-                    name="presetSlot"
-                    value={String(slot)}
-                    disabled={maintenance || !saved}
-                  >
-                    入力
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-
-          <div
-            class={`command-panel-status${error ? ' is-visible' : ''}`}
-            data-command-status
-            role="status"
-            aria-live="polite"
-          >
-            {error ?? ''}
-          </div>
-        </div>
-
-        <div class="command-board-body">
           <div class="command-queue-pane">
+            <h3 class="command-pane-title">一覧</h3>
           <div class="command-queue-scroll">
             <ol class="command-queue-list" data-queue-list>
               {slots.map((item, index) => {
@@ -296,8 +321,10 @@ export function CommandPanel({
             </ol>
           </div>
           </div>
+          </div>
 
           <div class="command-picker-list">
+            <h3 class="command-pane-title">コマンド</h3>
               <button
                 type="submit"
                 class="command-card command-card-action"
@@ -321,7 +348,7 @@ export function CommandPanel({
                 <span class="command-card-hint">選んだ並びを後ろへ繰り返す</span>
               </button>
 
-              <div class="command-param-block">
+              <div class="command-param-block" style={{ order: commandPickerRank('idou') }}>
                 <strong class="command-card-label">移動</strong>
                 <label class="field field-inline">
                   <span class="field-label">行き先</span>
@@ -348,7 +375,7 @@ export function CommandPanel({
               </div>
 
               {inHomeLand && !maintenance ? (
-                <div class="command-param-block">
+                <div class="command-param-block" style={{ order: commandPickerRank('beibai') }}>
                   <strong class="command-card-label">米売買</strong>
                   <p class="hint">
                     相場 米100→金{ricePer100} / 金100→米{goldPer100}（最大{TRADE_MAX}）
@@ -385,7 +412,7 @@ export function CommandPanel({
               ) : null}
 
               {inHomeLand && !maintenance ? (
-                <div class="command-param-block">
+                <div class="command-param-block" style={{ order: commandPickerRank('chouhei') }}>
                   <strong class="command-card-label">徴兵</strong>
                   <p class="hint">雑兵・金10/人・農民×5・民忠（人数/10）。上限は統率{troopCap}</p>
                   <label class="field field-inline">
@@ -413,7 +440,7 @@ export function CommandPanel({
               ) : null}
 
               {inHomeLand && !maintenance ? (
-                <div class="command-param-block">
+                <div class="command-param-block" style={{ order: commandPickerRank('sensou') }}>
                   <strong class="command-card-label">戦争</strong>
                   <p class="hint">隣接する敵国・中立国のみ。建国後36ヶ月で解禁</p>
                   <label class="field field-inline">
@@ -442,7 +469,7 @@ export function CommandPanel({
               ) : null}
 
               {inHomeLand && !maintenance ? (
-                <div class="command-param-block">
+                <div class="command-param-block" style={{ order: commandPickerRank('tanren') }}>
                   <strong class="command-card-label">鍛錬</strong>
                   <p class="hint">金50・選んだ能力のEX+2・貢献+10</p>
                   <label class="field field-inline">
@@ -467,7 +494,7 @@ export function CommandPanel({
               ) : null}
 
               {inHomeLand && !maintenance ? (
-                <div class="command-param-block">
+                <div class="command-param-block" style={{ order: commandPickerRank('touyou') }}>
                   <strong class="command-card-label">登用</strong>
                   <p class="hint">金100・同国の他家／浪人。成功率は乱数・貢献・忠誠</p>
                   <label class="field field-inline">
@@ -499,10 +526,14 @@ export function CommandPanel({
                 ? COMMANDS.filter(
                     (command) =>
                       !command.needsPayload && commandAvailable(command, inHomeLand, canShikan),
-                  ).map((command) => (
+                  )
+                    .slice()
+                    .sort((a, b) => commandPickerRank(a.id) - commandPickerRank(b.id))
+                    .map((command) => (
                     <button
                       type="submit"
                       class="command-card"
+                      style={{ order: commandPickerRank(command.id) }}
                       formaction="/actions/apply-commands"
                       name="commandId"
                       value={command.id}

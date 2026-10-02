@@ -29,6 +29,12 @@ export const gameActionRoutes = new Hono<AppEnv>()
 
 gameActionRoutes.use('*', requireAuth)
 
+/** コマンド操作のあと、ゲーム画面でコマンド欄を開いたまま戻す */
+function commandSheetPath(query: Record<string, string> = {}): string {
+  const params = new URLSearchParams({ commands: '1', ...query })
+  return `/game?${params.toString()}`
+}
+
 function parseBodyString(body: Record<string, unknown>, key: string): string {
   const value = body[key]
   return typeof value === 'string' ? value : ''
@@ -116,7 +122,7 @@ gameActionRoutes.post('/apply-commands', async (c) => {
 
   const gameState = await ensureGameState(c.env.DB, getTurnIntervalSeconds(c.env))
   if (gameState.maintenance) {
-    return c.redirect(`/game?cmdError=${encodeURIComponent('メンテナンス中のためコマンドを入力できません')}`)
+    return c.redirect(commandSheetPath({ cmdError: 'メンテナンス中のためコマンドを入力できません' }))
   }
 
   const body = await c.req.parseBody({ all: true })
@@ -169,13 +175,13 @@ gameActionRoutes.post('/apply-commands', async (c) => {
       positions,
       payload,
     })
-    return c.redirect('/game')
+    return c.redirect(commandSheetPath())
   } catch (error) {
     if (error instanceof DomainError) {
-      return c.redirect(`/game?cmdError=${encodeURIComponent(error.message)}`)
+      return c.redirect(commandSheetPath({ cmdError: error.message }))
     }
     console.error(error)
-    return c.redirect(`/game?cmdError=${encodeURIComponent('コマンド入力に失敗しました')}`)
+    return c.redirect(commandSheetPath({ cmdError: 'コマンド入力に失敗しました' }))
   }
 })
 
@@ -185,20 +191,20 @@ gameActionRoutes.post('/clear-commands', async (c) => {
 
   const gameState = await ensureGameState(c.env.DB, getTurnIntervalSeconds(c.env))
   if (gameState.maintenance) {
-    return c.redirect(`/game?cmdError=${encodeURIComponent('メンテナンス中です')}`)
+    return c.redirect(commandSheetPath({ cmdError: 'メンテナンス中です' }))
   }
 
   const { positions } = await parseCommandForm(c)
 
   try {
     await clearCommandPositions(c.env.DB, { userId: user.id, positions })
-    return c.redirect('/game')
+    return c.redirect(commandSheetPath())
   } catch (error) {
     if (error instanceof DomainError) {
-      return c.redirect(`/game?cmdError=${encodeURIComponent(error.message)}`)
+      return c.redirect(commandSheetPath({ cmdError: error.message }))
     }
     console.error(error)
-    return c.redirect(`/game?cmdError=${encodeURIComponent('コマンド削除に失敗しました')}`)
+    return c.redirect(commandSheetPath({ cmdError: 'コマンド削除に失敗しました' }))
   }
 })
 
@@ -208,20 +214,20 @@ gameActionRoutes.post('/repeat-commands', async (c) => {
 
   const gameState = await ensureGameState(c.env.DB, getTurnIntervalSeconds(c.env))
   if (gameState.maintenance) {
-    return c.redirect(`/game?cmdError=${encodeURIComponent('メンテナンス中です')}`)
+    return c.redirect(commandSheetPath({ cmdError: 'メンテナンス中です' }))
   }
 
   const { positions } = await parseCommandForm(c)
 
   try {
     await repeatSelectedCommands(c.env.DB, { userId: user.id, positions })
-    return c.redirect('/game')
+    return c.redirect(commandSheetPath())
   } catch (error) {
     if (error instanceof DomainError) {
-      return c.redirect(`/game?cmdError=${encodeURIComponent(error.message)}`)
+      return c.redirect(commandSheetPath({ cmdError: error.message }))
     }
     console.error(error)
-    return c.redirect(`/game?cmdError=${encodeURIComponent('コマンド繰返に失敗しました')}`)
+    return c.redirect(commandSheetPath({ cmdError: 'コマンド繰返に失敗しました' }))
   }
 })
 
@@ -231,7 +237,7 @@ gameActionRoutes.post('/save-preset', async (c) => {
 
   const gameState = await ensureGameState(c.env.DB, getTurnIntervalSeconds(c.env))
   if (gameState.maintenance) {
-    return c.redirect(`/game?cmdError=${encodeURIComponent('メンテナンス中です')}`)
+    return c.redirect(commandSheetPath({ cmdError: 'メンテナンス中です' }))
   }
 
   const body = await c.req.parseBody({ all: true })
@@ -245,13 +251,13 @@ gameActionRoutes.post('/save-preset', async (c) => {
       name: parseBodyString(body, `presetName${slot}`),
       positions,
     })
-    return c.redirect(`/game?notice=${encodeURIComponent(`定型「${saved.name}」を保存した`)}`)
+    return c.redirect(commandSheetPath({ notice: `定型「${saved.name}」を保存した` }))
   } catch (error) {
     if (error instanceof DomainError) {
-      return c.redirect(`/game?cmdError=${encodeURIComponent(error.message)}`)
+      return c.redirect(commandSheetPath({ cmdError: error.message }))
     }
     console.error(error)
-    return c.redirect(`/game?cmdError=${encodeURIComponent('定型の保存に失敗しました')}`)
+    return c.redirect(commandSheetPath({ cmdError: '定型の保存に失敗しました' }))
   }
 })
 
@@ -261,7 +267,7 @@ gameActionRoutes.post('/apply-preset', async (c) => {
 
   const gameState = await ensureGameState(c.env.DB, getTurnIntervalSeconds(c.env))
   if (gameState.maintenance) {
-    return c.redirect(`/game?cmdError=${encodeURIComponent('メンテナンス中です')}`)
+    return c.redirect(commandSheetPath({ cmdError: 'メンテナンス中です' }))
   }
 
   const body = await c.req.parseBody({ all: true })
@@ -272,13 +278,13 @@ gameActionRoutes.post('/apply-preset', async (c) => {
       slot: parseBodyString(body, 'presetSlot'),
       positions: parseBodyIds(body, 'positions'),
     })
-    return c.redirect(`/game?notice=${encodeURIComponent('定型を入力した')}`)
+    return c.redirect(commandSheetPath({ notice: '定型を入力した' }))
   } catch (error) {
     if (error instanceof DomainError) {
-      return c.redirect(`/game?cmdError=${encodeURIComponent(error.message)}`)
+      return c.redirect(commandSheetPath({ cmdError: error.message }))
     }
     console.error(error)
-    return c.redirect(`/game?cmdError=${encodeURIComponent('定型の入力に失敗しました')}`)
+    return c.redirect(commandSheetPath({ cmdError: '定型の入力に失敗しました' }))
   }
 })
 
