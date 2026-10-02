@@ -268,7 +268,7 @@ export const COMMANDS: GameCommand[] = [
   {
     id: 'tanren',
     label: '鍛錬',
-    blurb: '武勇・知略・統率のいずれかを鍛える',
+    blurb: '能力を鍛える。貢献は増えるが国貢献にはならず、税金・年貢の対象外',
     category: 'domestic',
     needsPayload: 'train_stat',
     effects: [

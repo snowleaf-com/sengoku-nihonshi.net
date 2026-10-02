@@ -345,10 +345,18 @@ export function GameHubPage({
                   <dd>{character.merit}</dd>
                 </div>
                 <div>
+                  <dt>
+                    <StatIcon target="merit" />
+                    国貢献
+                  </dt>
+                  <dd>{character.countryMerit}</dd>
+                </div>
+                <div>
                   <dt>忠誠</dt>
                   <dd>{character.loyalty}</dd>
                 </div>
               </dl>
+              <p class="hint">国貢献が0の半期は、税金・年貢は支給されない。</p>
               {unit ? (
                 <p class="status-badge">
                   部隊「{unit.name}」{unit.isLeader ? '（隊長）' : ''}

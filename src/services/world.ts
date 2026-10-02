@@ -1,5 +1,5 @@
 import { STARTING_LOYALTY } from '../config/game'
-import { DEFAULT_MARKET_RATE } from '../config/net'
+import { marketBandForTier } from '../config/net'
 import {
   initialStats,
   NEUTRAL_GARRISON,
@@ -32,7 +32,7 @@ export async function ensureProvincesSeeded(db: D1Database): Promise<void> {
         garrison: NEUTRAL_GARRISON,
         loyalty: STARTING_LOYALTY,
         tech: 0,
-        marketRate: DEFAULT_MARKET_RATE,
+        marketRate: marketBandForTier(master.commerceTier).center,
         createdAt,
       }
     }),

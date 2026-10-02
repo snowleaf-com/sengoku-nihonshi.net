@@ -142,6 +142,7 @@ describe('phase N6 commands', () => {
     const updated = await new CharacterRepository(env.DB).findById(character.id)
     expect(updated!.money).toBe(beforeMoney - TRAIN_STAT_GOLD_COST)
     expect(updated!.merit).toBe(beforeMerit + TRAIN_STAT_CONTRIBUTION)
+    expect(updated!.countryMerit).toBe(character.countryMerit)
     expect(updated!.buyuEx).toBe(beforeEx + 2)
   })
 

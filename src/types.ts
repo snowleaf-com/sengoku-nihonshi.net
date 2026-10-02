@@ -66,8 +66,10 @@ export type Character = {
   houseId: string | null
   provinceId: string
   rank: number
-  /** 貢献（1月・7月でリセット。NET の kcex） */
+  /** 貢献（鍛錬を含む。1月・7月で階級値へ繰り込みリセット。NET の kcex） */
   merit: number
+  /** 国貢献（鍛錬を除く。税金・年貢の按分。同期でリセット） */
+  countryMerit: number
   /** 階級値（蓄積。NET の kclass） */
   classPoints: number
   money: number
