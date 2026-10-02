@@ -89,6 +89,8 @@ npx wrangler secret put ADMIN_SECRET --env staging
 
 ### production（良いと見たら手動）
 
+GitHub Actions の CI を **workflow_dispatch** で起動すると、check のあと本番へ `npm run deploy:production` する。main への push では staging のみ。
+
 ```bash
 npm run deploy:production
 # 必要なら
