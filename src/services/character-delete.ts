@@ -1,6 +1,7 @@
 import { nowSeconds } from '../lib/id'
 import { CharacterCommandRepository } from '../repositories/character-commands'
 import { CharacterRepository } from '../repositories/characters'
+import { CommandPresetRepository } from '../repositories/command-presets'
 import { HouseRoleRepository } from '../repositories/house-roles'
 import { HouseRepository } from '../repositories/houses'
 import { ProvinceRepository } from '../repositories/provinces'
@@ -21,6 +22,7 @@ export async function deleteCharacterWithCleanup(
   const units = new UnitRepository(db)
   const roles = new HouseRoleRepository(db)
   const commands = new CharacterCommandRepository(db)
+  const presets = new CommandPresetRepository(db)
 
   const unit = await units.findByMember(characterId)
   if (unit) {
@@ -35,6 +37,7 @@ export async function deleteCharacterWithCleanup(
   if (queue.length > 0) {
     await commands.deleteMany(queue.map((q) => q.id))
   }
+  await presets.deleteByCharacterId(characterId)
 
   if (character.houseId) {
     const houses = new HouseRepository(db)

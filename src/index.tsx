@@ -16,6 +16,7 @@ import { CharacterCommandRepository } from './repositories/character-commands'
 import { CharacterRepository } from './repositories/characters'
 import { GameStateRepository } from './repositories/game-state'
 import { HouseRepository } from './repositories/houses'
+import { HouseRoleRepository } from './repositories/house-roles'
 import { ProvinceRepository } from './repositories/provinces'
 import { UnitRepository } from './repositories/units'
 import { renderer } from './renderer'
@@ -25,8 +26,10 @@ import {
 } from './config/archetypes'
 import { nextHouseColor, HOUSE_ROLES } from './config/game'
 import { DomainError } from './services/character'
+import { listCommandPresetViews } from './services/command-presets'
 import {
   appointHouseRole,
+  exileHouseMember,
   listHouseMessages,
   listInbox,
   listRankingByHouse,
@@ -40,7 +43,6 @@ import { listActionResults, listRecentWarInvasions, listWorldNews } from './serv
 import { advanceDueTurns, ensureGameState } from './services/turns'
 import { getTurnIntervalSeconds } from './config/calendar'
 import { nowSeconds } from './lib/id'
-import { HouseRoleRepository } from './repositories/house-roles'
 import { HouseMessageRepository } from './repositories/house-messages'
 import type { AppEnv } from './types'
 import { AdminPage } from './routes/pages/admin'
@@ -137,12 +139,13 @@ app.get('/game', requireAuth, async (c) => {
     )
   }
 
-  const [province, provinces, houses, queue, news, results, locals, warInvasions] =
+  const [province, provinces, houses, queue, commandPresets, news, results, locals, warInvasions] =
     await Promise.all([
       provincesRepo.findById(character.provinceId),
       provincesRepo.listAll(),
       housesRepo.listActive(),
       new CharacterCommandRepository(c.env.DB).listByCharacter(character.id),
+      listCommandPresetViews(c.env.DB, character.id),
       listWorldNews(c.env.DB),
       listActionResults(c.env.DB, character.id),
       characters.listByProvinceId(character.provinceId),
@@ -263,6 +266,7 @@ app.get('/game', requireAuth, async (c) => {
       error={error}
       notice={notice}
       turnIntervalSeconds={turnIntervalSeconds}
+      commandPresets={commandPresets}
       houseOfficers={houseOfficers}
       houseBoardMessages={houseBoardMessages}
     />,
@@ -315,6 +319,9 @@ app.get('/game/house', requireAuth, async (c) => {
             name: u.name,
           }))
         : []
+    const actorRole = await new HouseRoleRepository(c.env.DB).findByCharacterId(character.id)
+    const canExile =
+      house.leaderCharacterId === character.id || actorRole?.role === HOUSE_ROLES.strategist
     return c.render(
       <HouseCouncilPage
         character={character}
@@ -323,6 +330,7 @@ app.get('/game/house', requireAuth, async (c) => {
         members={members}
         unit={unit}
         houseUnits={houseUnits}
+        canExile={canExile}
         error={error}
         notice={notice}
       />,
@@ -359,6 +367,13 @@ app.post('/game/house', requireAuth, async (c) => {
       return c.redirect(
         `/game/house?notice=${encodeURIComponent(`${targetName}を${roleLabel}に任命した`)}`,
       )
+    }
+    if (intent === 'exile') {
+      const { targetName } = await exileHouseMember(c.env.DB, {
+        userId: user.id,
+        targetCharacterId: parseBodyString(body, 'targetCharacterId'),
+      })
+      return c.redirect(`/game/house?notice=${encodeURIComponent(`${targetName}を追放した`)}`)
     }
     await postHouseMessage(c.env.DB, {
       userId: user.id,
