@@ -63,6 +63,7 @@ type GameHubPageProps = {
   commandError?: string | null
   error?: string | null
   notice?: string | null
+  commandNotice?: string | null
   turnIntervalSeconds: number
   commandPresets?: CommandPresetView[]
   houseOfficers?: HouseOfficerRow[]
@@ -92,6 +93,7 @@ export function GameHubPage({
   commandError = null,
   error,
   notice = null,
+  commandNotice = null,
   turnIntervalSeconds,
   commandPresets = [],
   houseOfficers = [],
@@ -602,6 +604,7 @@ export function GameHubPage({
                 troopCap={character.toso}
                 maintenance={Boolean(gameState.maintenance)}
                 presets={commandPresets}
+                notice={commandNotice}
               />
             </div>
           </dialog>

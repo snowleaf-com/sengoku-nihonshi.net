@@ -13,6 +13,7 @@ function selectedCount(root: HTMLElement): number {
 function setStatus(root: HTMLElement, message: string | null) {
   const status = root.querySelector<HTMLElement>('[data-command-status]')
   if (!status) return
+  status.classList.remove('is-notice')
   if (message) {
     status.textContent = message
     status.classList.add('is-visible')
@@ -31,6 +32,19 @@ function updateSelectedCount(root: HTMLElement) {
   if (count > 0) setStatus(root, null)
 }
 
+function monthButtons(root: HTMLElement): HTMLButtonElement[] {
+  return Array.from(root.querySelectorAll<HTMLButtonElement>('[data-queue-select-month]'))
+}
+
+function setMonthPressed(button: HTMLElement, on: boolean) {
+  button.classList.toggle('is-current', on)
+  button.setAttribute('aria-pressed', on ? 'true' : 'false')
+}
+
+function clearMonthButtons(root: HTMLElement) {
+  for (const button of monthButtons(root)) setMonthPressed(button, false)
+}
+
 function applySelection(root: HTMLElement, mode: SelectMode) {
   const boxes = queueBoxes(root)
   for (const box of boxes) {
@@ -41,13 +55,21 @@ function applySelection(root: HTMLElement, mode: SelectMode) {
     else if (mode === 'odd') box.checked = index % 2 === 1
     else if (mode === 'even') box.checked = index % 2 === 0
   }
+  clearMonthButtons(root)
   updateSelectedCount(root)
 }
 
 function applyMonthSelection(root: HTMLElement, month: number) {
+  const button = monthButtons(root).find(
+    (item) => Number.parseInt(item.dataset.queueSelectMonth ?? '', 10) === month,
+  )
+  if (!button) return
+  const on = !button.classList.contains('is-current')
+  setMonthPressed(button, on)
   for (const box of queueBoxes(root)) {
     const slotMonth = Number.parseInt(box.dataset.queueMonth ?? '', 10)
-    box.checked = slotMonth === month
+    if (slotMonth !== month) continue
+    box.checked = on
   }
   updateSelectedCount(root)
 }
@@ -72,6 +94,7 @@ function applySearchSelection(root: HTMLElement) {
     flashQueue(root)
     setStatus(root, `「${query}」に一致する枠はない`)
   }
+  clearMonthButtons(root)
 }
 
 function readPositiveInt(input: HTMLInputElement | null, fallback: number): number | null {
@@ -110,6 +133,7 @@ function applyRangeSelection(root: HTMLElement) {
     const index = Number.parseInt(box.dataset.queueIndex ?? '', 10)
     box.checked = selected.has(index)
   }
+  clearMonthButtons(root)
   updateSelectedCount(root)
 }
 
