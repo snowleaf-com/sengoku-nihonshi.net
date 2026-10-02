@@ -155,13 +155,26 @@ export function wallDefender(defense: number): BattleCombatant {
 }
 
 function formatRoundLine(row: BattleRoundLog): string {
+  const attack = `攻撃 -${row.attackerDamage}、守備の残り ${row.defenderTroopsAfter}`
   if (row.defenderDamage == null) {
-    return `${row.round} 攻-${row.attackerDamage}→守${row.defenderTroopsAfter} 攻略`
+    return `${row.round}. ${attack}。攻略`
   }
+  const defend = `守備 -${row.defenderDamage}、攻撃の残り ${row.attackerTroopsAfter}`
   if (row.attackerTroopsAfter <= 0) {
-    return `${row.round} 攻-${row.attackerDamage}→守${row.defenderTroopsAfter} / 守-${row.defenderDamage}→攻0 撃退`
+    return `${row.round}. ${attack}。${defend}。撃退`
   }
-  return `${row.round} 攻-${row.attackerDamage}→守${row.defenderTroopsAfter} / 守-${row.defenderDamage}→攻${row.attackerTroopsAfter}`
+  return `${row.round}. ${attack}。${defend}`
+}
+
+function battleOutcome(
+  rounds: number,
+  winner: 'attacker' | 'defender',
+  last: BattleRoundLog | undefined,
+): string {
+  if (winner === 'attacker') return `${rounds}ラウンドで攻略`
+  const endured = last != null && last.attackerTroopsAfter > 0 && last.defenderTroopsAfter > 0
+  if (endured) return `${rounds}ラウンド続き、守備が耐えて撃退`
+  return `${rounds}ラウンドで撃退`
 }
 
 /**
@@ -177,7 +190,7 @@ export function formatBattleLog(
     return `【戦況】交戦なし（${winner === 'attacker' ? '守備兵なし' : '攻撃兵なし'}）`
   }
 
-  const header = `【戦況】全${rounds}ラウンド`
+  const header = `【戦況】${battleOutcome(rounds, winner, log[log.length - 1])}`
   if (log.length <= maxLines) {
     return [header, ...log.map(formatRoundLine)].join('\n')
   }

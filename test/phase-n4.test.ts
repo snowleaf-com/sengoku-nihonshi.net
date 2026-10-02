@@ -115,7 +115,7 @@ describe('phase N4 battle math', () => {
     const text = formatBattleLog(result)
     expect(text).toContain('【戦況】')
     expect(text).toContain('ラウンド')
-    expect(text).toMatch(/\d 攻-/)
+    expect(text).toMatch(/\d+\. 攻撃 -/)
   })
 
   it('wallDefender uses defense as troops', () => {
