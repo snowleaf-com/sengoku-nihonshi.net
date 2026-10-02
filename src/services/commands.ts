@@ -20,8 +20,6 @@ import {
   COMMAND_CONTRIBUTION,
   DEFEND_CONTRIBUTION,
   DOMESTIC_GOLD_COST,
-  MARKET_RATE_MAX,
-  MARKET_RATE_MIN,
   MOVE_CONTRIBUTION,
   RECRUIT_CONTRIBUTION,
   RECRUIT_GOLD_PER,
@@ -38,9 +36,11 @@ import {
   TRAINING_MAX,
   WAR_CONTRIBUTION,
   isHouseWarReady,
+  marketBandForTier,
   netStatGain,
   netTrainGain,
   salaryCapForClassPoints,
+  type MarketTier,
 } from '../config/net'
 import { getProvinceMaster } from '../config/provinces'
 import { areAdjacent } from '../domain/province/adjacency'
@@ -393,6 +393,7 @@ type MutableCharacter = {
   training: number
   defending: number
   merit: number
+  countryMerit: number
   buyu: number
   chiryaku: number
   toso: number
@@ -424,6 +425,11 @@ export type CommandExecutionOk = {
 export type CommandExecutionFail = {
   ok: false
   reason: string
+}
+
+function gainContribution(state: MutableCharacter, amount: number, country = true): void {
+  state.merit += amount
+  if (country) state.countryMerit += amount
 }
 
 function gainChiryakuEx(state: MutableCharacter): void {
@@ -514,6 +520,7 @@ export async function executeCharacterCommand(
     training: character.training,
     defending: character.defending,
     merit: character.merit,
+    countryMerit: character.countryMerit,
     buyu: character.buyu,
     chiryaku: character.chiryaku,
     toso: character.toso,
@@ -555,7 +562,7 @@ export async function executeCharacterCommand(
     if (!dest) return { ok: false, reason: '移動先がありません' }
 
     gainTosoEx(personal)
-    if (character.houseId) personal.merit += MOVE_CONTRIBUTION
+    if (character.houseId) gainContribution(personal, MOVE_CONTRIBUTION)
     personal.defending = 0
 
     const now = nowSeconds()
@@ -563,6 +570,7 @@ export async function executeCharacterCommand(
     await characters.updateProvince(character.id, dest.id, now)
     await characters.updateResources(character.id, {
       merit: personal.merit,
+      countryMerit: personal.countryMerit,
       toso: personal.toso,
       tosoEx: personal.tosoEx,
       defending: 0,
@@ -642,7 +650,7 @@ export async function executeCharacterCommand(
     }
     personal.money -= DOMESTIC_GOLD_COST
     const gain = netStatGain(personal.chiryaku)
-    personal.merit += COMMAND_CONTRIBUTION
+    gainContribution(personal, COMMAND_CONTRIBUTION)
     gainChiryakuEx(personal)
 
     let message = ''
@@ -671,7 +679,7 @@ export async function executeCharacterCommand(
     personal.rice -= RICE_GIVE_COST
     const gain = netStatGain(personal.tokubo)
     local.loyalty = clamp(local.loyalty + gain, 0, 100)
-    personal.merit += COMMAND_CONTRIBUTION
+    gainContribution(personal, COMMAND_CONTRIBUTION)
     gainTokuboEx(personal)
     await finishCommand(db, character, queued, personal, local)
     return { ok: true, message: `${province.name}の民忠が+${gain}上がった。` }
@@ -699,7 +707,7 @@ export async function executeCharacterCommand(
     personal.money -= goldCost
     personal.troops += amount
     personal.training = Math.max(0, personal.training - amount)
-    personal.merit += RECRUIT_CONTRIBUTION
+    gainContribution(personal, RECRUIT_CONTRIBUTION)
     local.population -= popCost
     local.loyalty = Math.max(0, local.loyalty - loyaltyCost)
     gainBuyuEx(personal)
@@ -714,7 +722,7 @@ export async function executeCharacterCommand(
   if (commandId === 'kunren') {
     const gain = netTrainGain(personal.toso)
     personal.training = clamp(personal.training + gain, 0, TRAINING_MAX)
-    personal.merit += TRAIN_CONTRIBUTION
+    gainContribution(personal, TRAIN_CONTRIBUTION)
     gainTosoEx(personal)
     const now = nowSeconds()
     await new CharacterRepository(db).updateResources(character.id, {
@@ -733,7 +741,7 @@ export async function executeCharacterCommand(
     const characters = new CharacterRepository(db)
     await characters.clearDefendingInProvince(character.provinceId, character.id, now)
     personal.defending = 1
-    personal.merit += DEFEND_CONTRIBUTION
+    gainContribution(personal, DEFEND_CONTRIBUTION)
     gainTosoEx(personal)
     await characters.updateResources(character.id, {
       ...personal,
@@ -808,7 +816,7 @@ export async function executeCharacterCommand(
     const now = nowSeconds()
 
     personal.troops = battle.attackerTroops
-    personal.merit += WAR_CONTRIBUTION
+    gainContribution(personal, WAR_CONTRIBUTION)
     gainBuyuEx(personal)
 
     if (battle.winner === 'attacker') {
@@ -922,7 +930,7 @@ export async function executeCharacterCommand(
       return { ok: false, reason: '金が足りません' }
     }
     personal.money -= TRAIN_STAT_GOLD_COST
-    personal.merit += TRAIN_STAT_CONTRIBUTION
+    gainContribution(personal, TRAIN_STAT_CONTRIBUTION, false)
     const statLabel =
       payload.stat === 'buyu' ? '武勇' : payload.stat === 'chiryaku' ? '知略' : '統率'
     if (payload.stat === 'buyu') {
@@ -1072,11 +1080,21 @@ export async function executeCharacterCommand(
   return { ok: false, reason: '未対応のコマンド' }
 }
 
-/** 1月・7月の相場変動 */
-export function nextMarketRate(current: number): number {
-  const delta = Math.round(Math.random() * 50) / 100
-  const next = Math.random() < 0.5 ? current + delta : current - delta
-  return clamp(Math.round(next * 100) / 100, MARKET_RATE_MIN, MARKET_RATE_MAX)
+/**
+ * 1月・7月の相場変動。
+ * 商業ティアごとに中心がずれ、その幅の中で上下する。B は 0.8〜1.2。
+ */
+export function nextMarketRate(
+  current: number,
+  tier: MarketTier = 'B',
+  random01: number = Math.random(),
+  direction01: number = Math.random(),
+): number {
+  const band = marketBandForTier(tier)
+  const swing = Math.min(1, Math.max(0, random01))
+  const delta = Math.round(swing * 50) / 100
+  const next = direction01 < 0.5 ? current + delta : current - delta
+  return clamp(Math.round(next * 100) / 100, band.min, band.max)
 }
 
 /** 家の給与・俸禄プール（NET SALARY） */

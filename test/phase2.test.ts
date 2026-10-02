@@ -184,6 +184,7 @@ describe('phase N1 NET domestic', () => {
     expect(afterQueue).toHaveLength(0)
     expect(afterCharacter?.money).toBe(character.money - 50)
     expect(afterCharacter?.merit).toBe(COMMAND_CONTRIBUTION)
+    expect(afterCharacter?.countryMerit).toBe(COMMAND_CONTRIBUTION)
     expect(afterCharacter?.chiryakuEx).toBe(1)
     expect(afterProvince!.agriculture).toBeGreaterThanOrEqual(beforeProvince!.agriculture)
 
