@@ -281,7 +281,9 @@ export function GameHubPage({
                 <div>
                   <h2 class="card-title self-name">{character.name}</h2>
                   <p class="self-meta">
-                    {archetype?.label ?? '均衡'} · {rankName(character.rank)}
+                    {archetype?.label ?? '均衡'} ·{' '}
+                    {house && house.leaderCharacterId === character.id ? '当主 · ' : ''}
+                    {rankName(character.rank)}
                     <span class="hint-inline">給与上限 {formatMoney(salaryCap)}</span>
                   </p>
                   <p class="self-meta">{houseLine}</p>

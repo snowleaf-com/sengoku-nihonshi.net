@@ -118,6 +118,19 @@ export function CommandPanel({
               選択 <span data-queue-selected-count>0</span>
             </span>
           </div>
+          <div class="command-pane-switch" role="tablist" aria-label="コマンド画面">
+            <button
+              type="button"
+              class="btn btn-ghost btn-small is-active"
+              data-command-pane-tab="queue"
+              role="tab"
+            >
+              予約枠
+            </button>
+            <button type="button" class="btn btn-ghost btn-small" data-command-pane-tab="pick" role="tab">
+              コマンド入力
+            </button>
+          </div>
 
           {maintenance ? (
             <p class="hint command-foreign-hint">メンテナンス中のためコマンドを入力できません。</p>
@@ -188,6 +201,7 @@ export function CommandPanel({
         </div>
 
         <div class="command-board-body">
+          <div class="command-queue-pane">
           <div class="command-queue-scroll">
             <ol class="command-queue-list" data-queue-list>
               {slots.map((item, index) => {
@@ -233,6 +247,7 @@ export function CommandPanel({
                 )
               })}
             </ol>
+          </div>
           </div>
 
           <div class="command-picker-list">

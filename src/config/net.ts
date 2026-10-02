@@ -106,10 +106,21 @@ export const WAR_CONTRIBUTION = 20
 /** 訓練度上限 */
 export const TRAINING_MAX = 100
 
+/** 普請: 金コスト（農業・商業・城壁の上限を上げる） */
+export const FUSHIN_GOLD_COST = 80
+
+/** 普請: 上限のハードキャップ */
+export const FUSHIN_MAX_CAP = 4000
+
+/** 普請: 1回の最低上昇 */
+export const FUSHIN_MIN_GAIN = 8
+
 /** 鍛錬: 金コスト */
 export const TRAIN_STAT_GOLD_COST = 50
 
-/** 鍛錬: 貢献 */
+/**
+ * 鍛錬の階級値（merit）。国貢献（countryMerit）には入れないので税金・年貢の対象外。
+ */
 export const TRAIN_STAT_CONTRIBUTION = 10
 
 /** 鍛錬: EX 加算（+1 を2回） */

@@ -4,9 +4,12 @@
  */
 
 import {
+  COMMAND_CONTRIBUTION,
   COMMAND_QUEUE_MAX,
   DEFEND_CONTRIBUTION,
   DOMESTIC_GOLD_COST,
+  FUSHIN_GOLD_COST,
+  FUSHIN_MIN_GAIN,
   RECRUIT_CONTRIBUTION,
   RECRUIT_GOLD_PER,
   RECRUIT_OFFICER_GOLD_COST,
@@ -276,6 +279,28 @@ export const COMMANDS: GameCommand[] = [
       { target: 'merit', magnitude: 'up', amount: TRAIN_STAT_CONTRIBUTION },
       { target: 'money', magnitude: 'down', amount: TRAIN_STAT_GOLD_COST },
     ],
+  },
+  {
+    id: 'fushin',
+    label: '普請',
+    blurb: '農業・商業・城壁の上限を上げる',
+    category: 'domestic',
+    effects: [
+      { target: 'agriculture', magnitude: 'up2', amount: FUSHIN_MIN_GAIN, variable: true },
+      { target: 'commerce', magnitude: 'up2', amount: FUSHIN_MIN_GAIN, variable: true },
+      { target: 'defense', magnitude: 'up2', amount: FUSHIN_MIN_GAIN, variable: true },
+      { target: 'chiryaku', magnitude: 'up', amount: 1 },
+      { target: 'merit', magnitude: 'up', amount: COMMAND_CONTRIBUTION },
+      { target: 'money', magnitude: 'down', amount: FUSHIN_GOLD_COST },
+    ],
+  },
+  {
+    id: 'geya',
+    label: '下野',
+    blurb: '家を離れて浪人になる（当主は不可）',
+    category: 'social',
+    foreignOk: true,
+    effects: [],
   },
   {
     id: 'touyou',

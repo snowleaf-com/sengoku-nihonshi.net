@@ -81,6 +81,8 @@ describe('phase N1 NET domestic', () => {
       'shubi',
       'sensou',
       'tanren',
+      'fushin',
+      'geya',
       'touyou',
       'syuugou',
       'nashi',
