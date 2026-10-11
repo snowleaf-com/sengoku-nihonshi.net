@@ -17,7 +17,12 @@ import { WorldEventRepository } from '../src/repositories/world-events'
 import { getProvinceMaster, PROVINCES } from '../src/config/provinces'
 import { listAdjacentIds } from '../src/domain/province/adjacency'
 import { createId, nowSeconds } from '../src/lib/id'
-import { BATTLE_STOP_MONTHS, WAR_CONTRIBUTION, isHouseWarReady } from '../src/config/net'
+import {
+  BATTLE_STOP_MONTHS,
+  FALLEN_JOIN_STAT_BONUS,
+  WAR_CONTRIBUTION,
+  isHouseWarReady,
+} from '../src/config/net'
 
 async function findNeutralProvince(prefer?: string[]): Promise<string> {
   await ensureProvincesSeeded(env.DB)
@@ -197,6 +202,100 @@ describe('phase N4 war', () => {
       limit: 10,
     })
     expect(news.some((e) => e.kind === 'war' && e.message.includes('攻略'))).toBe(true)
+  })
+
+  it('destroys a house that loses its last province', async () => {
+    const { from, to } = await findNeutralAdjacentPair()
+    const attacker = await seedAt(from, `攻滅${createId(2)}`)
+    await unlockWar(attacker.character.houseId!)
+
+    const defender = await seedAt(to, `守滅${createId(2)}`)
+    await unlockWar(defender.character.houseId!)
+    const lostHouseId = defender.character.houseId!
+
+    const retainerUserId = createId(12)
+    await env.DB.prepare(
+      `INSERT INTO users (id, created_at, updated_at, last_login_at) VALUES (?, ?, ?, NULL)`,
+    )
+      .bind(retainerUserId, nowSeconds(), nowSeconds())
+      .run()
+    const retainer = await createCharacter(env.DB, {
+      userId: retainerUserId,
+      name: `臣滅${createId(3)}`,
+      iconId: 'busho_03',
+      archetypeId: 'battle',
+      provinceId: to,
+      buyu: '50',
+      chiryaku: '50',
+      toso: '50',
+    })
+    const now = nowSeconds()
+    await new CharacterRepository(env.DB).assignHouse(retainer.id, lostHouseId, now)
+
+    const characters = new CharacterRepository(env.DB)
+    await characters.updateResources(attacker.character.id, {
+      troops: 200,
+      training: 90,
+      buyu: 95,
+      updatedAt: now,
+    })
+    await characters.updateResources(defender.character.id, {
+      troops: 3,
+      training: 10,
+      buyu: 20,
+      defending: 1,
+      updatedAt: now,
+    })
+
+    await applyCommandsToPositions(env.DB, {
+      userId: attacker.userId,
+      commandId: 'sensou',
+      positions: [0],
+      payload: { kind: 'war', provinceId: to },
+    })
+    const queued = (
+      await new CharacterCommandRepository(env.DB).listByCharacter(attacker.character.id)
+    )[0]!
+    const before = await characters.findById(attacker.character.id)
+    const result = await executeCharacterCommand(env.DB, before!, queued)
+    expect(result.ok).toBe(true)
+
+    const lostHouse = await new HouseRepository(env.DB).findById(lostHouseId)
+    expect(lostHouse?.destroyedAt).not.toBeNull()
+    expect((await new ProvinceRepository(env.DB).listByHouseId(lostHouseId)).length).toBe(0)
+
+    const lordAfter = await characters.findById(defender.character.id)
+    const retainerAfter = await characters.findById(retainer.id)
+    expect(lordAfter?.houseId).toBeNull()
+    expect(retainerAfter?.houseId).toBeNull()
+    expect(lordAfter?.defending).toBe(0)
+
+    const news = await new WorldEventRepository(env.DB).listRecent({
+      channel: 'news',
+      limit: 20,
+    })
+    expect(news.some((e) => e.message.includes('領土をすべて失い滅亡した'))).toBe(true)
+
+    const buyuBefore = lordAfter!.buyu
+    const chiryakuBefore = lordAfter!.chiryaku
+    const tosoBefore = lordAfter!.toso
+    await applyCommandsToPositions(env.DB, {
+      userId: defender.userId,
+      commandId: 'shikan',
+      positions: [0],
+    })
+    const shikanQueued = (
+      await new CharacterCommandRepository(env.DB).listByCharacter(defender.character.id)
+    )[0]!
+    const shikanResult = await executeCharacterCommand(env.DB, lordAfter!, shikanQueued)
+    expect(shikanResult.ok).toBe(true)
+    if (shikanResult.ok) expect(shikanResult.message).toContain('帰順の礼')
+    const joined = await characters.findById(defender.character.id)
+    expect(joined?.houseId).toBe(attacker.character.houseId)
+    expect(joined?.buyu).toBe(buyuBefore + FALLEN_JOIN_STAT_BONUS)
+    expect(joined?.chiryaku).toBe(chiryakuBefore + FALLEN_JOIN_STAT_BONUS)
+    expect(joined?.toso).toBe(tosoBefore + FALLEN_JOIN_STAT_BONUS)
+    expect(joined?.fallenToHouseId).toBeNull()
   })
 
   it('defeats defending character and occupies', async () => {

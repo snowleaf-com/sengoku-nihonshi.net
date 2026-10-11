@@ -83,6 +83,10 @@ export type Character = {
   idleStreak: number
   /** 武将の国への忠誠（都市の民忠とは別） */
   loyalty: number
+  /** 滅亡時に領土を奪った家。帰順の礼の対象 */
+  fallenToHouseId: string | null
+  /** 滅亡した turn_index。帰順特典の期限に使う */
+  fallenAtTurn: number | null
   createdAt: number
   updatedAt: number
 }

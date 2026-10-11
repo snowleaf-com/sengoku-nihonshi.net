@@ -65,6 +65,8 @@ import type { Character, CharacterCommand, Province } from '../types'
 import { formatBattleLog, resolveBattle, wallDefender } from './battle'
 import { DomainError } from './character'
 import { recordWorldEvent } from './events'
+import { claimFallenJoinBonus } from './fallen-join'
+import { destroyHouseIfLandless } from './house-destroy'
 import { recruitOfficerSucceeds } from './recruit-officer'
 
 function clamp(value: number, min: number, max: number): number {
@@ -653,6 +655,8 @@ export async function executeCharacterCommand(
       return { ok: false, reason: '仕官先の家がありません' }
     }
     const now = nowSeconds()
+    const gameState = await new GameStateRepository(db).get()
+    if (!gameState) return { ok: false, reason: 'ゲーム状態がありません' }
     await new CharacterRepository(db).assignHouse(character.id, house.id, now)
     await new HouseRoleRepository(db).create({
       id: createId(16),
@@ -661,7 +665,20 @@ export async function executeCharacterCommand(
       role: HOUSE_ROLES.retainer,
       createdAt: now,
     })
+    const bonus = await claimFallenJoinBonus(
+      db,
+      character,
+      house.id,
+      gameState.turnIndex,
+      now,
+    )
     await consumeQueuedCommand(db, character.id, queued)
+    if (bonus) {
+      return {
+        ok: true,
+        message: `${house.name}へ仕官した。帰順の礼として武勇・知略・統率がそれぞれ+${bonus.statBonus}された。`,
+      }
+    }
     return { ok: true, message: `${house.name}へ仕官した。` }
   }
 
@@ -915,6 +932,7 @@ export async function executeCharacterCommand(
       } else {
         await provinces.updateStats(target.id, { defense: 0, updatedAt: now })
       }
+      const lostHouseId = target.houseId
       await provinces.updateOwner(target.id, character.houseId, now)
       await characters.clearDefendingInProvince(target.id, null, now)
 
@@ -952,6 +970,25 @@ export async function executeCharacterCommand(
           createdAt: now,
         })
       }
+
+      if (lostHouseId && lostHouseId !== character.houseId) {
+        const lostHouse = await new HouseRepository(db).findById(lostHouseId)
+        if (lostHouse && !lostHouse.destroyedAt) {
+          await destroyHouseIfLandless(db, lostHouseId, {
+            now,
+            conquerorHouseId: character.houseId ?? undefined,
+            turnIndex: gameState.turnIndex,
+            news: {
+              year: gameState.year,
+              month: gameState.month,
+              kind: 'war',
+              message: `${lostHouse.name}は領土をすべて失い滅亡した。`,
+            },
+            memberResultMessage: `所属する${lostHouse.name}が領土を失い滅亡した。浪人となった。`,
+          })
+        }
+      }
+
       return {
         ok: true,
         message: `${fromMaster.name}から${target.name}へ侵攻し占領した（対${vsLabel}、${roundLabel}、残兵${personal.troops}）。\n${battleLog}`,
@@ -1108,6 +1145,16 @@ export async function executeCharacterCommand(
       role: HOUSE_ROLES.retainer,
       createdAt: now,
     })
+    const joinBonus =
+      gameState && character.houseId
+        ? await claimFallenJoinBonus(
+            db,
+            { ...target, defending: 0, loyalty: 100 },
+            character.houseId,
+            gameState.turnIndex,
+            now,
+          )
+        : null
 
     const attackerHouse = await new HouseRepository(db).findById(character.houseId)
     await characters.updateResources(character.id, {
@@ -1126,6 +1173,12 @@ export async function executeCharacterCommand(
       houseId: character.houseId,
       createdAt: now,
     })
+    if (joinBonus) {
+      return {
+        ok: true,
+        message: `${target.name}を登用した。帰順の礼として武勇・知略・統率がそれぞれ+${joinBonus.statBonus}された。`,
+      }
+    }
     return { ok: true, message: `${target.name}を登用した。` }
   }
 
