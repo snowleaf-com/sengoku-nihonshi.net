@@ -4,8 +4,8 @@ import { CharacterRepository } from '../repositories/characters'
 import { CommandPresetRepository } from '../repositories/command-presets'
 import { HouseRoleRepository } from '../repositories/house-roles'
 import { HouseRepository } from '../repositories/houses'
-import { ProvinceRepository } from '../repositories/provinces'
 import { UnitRepository } from '../repositories/units'
+import { destroyHouse } from './house-destroy'
 
 /**
  * 武将削除。当主なら家を滅ぼし領土を解放、他メンバーは浪人化。
@@ -43,24 +43,7 @@ export async function deleteCharacterWithCleanup(
     const houses = new HouseRepository(db)
     const house = await houses.findById(character.houseId)
     if (house && !house.destroyedAt && house.leaderCharacterId === characterId) {
-      const provinces = new ProvinceRepository(db)
-      const owned = await provinces.listByHouseId(house.id)
-      for (const p of owned) {
-        await provinces.updateOwner(p.id, null, now)
-      }
-      const members = await characters.listByHouseId(house.id)
-      for (const m of members) {
-        if (m.id === characterId) continue
-        const memberUnit = await units.findByMember(m.id)
-        if (memberUnit) {
-          if (memberUnit.leaderCharacterId === m.id) await units.delete(memberUnit.id)
-          else await units.removeMember(m.id)
-        }
-        await roles.deleteByCharacterId(m.id)
-        await characters.assignHouse(m.id, null, now)
-      }
-      await roles.deleteByHouseId(house.id)
-      await houses.destroy(house.id, now)
+      await destroyHouse(db, house.id, { now })
     } else {
       await roles.deleteByCharacterId(characterId)
     }

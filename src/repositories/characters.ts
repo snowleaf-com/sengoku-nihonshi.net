@@ -27,6 +27,8 @@ type CharacterRow = {
   defending: number
   idle_streak: number
   loyalty: number
+  fallen_to_house_id: string | null
+  fallen_at_turn: number | null
   created_at: number
   updated_at: number
 }
@@ -34,7 +36,7 @@ type CharacterRow = {
 const CHARACTER_COLUMNS = `id, user_id, name, icon_id, archetype_id, buyu, chiryaku, toso, tokubo,
   buyu_ex, chiryaku_ex, toso_ex, tokubo_ex,
   house_id, province_id, rank, merit, country_merit, class_points, money, rice, troops, training, defending,
-  idle_streak, loyalty,
+  idle_streak, loyalty, fallen_to_house_id, fallen_at_turn,
   created_at, updated_at`
 
 function mapCharacter(row: CharacterRow): Character {
@@ -65,6 +67,8 @@ function mapCharacter(row: CharacterRow): Character {
     defending: row.defending,
     idleStreak: row.idle_streak ?? 0,
     loyalty: row.loyalty ?? 100,
+    fallenToHouseId: row.fallen_to_house_id ?? null,
+    fallenAtTurn: row.fallen_at_turn ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -148,6 +152,8 @@ export class CharacterRepository {
       defending: 0,
       idleStreak: 0,
       loyalty: 100,
+      fallenToHouseId: null,
+      fallenAtTurn: null,
       createdAt: input.createdAt,
       updatedAt: input.createdAt,
     }
@@ -234,6 +240,31 @@ export class CharacterRepository {
          WHERE id = ?`,
       )
       .bind(houseId, updatedAt, characterId)
+      .run()
+  }
+
+  async setFallenTo(
+    characterId: string,
+    input: { houseId: string; turnIndex: number; updatedAt: number },
+  ): Promise<void> {
+    await this.db
+      .prepare(
+        `UPDATE characters
+         SET fallen_to_house_id = ?, fallen_at_turn = ?, updated_at = ?
+         WHERE id = ?`,
+      )
+      .bind(input.houseId, input.turnIndex, input.updatedAt, characterId)
+      .run()
+  }
+
+  async clearFallenTo(characterId: string, updatedAt: number): Promise<void> {
+    await this.db
+      .prepare(
+        `UPDATE characters
+         SET fallen_to_house_id = NULL, fallen_at_turn = NULL, updated_at = ?
+         WHERE id = ?`,
+      )
+      .bind(updatedAt, characterId)
       .run()
   }
 

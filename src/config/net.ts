@@ -106,6 +106,12 @@ export const WAR_CONTRIBUTION = 20
 /** 訓練度上限 */
 export const TRAINING_MAX = 100
 
+/** 滅亡後、勝者の家へ仕官／登用したときの帰順の礼（武勇・知略・統率への加算） */
+export const FALLEN_JOIN_STAT_BONUS = 10
+
+/** 帰順の礼が有効な期間（ターン＝月） */
+export const FALLEN_JOIN_WINDOW_TURNS = 12
+
 /** 普請: 金コスト（農業・商業・城壁の上限を1系統上げる・武勇依存） */
 export const FUSHIN_GOLD_COST = 80
 
