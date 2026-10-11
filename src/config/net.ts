@@ -106,11 +106,8 @@ export const WAR_CONTRIBUTION = 20
 /** 訓練度上限 */
 export const TRAINING_MAX = 100
 
-/** 普請: 金コスト（農業・商業・城壁の上限を上げる） */
+/** 普請: 金コスト（農業・商業・城壁の上限を1系統上げる・武勇依存） */
 export const FUSHIN_GOLD_COST = 80
-
-/** 普請: 上限のハードキャップ */
-export const FUSHIN_MAX_CAP = 4000
 
 /** 普請: 1回の最低上昇 */
 export const FUSHIN_MIN_GAIN = 8

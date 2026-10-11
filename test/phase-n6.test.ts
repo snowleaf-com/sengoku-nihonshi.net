@@ -23,7 +23,14 @@ import { PROVINCES } from '../src/config/provinces'
 import { listAdjacentIds } from '../src/domain/province/adjacency'
 import { getProvinceMaster } from '../src/config/provinces'
 import { createId, nowSeconds } from '../src/lib/id'
-import { TRAIN_STAT_CONTRIBUTION, TRAIN_STAT_GOLD_COST } from '../src/config/net'
+import {
+  COMMAND_CONTRIBUTION,
+  FUSHIN_GOLD_COST,
+  FUSHIN_MIN_GAIN,
+  TRAIN_STAT_CONTRIBUTION,
+  TRAIN_STAT_GOLD_COST,
+} from '../src/config/net'
+import { formatQueueLabel } from '../src/config/command-payload'
 
 async function findNeutralProvince(prefer?: string[]): Promise<string> {
   await ensureProvincesSeeded(env.DB)
@@ -122,6 +129,45 @@ describe('phase N6 helpers', () => {
 })
 
 describe('phase N6 commands', () => {
+  it('fushin raises one max by buyu and keeps it after reseed', async () => {
+    const provinceId = await findNeutralProvince()
+    const { userId, character } = await seedAt(provinceId)
+    const provinceBefore = await new ProvinceRepository(env.DB).findById(provinceId)
+    expect(provinceBefore).not.toBeNull()
+    const agriMaxBefore = provinceBefore!.agricultureMax
+    const commerceMaxBefore = provinceBefore!.commerceMax
+
+    await applyCommandsToPositions(env.DB, {
+      userId,
+      commandId: 'fushin',
+      positions: [0],
+      payload: { kind: 'fushin', target: 'agriculture' },
+    })
+    const queued = (await new CharacterCommandRepository(env.DB).listByCharacter(character.id))[0]!
+    expect(
+      formatQueueLabel('fushin', queued.payload, '普請', () => null),
+    ).toBe('農業を普請')
+
+    const result = await executeCharacterCommand(env.DB, character, queued)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.message).toMatch(/農業上限を\+\d+普請した/)
+    }
+
+    const after = await new ProvinceRepository(env.DB).findById(provinceId)
+    expect(after!.agricultureMax).toBeGreaterThanOrEqual(agriMaxBefore + FUSHIN_MIN_GAIN)
+    expect(after!.commerceMax).toBe(commerceMaxBefore)
+
+    const updated = await new CharacterRepository(env.DB).findById(character.id)
+    expect(updated!.money).toBe(character.money - FUSHIN_GOLD_COST)
+    expect(updated!.merit).toBe(character.merit + COMMAND_CONTRIBUTION)
+    expect(updated!.buyuEx).toBe(character.buyuEx + 1)
+
+    await ensureProvincesSeeded(env.DB)
+    const kept = await new ProvinceRepository(env.DB).findById(provinceId)
+    expect(kept!.agricultureMax).toBe(after!.agricultureMax)
+  })
+
   it('tanren spends gold and gains EX+2', async () => {
     const provinceId = await findNeutralProvince()
     const { userId, character } = await seedAt(provinceId)

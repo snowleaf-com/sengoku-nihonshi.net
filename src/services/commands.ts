@@ -6,6 +6,7 @@ import {
   type RecruitOfficerPayload,
   type RecruitPayload,
   type TradePayload,
+  type FushinPayload,
   type TrainStatPayload,
   type WarPayload,
 } from '../config/command-payload'
@@ -21,7 +22,6 @@ import {
   DEFEND_CONTRIBUTION,
   DOMESTIC_GOLD_COST,
   FUSHIN_GOLD_COST,
-  FUSHIN_MAX_CAP,
   FUSHIN_MIN_GAIN,
   MOVE_CONTRIBUTION,
   RECRUIT_CONTRIBUTION,
@@ -147,6 +147,17 @@ export function buildTrainStatPayload(input: {
   return { kind: 'train_stat', stat: input.stat }
 }
 
+export function buildFushinPayload(input: { target: string }): FushinPayload {
+  if (
+    input.target !== 'agriculture' &&
+    input.target !== 'commerce' &&
+    input.target !== 'defense'
+  ) {
+    throw new DomainError('普請する対象を選んでください')
+  }
+  return { kind: 'fushin', target: input.target }
+}
+
 export function buildRecruitOfficerPayload(input: {
   targetCharacterId: string
 }): RecruitOfficerPayload {
@@ -182,6 +193,10 @@ function resolvePayloadForApply(
   if (def.needsPayload === 'train_stat') {
     if (!raw || raw.kind !== 'train_stat') throw new DomainError('鍛錬する能力を選んでください')
     return serializeCommandPayload(buildTrainStatPayload({ stat: raw.stat }))
+  }
+  if (def.needsPayload === 'fushin') {
+    if (!raw || raw.kind !== 'fushin') throw new DomainError('普請する対象を選んでください')
+    return serializeCommandPayload(buildFushinPayload({ target: raw.target }))
   }
   if (def.needsPayload === 'recruit_officer') {
     if (!raw || raw.kind !== 'recruit_officer') {
@@ -680,31 +695,30 @@ export async function executeCharacterCommand(
   }
 
   if (commandId === 'fushin') {
+    if (!payload || payload.kind !== 'fushin') {
+      return { ok: false, reason: '普請する対象が指定されていません' }
+    }
     if (personal.money < FUSHIN_GOLD_COST) {
       return { ok: false, reason: '金が足りません' }
     }
-    const targets = [
-      { key: 'agricultureMax' as const, label: '農業' },
-      { key: 'commerceMax' as const, label: '商業' },
-      { key: 'defenseMax' as const, label: '城壁' },
-    ].filter((row) => local[row.key] < FUSHIN_MAX_CAP)
-    if (targets.length === 0) {
-      return { ok: false, reason: 'これ以上普請できません' }
-    }
+    const targetKey =
+      payload.target === 'agriculture'
+        ? ('agricultureMax' as const)
+        : payload.target === 'commerce'
+          ? ('commerceMax' as const)
+          : ('defenseMax' as const)
+    const targetLabel =
+      payload.target === 'agriculture' ? '農業' : payload.target === 'commerce' ? '商業' : '城壁'
     personal.money -= FUSHIN_GOLD_COST
-    const gain = Math.max(FUSHIN_MIN_GAIN, netStatGain(personal.chiryaku))
-    const raised: string[] = []
-    for (const row of targets) {
-      const next = Math.min(FUSHIN_MAX_CAP, local[row.key] + gain)
-      const delta = next - local[row.key]
-      if (delta <= 0) continue
-      local[row.key] = next
-      raised.push(`${row.label}+${delta}`)
-    }
+    const gain = Math.max(FUSHIN_MIN_GAIN, netStatGain(personal.buyu))
+    local[targetKey] += gain
     gainContribution(personal, COMMAND_CONTRIBUTION)
-    gainChiryakuEx(personal)
+    gainBuyuEx(personal)
     await finishCommand(db, character, queued, personal, local)
-    return { ok: true, message: `${province.name}を普請した（${raised.join('、')}）。` }
+    return {
+      ok: true,
+      message: `${province.name}の${targetLabel}上限を+${gain}普請した。`,
+    }
   }
 
   if (
