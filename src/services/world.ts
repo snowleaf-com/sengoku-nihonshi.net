@@ -1,11 +1,6 @@
 import { STARTING_LOYALTY } from '../config/game'
 import { marketBandForTier } from '../config/net'
-import {
-  getProvinceMaster,
-  initialStats,
-  NEUTRAL_GARRISON,
-  PROVINCES,
-} from '../config/provinces'
+import { initialStats, NEUTRAL_GARRISON, PROVINCES } from '../config/provinces'
 import { nowSeconds } from '../lib/id'
 import { ProvinceRepository } from '../repositories/provinces'
 
@@ -40,32 +35,5 @@ export async function ensureProvincesSeeded(db: D1Database): Promise<void> {
     return
   }
 
-  // 普請で上限を個別に上げるようになったら、この上書きは初期投入だけに戻す。
-  await syncProvinceCaps(provinces)
-}
-
-/** 既存盤面の上限だけをマスターへ合わせる。現在値は触らない。 */
-async function syncProvinceCaps(provinces: ProvinceRepository): Promise<void> {
-  const updatedAt = nowSeconds()
-  const rows = await provinces.listAll()
-  for (const row of rows) {
-    const master = getProvinceMaster(row.id)
-    if (!master) continue
-    const stats = initialStats(master)
-    if (
-      row.populationMax === stats.populationCap &&
-      row.agricultureMax === stats.agricultureCap &&
-      row.commerceMax === stats.commerceCap &&
-      row.defenseMax === stats.defenseCap
-    ) {
-      continue
-    }
-    await provinces.updateCaps(row.id, {
-      populationMax: stats.populationCap,
-      agricultureMax: stats.agricultureCap,
-      commerceMax: stats.commerceCap,
-      defenseMax: stats.defenseCap,
-      updatedAt,
-    })
-  }
+  // 既存盤面の上限は触らない（普請で上げた農業・商業・城壁の上限を戻さない）。
 }

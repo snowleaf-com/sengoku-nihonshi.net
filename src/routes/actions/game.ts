@@ -3,6 +3,7 @@ import { requireAuth } from '../../middleware/auth'
 import { DomainError } from '../../services/character'
 import {
   applyCommandsToPositions,
+  buildFushinPayload,
   buildRecruitOfficerPayload,
   buildRecruitPayload,
   buildTradePayload,
@@ -136,6 +137,7 @@ gameActionRoutes.post('/apply-commands', async (c) => {
       | { kind: 'recruit'; amount: number }
       | { kind: 'war'; provinceId: string }
       | { kind: 'train_stat'; stat: 'buyu' | 'chiryaku' | 'toso' }
+      | { kind: 'fushin'; target: 'agriculture' | 'commerce' | 'defense' }
       | { kind: 'recruit_officer'; targetCharacterId: string }
       | null
 
@@ -164,6 +166,9 @@ gameActionRoutes.post('/apply-commands', async (c) => {
     } else if (commandId === 'tanren') {
       const stat = parseBodyString(body, 'trainStat')
       payload = buildTrainStatPayload({ stat })
+    } else if (commandId === 'fushin') {
+      const target = parseBodyString(body, 'fushinTarget')
+      payload = buildFushinPayload({ target })
     } else if (commandId === 'touyou') {
       const targetCharacterId = parseBodyString(body, 'recruitOfficerId')
       payload = buildRecruitOfficerPayload({ targetCharacterId })

@@ -46,20 +46,21 @@ describe('city rank and ports', () => {
     expect(troopCapForCity(100, 'great')).toBe(110)
   })
 
-  it('syncs stored caps without rewriting current agriculture', async () => {
+  it('does not reset raised province caps on reseed check', async () => {
     await ensureProvincesSeeded(env.DB)
     const repo = new ProvinceRepository(env.DB)
     const before = await repo.findById('settsu')
     expect(before).not.toBeNull()
+    const raisedMax = before!.agricultureMax + 40
     await env.DB.prepare(
-      `UPDATE provinces SET population_max = 1, agriculture = 123 WHERE id = ?`,
+      `UPDATE provinces SET agriculture_max = ?, agriculture = 123 WHERE id = ?`,
     )
-      .bind('settsu')
+      .bind(raisedMax, 'settsu')
       .run()
 
     await ensureProvincesSeeded(env.DB)
     const after = await repo.findById('settsu')
-    expect(after?.populationMax).toBe(Math.floor(POPULATION_MAX * 1.1))
+    expect(after?.agricultureMax).toBe(raisedMax)
     expect(after?.agriculture).toBe(123)
     expect(after?.population).toBe(before?.population)
   })

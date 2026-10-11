@@ -59,7 +59,7 @@ export type GameCommand = {
   /** 自国以外でも実行できる（NET: 移動・仕官） */
   foreignOk?: boolean
   /** UI で追加パラメータが必要 */
-  needsPayload?: 'move' | 'trade' | 'recruit' | 'war' | 'train_stat' | 'recruit_officer'
+  needsPayload?: 'move' | 'trade' | 'recruit' | 'war' | 'train_stat' | 'fushin' | 'recruit_officer'
   effects: CommandEffect[]
 }
 
@@ -283,13 +283,12 @@ export const COMMANDS: GameCommand[] = [
   {
     id: 'fushin',
     label: '普請',
-    blurb: '農業・商業・城壁の上限を上げる',
+    blurb: '農業・商業・城壁の上限を1つ選んで上げる（武勇で効果）',
     category: 'domestic',
+    needsPayload: 'fushin',
     effects: [
       { target: 'agriculture', magnitude: 'up2', amount: FUSHIN_MIN_GAIN, variable: true },
-      { target: 'commerce', magnitude: 'up2', amount: FUSHIN_MIN_GAIN, variable: true },
-      { target: 'defense', magnitude: 'up2', amount: FUSHIN_MIN_GAIN, variable: true },
-      { target: 'chiryaku', magnitude: 'up', amount: 1 },
+      { target: 'buyu', magnitude: 'up', amount: 1 },
       { target: 'merit', magnitude: 'up', amount: COMMAND_CONTRIBUTION },
       { target: 'money', magnitude: 'down', amount: FUSHIN_GOLD_COST },
     ],

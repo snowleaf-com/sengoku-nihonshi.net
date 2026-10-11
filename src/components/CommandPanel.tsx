@@ -469,6 +469,31 @@ export function CommandPanel({
               ) : null}
 
               {inHomeLand && !maintenance ? (
+                <div class="command-param-block" style={{ order: commandPickerRank('fushin') }}>
+                  <strong class="command-card-label">普請</strong>
+                  <p class="hint">金80・農業／商業／城壁の上限を1つ上げる。効果は武勇依存</p>
+                  <label class="field field-inline">
+                    <span class="field-label">対象</span>
+                    <select class="field-input" name="fushinTarget">
+                      <option value="agriculture">農業</option>
+                      <option value="commerce">商業</option>
+                      <option value="defense">城壁</option>
+                    </select>
+                  </label>
+                  <button
+                    type="submit"
+                    class="btn btn-primary btn-small"
+                    formaction="/actions/apply-commands"
+                    name="commandId"
+                    value="fushin"
+                    data-needs-selection
+                  >
+                    普請を入力
+                  </button>
+                </div>
+              ) : null}
+
+              {inHomeLand && !maintenance ? (
                 <div class="command-param-block" style={{ order: commandPickerRank('tanren') }}>
                   <strong class="command-card-label">鍛錬</strong>
                   <p class="hint">金50・選んだ能力のEX+2・貢献+10</p>

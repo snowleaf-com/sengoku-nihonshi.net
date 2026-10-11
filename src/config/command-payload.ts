@@ -32,6 +32,13 @@ export type TrainStatPayload = {
   stat: 'buyu' | 'chiryaku' | 'toso'
 }
 
+export type FushinTarget = 'agriculture' | 'commerce' | 'defense'
+
+export type FushinPayload = {
+  kind: 'fushin'
+  target: FushinTarget
+}
+
 export type RecruitOfficerPayload = {
   kind: 'recruit_officer'
   targetCharacterId: string
@@ -43,6 +50,7 @@ export type CommandPayload =
   | RecruitPayload
   | WarPayload
   | TrainStatPayload
+  | FushinPayload
   | RecruitOfficerPayload
 
 export function parseCommandPayload(raw: string | null | undefined): CommandPayload | null {
@@ -66,6 +74,14 @@ export function parseCommandPayload(raw: string | null | undefined): CommandPayl
     ) {
       return data
     }
+    if (
+      data?.kind === 'fushin' &&
+      (data.target === 'agriculture' ||
+        data.target === 'commerce' ||
+        data.target === 'defense')
+    ) {
+      return data
+    }
     if (data?.kind === 'recruit_officer' && typeof data.targetCharacterId === 'string') {
       return data
     }
@@ -83,6 +99,12 @@ const STAT_LABELS: Record<TrainStatPayload['stat'], string> = {
   buyu: '武勇',
   chiryaku: '知略',
   toso: '統率',
+}
+
+const FUSHIN_LABELS: Record<FushinTarget, string> = {
+  agriculture: '農業',
+  commerce: '商業',
+  defense: '城壁',
 }
 
 export function formatQueueLabel(
@@ -110,6 +132,9 @@ export function formatQueueLabel(
   }
   if (payload?.kind === 'train_stat') {
     return `${STAT_LABELS[payload.stat]}を鍛錬`
+  }
+  if (payload?.kind === 'fushin') {
+    return `${FUSHIN_LABELS[payload.target]}を普請`
   }
   if (payload?.kind === 'recruit_officer') {
     const name =
