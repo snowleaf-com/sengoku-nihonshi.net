@@ -581,10 +581,71 @@ a {
 }
 
 .game-layout {
+  --hub-frame-max: 30rem; /* ≈480px */
   position: relative;
   width: 100%;
-  max-width: none;
+  max-width: var(--hub-frame-max);
+  margin-inline: auto;
   display: grid;
+  gap: 0.85rem;
+  background: var(--bg0);
+}
+
+/* Hub: 中央フレーム内のアプリ列 */
+.game-layout[data-hub-tab] {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  gap: 0;
+  border-inline: 1px solid var(--line);
+}
+
+@media (max-width: 30rem) {
+  .game-layout[data-hub-tab] {
+    border-inline: 0;
+  }
+}
+
+.game-layout[data-hub-tab] > .game-top,
+.game-layout[data-hub-tab] > .vital-flag-banner,
+.game-layout[data-hub-tab] > .game-error,
+.game-layout[data-hub-tab] > .game-notice,
+.game-layout[data-hub-tab] > .hero-error {
+  margin-inline: 0;
+}
+
+.game-layout[data-hub-tab] > .game-top {
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+}
+
+.game-layout[data-hub-tab] > .game-board {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.75rem 0.85rem 0.85rem;
+  gap: 0;
+  display: block;
+}
+
+.game-layout[data-hub-tab] > .game-bottom-nav {
+  flex: none;
+}
+
+.hub-pane {
+  display: none;
+}
+
+.game-layout[data-hub-tab='map'] > .game-board > [data-hub-pane='map'],
+.game-layout[data-hub-tab='self'] > .game-board > [data-hub-pane='self'],
+.game-layout[data-hub-tab='news'] > .game-board > [data-hub-pane='news'] {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.hub-news-pane {
   gap: 0.85rem;
 }
 
@@ -1084,66 +1145,23 @@ a {
   }
 }
 
-@media (min-width: 1100px) {
-  .game-board {
-    grid-template-columns: minmax(22rem, 28rem) minmax(14rem, 1fr) minmax(26rem, 1.35fr);
-    align-items: start;
-    min-height: calc(100vh - 11rem);
-  }
-
-  .game-info-stack {
-    position: sticky;
-    top: 0.75rem;
-  }
-
-  .game-map-section {
-    position: sticky;
-    top: 0.75rem;
-  }
-
-  .game-commands {
-    position: sticky;
-    top: 0.75rem;
-    /* コマンド欄は中身の高さに伸ばす。必要ならページ全体でスクロール */
-  }
+.province-map {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  overscroll-behavior-x: contain;
 }
 
-@media (max-width: 1099px) {
-  .game-board {
-    grid-template-columns: 1fr;
-  }
+.game-top-actions .btn-touch {
+  min-height: 2.5rem;
+}
 
-  /* スマホ: 地図を先に（位置・侵攻が主役） */
-  .game-map-section {
-    order: 1;
-  }
+.site:has(.game-layout[data-hub-tab]) {
+  grid-template-rows: 1fr;
+}
 
-  .game-info-stack {
-    order: 2;
-  }
-
-  .game-commands {
-    order: 3;
-  }
-
-  .province-map {
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-x pan-y;
-    overscroll-behavior-x: contain;
-  }
-
-  .command-fab-bar {
-    bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  .game-top-actions {
-    gap: 0.4rem;
-  }
-
-  .game-top-actions .btn-touch {
-    min-height: 2.5rem;
-  }
+.site:has(.game-layout[data-hub-tab]) .site-header,
+.site:has(.game-layout[data-hub-tab]) .site-footer {
+  display: none;
 }
 
 .site-main:has(.game-layout),
@@ -1152,8 +1170,15 @@ a {
   padding: 0.75rem;
 }
 
+.site-main:has(.game-layout[data-hub-tab]) {
+  padding: 0;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(196, 92, 38, 0.06), transparent 55%),
+    var(--bg1);
+}
+
 @media (min-width: 1100px) {
-  .site-main:has(.game-layout) {
+  .site-main:has(.game-layout):not(:has(.game-layout[data-hub-tab])) {
     padding: 0.85rem 1rem 1.25rem;
   }
 
@@ -1912,6 +1937,44 @@ a {
   display: none;
 }
 
+.game-layout[data-hub-tab] > .game-bottom-nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.game-layout[data-hub-tab] > .game-bottom-nav a,
+.game-layout[data-hub-tab] > .game-bottom-nav button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.1rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.82rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.game-layout[data-hub-tab] > .game-bottom-nav button.is-active,
+.game-layout[data-hub-tab] > .game-bottom-nav a.is-active {
+  color: var(--accent);
+  font-weight: 650;
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.game-layout[data-hub-tab]:has(.command-sheet[open]) > .game-bottom-nav {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .command-card-action {
   gap: 0.2rem;
 }
@@ -2532,170 +2595,124 @@ textarea.field-input {
 }
 
 .command-sheet {
-  width: min(96vw, 42rem);
-  max-height: min(92vh, 52rem);
-  margin: auto;
+  width: min(100vw, var(--hub-frame-max, 30rem));
+  max-width: 100vw;
+  height: min(92dvh, 44rem);
+  max-height: 92dvh;
+  margin: 0 auto;
+  margin-top: auto;
   padding: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   border: 1px solid var(--line);
-  border-radius: 0.75rem;
+  border-radius: 0.85rem 0.85rem 0 0;
+  border-bottom: none;
   background: var(--panel);
   color: inherit;
 }
 
-/* スマホ: 下から出るボトムシート */
+.command-sheet[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.command-fab-bar {
+  display: none;
+}
+
+.command-dock {
+  position: static;
+  z-index: auto;
+  padding-bottom: 0;
+  background: none;
+}
+
+.command-pane-switch {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  width: auto;
+  margin: 0.35rem -1rem 0.65rem;
+  padding-inline: 0.65rem;
+}
+
+.command-pane-switch .btn {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  min-height: 2.75rem;
+  padding-inline: 0.25rem;
+  text-align: center;
+}
+
+.command-pane-switch .btn.is-active {
+  border-color: rgba(196, 92, 38, 0.7);
+  background: rgba(196, 92, 38, 0.16);
+}
+
+.command-sheet .command-picker-list,
+.command-sheet .command-queue-scroll,
+.command-sheet .command-select-pane {
+  position: static;
+  max-height: none;
+  overflow: visible;
+  border: none;
+  padding-top: 0;
+  background: transparent;
+}
+
+.command-sheet .command-panel:not([data-command-pane]) .command-select-pane,
+.command-sheet .command-panel:not([data-command-pane]) .command-picker-list,
+.command-sheet .command-panel[data-command-pane='queue'] .command-select-pane,
+.command-sheet .command-panel[data-command-pane='queue'] .command-picker-list,
+.command-sheet .command-panel[data-command-pane='select'] .command-queue-pane,
+.command-sheet .command-panel[data-command-pane='select'] .command-picker-list,
+.command-sheet .command-panel[data-command-pane='pick'] .command-select-pane,
+.command-sheet .command-panel[data-command-pane='pick'] .command-queue-pane {
+  display: none;
+}
+
+.command-sheet-inner {
+  flex: 1;
+  min-height: 0;
+  max-height: 100%;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.command-sheet .command-panel {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0.75rem 1rem 1.25rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.command-sheet .command-board {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.command-sheet .command-panel-top {
+  flex: none;
+  margin-bottom: 0;
+  padding-bottom: 0.15rem;
+  background: var(--panel);
+}
+
+.command-sheet .command-board-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: block;
+}
+
+/* 旧スマホ専用ブロックの残り（キュー行レイアウト等） */
 @media (max-width: 719px) {
-  .command-sheet {
-    width: 100vw;
-    max-width: 100vw;
-    height: min(92dvh, 44rem);
-    max-height: 92dvh;
-    margin: 0;
-    margin-top: auto;
-    border-radius: 0.85rem 0.85rem 0 0;
-    border-bottom: none;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  .command-sheet[open] {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .command-fab-bar {
-    display: none;
-  }
-
-  .game-layout {
-    padding-bottom: calc(3.6rem + env(safe-area-inset-bottom, 0px));
-  }
-
-  .game-bottom-nav {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 30;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    border-top: 1px solid var(--line);
-    background: var(--panel);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  .game-bottom-nav a,
-  .game-bottom-nav button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 3.1rem;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    font-size: 0.82rem;
-    text-decoration: none;
-  }
-
-  .game-layout:has(.command-sheet[open]) .game-bottom-nav {
-    display: none;
-  }
-
-  #hub-map,
-  #hub-self,
-  #feed-news {
-    scroll-margin-top: 0.75rem;
-  }
-
-  .command-dock {
-    position: static;
-    z-index: auto;
-    padding-bottom: 0;
-    background: none;
-  }
-
-  .command-pane-switch {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.35rem;
-    width: auto;
-    margin: 0.35rem -1rem 0.65rem;
-    padding-inline: 0.65rem;
-  }
-
-  .command-pane-switch .btn {
-    width: 100%;
-    min-width: 0;
-    max-width: none;
-    min-height: 2.75rem;
-    padding-inline: 0.25rem;
-    text-align: center;
-  }
-
-  .command-pane-switch .btn.is-active {
-    border-color: rgba(196, 92, 38, 0.7);
-    background: rgba(196, 92, 38, 0.16);
-  }
-
-  .command-picker-list,
-  .command-queue-scroll,
-  .command-select-pane {
-    position: static;
-    max-height: none;
-    overflow: visible;
-    border: none;
-    padding-top: 0;
-    background: transparent;
-  }
-
-  .command-panel:not([data-command-pane]) .command-select-pane,
-  .command-panel:not([data-command-pane]) .command-picker-list,
-  .command-panel[data-command-pane='queue'] .command-select-pane,
-  .command-panel[data-command-pane='queue'] .command-picker-list,
-  .command-panel[data-command-pane='select'] .command-queue-pane,
-  .command-panel[data-command-pane='select'] .command-picker-list,
-  .command-panel[data-command-pane='pick'] .command-select-pane,
-  .command-panel[data-command-pane='pick'] .command-queue-pane {
-    display: none;
-  }
-
-  .command-queue-scroll {
-    max-height: none;
-  }
-
-  .command-sheet-inner {
-    flex: 1;
-    min-height: 0;
-    max-height: 100%;
-    height: auto;
-  }
-
-  .command-sheet .command-panel {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .command-sheet .command-board {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .command-panel-top {
-    flex: none;
-    margin-bottom: 0;
-    padding-bottom: 0.15rem;
-    background: var(--panel);
-  }
-
-  .command-board-body {
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
-  }
 
   .command-select-pane .btn,
   .queue-month-btn {
@@ -2752,12 +2769,6 @@ textarea.field-input {
   background: rgba(0, 0, 0, 0.55);
 }
 
-.command-sheet-inner {
-  display: flex;
-  flex-direction: column;
-  max-height: min(92vh, 52rem);
-}
-
 .command-sheet-head {
   display: flex;
   align-items: center;
@@ -2769,106 +2780,12 @@ textarea.field-input {
   top: 0;
   background: inherit;
   z-index: 1;
+  flex: none;
 }
 
 .command-sheet-head h2 {
   margin: 0;
   font-size: 1.05rem;
-}
-
-.command-sheet .command-panel {
-  margin: 0;
-  padding: 0.75rem 1rem 1.25rem;
-  overflow: auto;
-}
-
-@media (min-width: 720px) {
-  .command-sheet {
-    width: min(96vw, 76rem);
-  }
-
-  .command-sheet[open] {
-    display: flex;
-    flex-direction: column;
-    height: min(88vh, 48rem);
-    max-height: 92vh;
-  }
-
-  .command-sheet-inner {
-    flex: 1;
-    min-height: 0;
-    max-height: none;
-  }
-
-  .command-sheet .command-panel {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .command-board {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .command-board-body {
-    flex: 1;
-    min-height: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 1fr);
-    gap: 0;
-    align-items: stretch;
-    padding: 0;
-  }
-
-  .command-side {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .command-pane-title {
-    display: block;
-    margin: 0 0 0.15rem;
-  }
-
-  .command-select-pane,
-  .command-queue-pane,
-  .command-picker-list {
-    min-height: 0;
-    padding: 0.45rem 0.65rem 0.75rem;
-  }
-
-  .command-select-pane {
-    flex: 0 0 auto;
-    overflow: auto;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .command-queue-pane {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .command-picker-list {
-    overflow: auto;
-    border-left: 1px solid var(--line);
-  }
-
-  .command-queue-scroll {
-    flex: 1;
-    min-height: 0;
-    max-height: none;
-    overflow: auto;
-  }
 }
 
 

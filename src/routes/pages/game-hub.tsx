@@ -171,7 +171,7 @@ export function GameHubPage({
 
   return (
     <SiteShell title={`${character.name} — 戦国日本史.net`}>
-      <div class="game-layout">
+      <div class="game-layout" data-hub-tab="map">
         <header class="game-top">
           <dl class="meta meta-inline game-top-meta">
             <div>
@@ -208,22 +208,24 @@ export function GameHubPage({
             <button type="button" class="btn btn-primary btn-small btn-touch" data-open-commands>
               コマンド
             </button>
-            <a
+            <button
+              type="button"
               class="btn btn-ghost btn-small btn-touch"
-              href="#feed-results"
+              data-hub-tab-btn="news"
               data-feed-badge="results"
               data-feed-latest={String(latestResultsAt)}
             >
               結果{resultsCount > 0 ? ` (${resultsCount})` : ''}
-            </a>
-            <a
+            </button>
+            <button
+              type="button"
               class="btn btn-ghost btn-small btn-touch"
-              href="#feed-news"
+              data-hub-tab-btn="news"
               data-feed-badge="news"
               data-feed-latest={String(latestNewsAt)}
             >
               全国の知らせ{newsCount > 0 ? ` (${newsCount})` : ''}
-            </a>
+            </button>
             <a class="btn btn-ghost btn-small btn-touch" href="/game/house">
               作戦会議
             </a>
@@ -263,7 +265,7 @@ export function GameHubPage({
         {notice ? <p class="hint game-notice">{notice}</p> : null}
 
         <div class="game-board">
-          <div class="game-info-stack" id="hub-self">
+          <div class="hub-pane game-info-stack" data-hub-pane="self" id="hub-self">
             <details class="game-panel game-card game-card-self game-card-disclosure" open>
               <summary class="card-title self-summary">自身</summary>
               <div class="self-identity">
@@ -534,7 +536,12 @@ export function GameHubPage({
             </details>
           </div>
 
-          <section class="game-panel game-map-section" id="hub-map" data-season={season}>
+          <section
+            class="hub-pane game-panel game-map-section"
+            data-hub-pane="map"
+            id="hub-map"
+            data-season={season}
+          >
             <h2>全国</h2>
             <ProvinceMap
               compact
@@ -547,6 +554,20 @@ export function GameHubPage({
             <p class="hint">
               隣接の攻撃可能国は強調。最近の侵攻は矢印。
             </p>
+            <div class="command-dock">
+              <QueueSummary
+                queue={queue}
+                currentYear={gameState.year}
+                currentMonth={gameState.month}
+                nextTurnAt={gameState.nextTurnAt}
+                turnIntervalSeconds={turnIntervalSeconds}
+                provinceNameById={provinceNameById}
+                characterNameById={characterNameById}
+              />
+            </div>
+          </section>
+
+          <div class="hub-pane hub-news-pane" data-hub-pane="news" id="hub-news">
             <div id="feed-news">
               <EventFeed
                 title="全国の知らせ"
@@ -558,23 +579,6 @@ export function GameHubPage({
             </div>
             <div id="feed-results">
               <EventFeed title="あなたの結果" events={results} empty="まだ結果はない" />
-            </div>
-          </section>
-
-          <div class="command-dock">
-            <QueueSummary
-              queue={queue}
-              currentYear={gameState.year}
-              currentMonth={gameState.month}
-              nextTurnAt={gameState.nextTurnAt}
-              turnIntervalSeconds={turnIntervalSeconds}
-              provinceNameById={provinceNameById}
-              characterNameById={characterNameById}
-            />
-            <div class="command-fab-bar">
-              <button type="button" class="btn btn-primary btn-touch" data-open-commands>
-                コマンド
-              </button>
             </div>
           </div>
 
@@ -610,12 +614,18 @@ export function GameHubPage({
           </dialog>
         </div>
         <nav class="game-bottom-nav" aria-label="画面移動">
-          <a href="#hub-map">地図</a>
-          <a href="#hub-self">自身</a>
+          <button type="button" class="is-active" data-hub-tab-btn="map" aria-selected="true">
+            地図
+          </button>
+          <button type="button" data-hub-tab-btn="self" aria-selected="false">
+            自身
+          </button>
           <button type="button" data-open-commands>
             コマンド
           </button>
-          <a href="#feed-news">知らせ</a>
+          <button type="button" data-hub-tab-btn="news" aria-selected="false">
+            知らせ
+          </button>
         </nav>
       </div>
     </SiteShell>
