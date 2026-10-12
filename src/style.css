@@ -580,19 +580,25 @@ a {
   width: auto;
 }
 
-.game-layout {
+.game-app {
   --hub-frame-max: 30rem; /* ≈480px */
   position: relative;
+  min-height: 100dvh;
+}
+
+.game-layout {
+  position: relative;
   width: 100%;
-  max-width: var(--hub-frame-max);
+  max-width: var(--hub-frame-max, 30rem);
   margin-inline: auto;
   display: grid;
   gap: 0.85rem;
   background: var(--bg0);
 }
 
-/* Hub: 中央フレーム内のアプリ列 */
-.game-layout[data-hub-tab] {
+/* Hub / サブページ: 中央フレーム内のアプリ列 */
+.game-layout[data-hub-tab],
+.game-layout.game-subpage {
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
@@ -601,24 +607,192 @@ a {
 }
 
 @media (max-width: 30rem) {
-  .game-layout[data-hub-tab] {
+  .game-layout[data-hub-tab],
+  .game-layout.game-subpage {
     border-inline: 0;
   }
+}
+
+/* PC: ハンバーガーを中央フレームの外側・右上へ（nekoconne 風） */
+.game-chrome-menu {
+  position: fixed;
+  top: 0.65rem;
+  right: 0.65rem;
+  z-index: 80;
+}
+
+@media (min-width: 36rem) {
+  .game-chrome-menu {
+    top: 1rem;
+    right: max(0.75rem, calc((100vw - var(--hub-frame-max, 30rem)) / 2 - 3.4rem));
+  }
+}
+
+.game-chrome-menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.game-chrome-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.game-chrome-menu-toggle {
+  display: grid;
+  place-items: center;
+  width: 2.65rem;
+  height: 2.65rem;
+  border: 1px solid var(--line);
+  border-radius: 0.45rem;
+  background: var(--panel);
+  box-shadow: 0 0.25rem 0.75rem rgba(26, 20, 16, 0.1);
+}
+
+.game-chrome-menu-icon,
+.game-chrome-menu-icon::before,
+.game-chrome-menu-icon::after {
+  display: block;
+  width: 1.05rem;
+  height: 2px;
+  background: var(--ink);
+  border-radius: 1px;
+}
+
+.game-chrome-menu-icon {
+  position: relative;
+}
+
+.game-chrome-menu-icon::before,
+.game-chrome-menu-icon::after {
+  content: '';
+  position: absolute;
+  left: 0;
+}
+
+.game-chrome-menu-icon::before {
+  top: -0.35rem;
+}
+
+.game-chrome-menu-icon::after {
+  top: 0.35rem;
+}
+
+.game-chrome-menu-panel {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  width: min(16rem, calc(100vw - 1.5rem));
+  padding: 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  background: var(--panel);
+  box-shadow: 0 0.55rem 1.4rem rgba(26, 20, 16, 0.14);
+  display: grid;
+  gap: 0.65rem;
+}
+
+.game-chrome-nav {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.game-chrome-nav a,
+.game-chrome-actions a,
+.game-chrome-actions button {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  text-decoration: none;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.35rem;
+  cursor: pointer;
+}
+
+.game-chrome-nav a:hover,
+.game-chrome-actions a:hover,
+.game-chrome-actions button:hover,
+.game-chrome-nav a.is-active {
+  background: rgba(196, 92, 38, 0.12);
+}
+
+.game-chrome-nav a.is-active {
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.game-chrome-section-label {
+  margin: 0 0 0.25rem;
+  padding-inline: 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.game-chrome-section .hub-home-pref-menu {
+  position: static;
+  box-shadow: none;
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  background: transparent;
+}
+
+.game-chrome-actions {
+  display: grid;
+  gap: 0.1rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--line);
+}
+
+.game-chrome-actions form {
+  margin: 0;
 }
 
 .game-layout[data-hub-tab] > .game-top,
 .game-layout[data-hub-tab] > .vital-flag-banner,
 .game-layout[data-hub-tab] > .game-error,
 .game-layout[data-hub-tab] > .game-notice,
-.game-layout[data-hub-tab] > .hero-error {
+.game-layout[data-hub-tab] > .hero-error,
+.game-layout.game-subpage > .game-top,
+.game-layout.game-subpage > .game-error,
+.game-layout.game-subpage > .game-notice,
+.game-layout.game-subpage > .hero-error {
   margin-inline: 0;
 }
 
-.game-layout[data-hub-tab] > .game-top {
+.game-layout[data-hub-tab] > .game-top,
+.game-layout.game-subpage > .game-top {
   border-radius: 0;
   border-left: 0;
   border-right: 0;
   border-top: 0;
+  flex: none;
+}
+
+/* 狭幅時はハンバーガーがフレーム上に載るのでヘッダー右に余白 */
+@media (max-width: 35.99rem) {
+  .game-layout[data-hub-tab] > .game-top,
+  .game-layout.game-subpage > .game-top {
+    padding-right: 3.5rem;
+  }
+}
+
+.game-layout.game-subpage > .game-subpage-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.75rem 0.85rem 1rem;
+}
+
+.game-layout.game-subpage > .game-error,
+.game-layout.game-subpage > .game-notice,
+.game-layout.game-subpage > .hero-error {
+  padding-inline: 0.85rem;
 }
 
 .game-layout[data-hub-tab] > .game-board {
@@ -634,19 +808,48 @@ a {
   flex: none;
 }
 
-.hub-pane {
+/* .game-info-stack 等より後勝ちしないよう、フレーム内の pane を明示的に隠す */
+.game-layout[data-hub-tab] > .game-board > .hub-pane {
   display: none;
 }
 
 .game-layout[data-hub-tab='map'] > .game-board > [data-hub-pane='map'],
 .game-layout[data-hub-tab='self'] > .game-board > [data-hub-pane='self'],
+.game-layout[data-hub-tab='results'] > .game-board > [data-hub-pane='results'],
 .game-layout[data-hub-tab='news'] > .game-board > [data-hub-pane='news'] {
   display: grid;
   gap: 0.85rem;
 }
 
-.hub-news-pane {
+.hub-feed-pane {
   gap: 0.85rem;
+}
+
+.hub-home-pref-menu {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.hub-home-pref-menu button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.3rem;
+  cursor: pointer;
+}
+
+.hub-home-pref-menu button:hover,
+.hub-home-pref-menu button.is-home {
+  background: rgba(196, 92, 38, 0.12);
+}
+
+.hub-home-pref-menu button.is-home {
+  font-weight: 650;
+  color: var(--accent);
 }
 
 .season-chip {
@@ -1155,12 +1358,12 @@ a {
   min-height: 2.5rem;
 }
 
-.site:has(.game-layout[data-hub-tab]) {
+.site:has(.game-app) {
   grid-template-rows: 1fr;
 }
 
-.site:has(.game-layout[data-hub-tab]) .site-header,
-.site:has(.game-layout[data-hub-tab]) .site-footer {
+.site:has(.game-app) .site-header,
+.site:has(.game-app) .site-footer {
   display: none;
 }
 
@@ -1170,7 +1373,7 @@ a {
   padding: 0.75rem;
 }
 
-.site-main:has(.game-layout[data-hub-tab]) {
+.site-main:has(.game-app) {
   padding: 0;
   background:
     radial-gradient(ellipse at 50% 0%, rgba(196, 92, 38, 0.06), transparent 55%),
@@ -1178,7 +1381,7 @@ a {
 }
 
 @media (min-width: 1100px) {
-  .site-main:has(.game-layout):not(:has(.game-layout[data-hub-tab])) {
+  .site-main:has(.game-layout):not(:has(.game-app)) {
     padding: 0.85rem 1rem 1.25rem;
   }
 
@@ -1942,7 +2145,7 @@ a {
   bottom: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   border-top: 1px solid var(--line);
   background: var(--panel);
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -1968,6 +2171,16 @@ a {
   color: var(--accent);
   font-weight: 650;
   box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.game-layout[data-hub-tab] > .game-bottom-nav button.is-home-tab:not(.is-active)::after {
+  content: '';
+  width: 0.28rem;
+  height: 0.28rem;
+  margin-left: 0.25rem;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.7;
 }
 
 .game-layout[data-hub-tab]:has(.command-sheet[open]) > .game-bottom-nav {
@@ -2095,42 +2308,9 @@ a {
   font-weight: 700;
 }
 
-.game-subnav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  align-items: center;
-}
-
-.game-subnav a {
-  padding: 0.3rem 0.65rem;
-  border: 1px solid var(--line);
-  color: var(--muted);
-  text-decoration: none;
-  font-size: 0.85rem;
-}
-
-.game-subnav a:hover {
-  color: var(--ink);
-  border-color: rgba(200, 160, 90, 0.45);
-}
-
-.game-subnav a.is-active {
-  color: var(--ink);
-  background: rgba(200, 160, 90, 0.12);
-  border-color: rgba(200, 160, 90, 0.55);
-}
-
 .game-subpage-grid {
   display: grid;
-  gap: 1rem;
-}
-
-@media (min-width: 800px) {
-  .game-subpage-grid {
-    grid-template-columns: 1fr 1.2fr;
-    align-items: start;
-  }
+  gap: 0.85rem;
 }
 
 .game-notice {
@@ -2595,17 +2775,20 @@ textarea.field-input {
 }
 
 .command-sheet {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
   width: min(100vw, var(--hub-frame-max, 30rem));
   max-width: 100vw;
-  height: min(92dvh, 44rem);
-  max-height: 92dvh;
-  margin: 0 auto;
-  margin-top: auto;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
   padding: 0;
   padding-bottom: env(safe-area-inset-bottom, 0px);
   border: 1px solid var(--line);
-  border-radius: 0.85rem 0.85rem 0 0;
-  border-bottom: none;
+  border-radius: 0;
   background: var(--panel);
   color: inherit;
 }

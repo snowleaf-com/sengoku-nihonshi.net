@@ -1,5 +1,6 @@
 import { CommandPanel } from '../../components/CommandPanel'
 import { EventFeed } from '../../components/EventFeed'
+import { GameChromeMenu } from '../../components/GameChromeMenu'
 import { ExGauge } from '../../components/ExGauge'
 import {
   HouseOfficersPanel,
@@ -171,7 +172,9 @@ export function GameHubPage({
 
   return (
     <SiteShell title={`${character.name} — 戦国日本史.net`}>
-      <div class="game-layout" data-hub-tab="map">
+      <div class="game-app">
+        <GameChromeMenu active="hub" showHubHomePref showAdvanceTurn />
+        <div class="game-layout" data-hub-tab="map">
         <header class="game-top">
           <dl class="meta meta-inline game-top-meta">
             <div>
@@ -205,13 +208,10 @@ export function GameHubPage({
           </dl>
 
           <div class="game-top-actions">
-            <button type="button" class="btn btn-primary btn-small btn-touch" data-open-commands>
-              コマンド
-            </button>
             <button
               type="button"
               class="btn btn-ghost btn-small btn-touch"
-              data-hub-tab-btn="news"
+              data-hub-tab-btn="results"
               data-feed-badge="results"
               data-feed-latest={String(latestResultsAt)}
             >
@@ -224,33 +224,8 @@ export function GameHubPage({
               data-feed-badge="news"
               data-feed-latest={String(latestNewsAt)}
             >
-              全国の知らせ{newsCount > 0 ? ` (${newsCount})` : ''}
+              知らせ{newsCount > 0 ? ` (${newsCount})` : ''}
             </button>
-            <a class="btn btn-ghost btn-small btn-touch" href="/game/house">
-              作戦会議
-            </a>
-            <a class="btn btn-ghost btn-small btn-touch" href="/game/letters">
-              手紙
-            </a>
-            <a class="btn btn-ghost btn-small btn-touch" href="/game/ranking">
-              武将一覧
-            </a>
-            <a class="btn btn-ghost btn-small btn-touch" href="/game/titles">
-              名将一覧
-            </a>
-            <a class="btn btn-ghost btn-small btn-touch" href="/game">
-              更新
-            </a>
-            <form method="post" action="/actions/advance-turn">
-              <button type="submit" class="btn btn-ghost btn-small btn-touch">
-                ターン進行
-              </button>
-            </form>
-            <form method="post" action="/auth/logout">
-              <button type="submit" class="btn btn-ghost btn-small btn-touch">
-                ログアウト
-              </button>
-            </form>
           </div>
         </header>
 
@@ -567,7 +542,13 @@ export function GameHubPage({
             </div>
           </section>
 
-          <div class="hub-pane hub-news-pane" data-hub-pane="news" id="hub-news">
+          <div class="hub-pane hub-feed-pane" data-hub-pane="results" id="hub-results">
+            <div id="feed-results">
+              <EventFeed title="あなたの結果" events={results} empty="まだ結果はない" />
+            </div>
+          </div>
+
+          <div class="hub-pane hub-feed-pane" data-hub-pane="news" id="hub-news">
             <div id="feed-news">
               <EventFeed
                 title="全国の知らせ"
@@ -576,9 +557,6 @@ export function GameHubPage({
                 empty="まだ知らせはない"
                 filterable
               />
-            </div>
-            <div id="feed-results">
-              <EventFeed title="あなたの結果" events={results} empty="まだ結果はない" />
             </div>
           </div>
 
@@ -623,10 +601,14 @@ export function GameHubPage({
           <button type="button" data-open-commands>
             コマンド
           </button>
+          <button type="button" data-hub-tab-btn="results" aria-selected="false">
+            結果
+          </button>
           <button type="button" data-hub-tab-btn="news" aria-selected="false">
             知らせ
           </button>
         </nav>
+      </div>
       </div>
     </SiteShell>
   )
