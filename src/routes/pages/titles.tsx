@@ -16,30 +16,33 @@ function RankMark({ rank }: { rank: number }) {
 export function TitlesPage({ highlight, boards }: TitlesPageProps) {
   return (
     <SiteShell title="名将一覧 — 戦国日本史.net">
-      <GameSubpageShell title="名将一覧" active="titles">
+      <GameSubpageShell title="名将一覧" active="titles" wide>
         <section class="game-panel titles-panel">
-          <p class="hint">各指標の上位10名。原本の名称一覧（ranking2）に相当。</p>
+          <p class="hint">各指標の上位10名。部門別の名将を一覧する。</p>
 
           {highlight.length > 0 ? (
-            <ul class="title-highlight" aria-label="各部門1位">
-              {highlight.map((row) => (
-                <li class="title-highlight-item">
-                  <img
-                    class="title-portrait"
-                    src={iconPublicPath(row.iconId)}
-                    alt=""
-                    width="40"
-                    height="40"
-                  />
-                  <div>
-                    <strong class="title-highlight-name">{row.name}</strong>
-                    <span class="title-highlight-meta">
-                      {row.houseName} · {row.valueLabel}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <section class="title-highlight-section" aria-label="各部門1位">
+              <h2 class="title-section-heading">部門 No.1</h2>
+              <ul class="title-highlight">
+                {highlight.map((row) => (
+                  <li class="title-highlight-item">
+                    <img
+                      class="title-portrait"
+                      src={iconPublicPath(row.iconId)}
+                      alt=""
+                      width="44"
+                      height="44"
+                    />
+                    <div class="title-highlight-text">
+                      <strong class="title-highlight-name">{row.name}</strong>
+                      <span class="title-highlight-meta">
+                        {row.houseName} · {row.valueLabel}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ) : (
             <p class="hint">まだ武将がいない</p>
           )}

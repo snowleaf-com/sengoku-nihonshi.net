@@ -118,6 +118,9 @@ describe('ranking / war map / appoint', () => {
     expect(block?.memberCount).toBeGreaterThanOrEqual(2)
     expect(block?.provinceCount).toBeGreaterThanOrEqual(1)
     expect(block?.provinceNames.length).toBe(block?.provinceCount)
+    expect(block?.powerScore).toBeGreaterThan(0)
+    expect(block?.nationRank).toBeGreaterThanOrEqual(1)
+    expect(houses[0]?.nationRank).toBe(1)
     expect(total).toBeGreaterThanOrEqual(2)
   })
 
