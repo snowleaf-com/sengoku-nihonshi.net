@@ -151,6 +151,10 @@ export type HouseRankingBlock = {
   memberCount: number
   provinceCount: number
   provinceNames: string[]
+  /** 家臣の四能力（武勇+知略+統率+徳望）合計 */
+  powerScore: number
+  /** 総合力による国家順位（1始まり） */
+  nationRank: number
   members: RankingRow[]
 }
 

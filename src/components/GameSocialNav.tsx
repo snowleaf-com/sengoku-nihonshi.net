@@ -6,6 +6,8 @@ type GameSubpageShellProps = {
   active: 'house' | 'letters' | 'ranking' | 'titles'
   error?: string | null
   notice?: string | null
+  /** 一覧系など、中央フレームを少し広げる */
+  wide?: boolean
   children?: Child
 }
 
@@ -14,10 +16,11 @@ export function GameSubpageShell({
   active,
   error = null,
   notice = null,
+  wide = false,
   children,
 }: GameSubpageShellProps) {
   return (
-    <div class="game-app">
+    <div class={`game-app${wide ? ' is-wide' : ''}`}>
       <GameChromeMenu active={active} />
       <div class="game-layout game-subpage">
         <header class="game-top">

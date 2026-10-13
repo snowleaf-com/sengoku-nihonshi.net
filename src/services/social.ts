@@ -391,6 +391,10 @@ export async function listRanking(db: D1Database): Promise<RankingRow[]> {
   }))
 }
 
+function memberPower(row: RankingRow): number {
+  return row.buyu + row.chiryaku + row.toso + row.tokubo
+}
+
 /** 原本 ranking.cgi: 家（国）ごとに武将をまとめる */
 export async function listRankingByHouse(
   db: D1Database,
@@ -428,6 +432,7 @@ export async function listRankingByHouse(
     )
     const findRole = (label: string) =>
       members.find((m) => m.roleLabel === label)?.name ?? null
+    const powerScore = members.reduce((sum, m) => sum + memberPower(m), 0)
     houses.push({
       houseId,
       houseName,
@@ -437,14 +442,21 @@ export async function listRankingByHouse(
       memberCount: members.length,
       provinceCount: provinceNames.length,
       provinceNames,
+      powerScore,
+      nationRank: 0,
       members,
     })
   }
 
   houses.sort((a, b) => {
+    if (b.powerScore !== a.powerScore) return b.powerScore - a.powerScore
     if (b.provinceCount !== a.provinceCount) return b.provinceCount - a.provinceCount
     if (b.memberCount !== a.memberCount) return b.memberCount - a.memberCount
     return a.houseName.localeCompare(b.houseName, 'ja')
+  })
+
+  houses.forEach((house, i) => {
+    house.nationRank = i + 1
   })
 
   return { houses, ronin, total: rows.length }
