@@ -109,3 +109,25 @@ export function isTaxMonth(month: number): boolean {
 export function isTributeMonth(month: number): boolean {
   return month === TRIBUTE_MONTH
 }
+
+/** 本番の30分制だけ世界と個人の時計を分離する。 */
+export function usesPersonalTurns(interval: number): boolean {
+  return interval === 1800
+}
+
+/** anchor を起点とする、now より後の最初の実行時刻。 */
+export function nextScheduledAt(now: number, interval: number, anchor = 0): number {
+  return anchor + (Math.floor((now - anchor) / interval) + 1) * interval
+}
+
+/** 個人の次回実行月。世界境界と同時ならコマンドを先に実行する。 */
+export function commandDate(date: GameDate, worldNextAt: number, commandNextAt: number, interval: number): GameDate {
+  const offset = Math.max(0, Math.ceil((commandNextAt - worldNextAt) / interval))
+  return dateAtQueueOffset(date, offset)
+}
+
+/** 個人時計の表示。移行初回の排他待ちでも未初期化の0秒を表示しない。 */
+export function commandTurnAt(character: { createdAt: number; nextCommandAt: number }, worldNextAt: number, interval: number, now: number): number {
+  if (!usesPersonalTurns(interval)) return worldNextAt
+  return character.nextCommandAt || nextScheduledAt(now, interval, character.createdAt)
+}

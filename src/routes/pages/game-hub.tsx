@@ -1,3 +1,4 @@
+import { nowSeconds } from '../../lib/id'
 import { CommandPanel } from '../../components/CommandPanel'
 import { EventFeed } from '../../components/EventFeed'
 import { GameChromeMenu } from '../../components/GameChromeMenu'
@@ -13,6 +14,8 @@ import { StatGauge } from '../../components/StatGauge'
 import { StatIcon } from '../../components/StatIcon'
 import { getArchetype } from '../../config/archetypes'
 import {
+  commandDate,
+  commandTurnAt,
   formatGameDate,
   formatRealtime,
   realtimeAtQueueOffset,
@@ -112,6 +115,8 @@ export function GameHubPage({
   const adj = master ? adjacentCount(master, PROVINCES) : 0
   const houseById = Object.fromEntries(houses.map((h) => [h.id, h]))
   const archetype = getArchetype(character.archetypeId)
+  const personalNextAt = commandTurnAt(character, gameState.nextTurnAt, turnIntervalSeconds, nowSeconds())
+  const personalDate = commandDate(gameState, gameState.nextTurnAt, personalNextAt, turnIntervalSeconds)
   const timeFmt: Intl.DateTimeFormatOptions = {
     timeZone: 'Asia/Tokyo',
     year: 'numeric',
@@ -172,7 +177,7 @@ export function GameHubPage({
     : 'なし'
   const nextCommandRealtime = nextQueued
     ? formatRealtime(
-        realtimeAtQueueOffset(gameState.nextTurnAt, nextQueued.position, turnIntervalSeconds),
+        realtimeAtQueueOffset(personalNextAt, nextQueued.position, turnIntervalSeconds),
       )
     : null
 
@@ -191,15 +196,15 @@ export function GameHubPage({
               </dd>
             </div>
             <div>
-              <dt>次ターンまで</dt>
+              <dt>次の行動まで</dt>
               <dd>
                 <span
                   class="turn-countdown"
-                  data-next-turn-at={String(gameState.nextTurnAt)}
+                  data-next-turn-at={String(personalNextAt)}
                 >
                   —
                 </span>
-                <span class="hint-inline">{nextTurnLabel}</span>
+                <span class="hint-inline">月更新 {nextTurnLabel}</span>
               </dd>
             </div>
             <div>
@@ -542,9 +547,9 @@ export function GameHubPage({
             <div class="command-dock">
               <QueueSummary
                 queue={queue}
-                currentYear={gameState.year}
-                currentMonth={gameState.month}
-                nextTurnAt={gameState.nextTurnAt}
+                currentYear={personalDate.year}
+                currentMonth={personalDate.month}
+                nextTurnAt={personalNextAt}
                 turnIntervalSeconds={turnIntervalSeconds}
                 provinceNameById={provinceNameById}
                 characterNameById={characterNameById}
@@ -580,9 +585,9 @@ export function GameHubPage({
               </header>
               <CommandPanel
                 queue={queue}
-                currentYear={gameState.year}
-                currentMonth={gameState.month}
-                nextTurnAt={gameState.nextTurnAt}
+                currentYear={personalDate.year}
+                currentMonth={personalDate.month}
+                nextTurnAt={personalNextAt}
                 turnIntervalSeconds={turnIntervalSeconds}
                 error={commandError}
                 inHomeLand={inHomeLand}
