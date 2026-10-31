@@ -55,3 +55,5 @@ Issue を切ったら、必要なら同番号の md を追加して方針を書�
 | [#32](https://github.com/snowleaf-com/sengoku-nihonshi.net/issues/32) | [32.md](./32.md) | 開発用（フッター・時刻・定型・兵種） |
 | [#33](https://github.com/snowleaf-com/sengoku-nihonshi.net/issues/33) | [33.md](./33.md) | 魔改造（都市ランク・海路・方針） |
 | [#39](https://github.com/snowleaf-com/sengoku-nihonshi.net/issues/39) | [39.md](./39.md) | 普請（上限が戻る不具合・上げ方） |
+| [#40](https://github.com/snowleaf-com/sengoku-nihonshi.net/issues/40) | [40.md](./40.md) | 占領後の攻撃者の移動 |
+| [#41](https://github.com/snowleaf-com/sengoku-nihonshi.net/issues/41) | [41.md](./41.md) | 兵の強さ・鍛錬効果の可視化と兵種追加 |

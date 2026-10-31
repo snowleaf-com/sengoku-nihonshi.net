@@ -350,7 +350,7 @@ export function GameHubPage({
               ) : null}
               <div class="gauge-grid card-gauges">
                 <StatGauge
-                  label="兵"
+                  label="兵（雑兵）"
                   value={character.troops}
                   max={softMax(troopCap, 1)}
                   sub={`上限 ${troopCap}`}
@@ -358,13 +358,14 @@ export function GameHubPage({
                   icon={<StatIcon target="troops" />}
                 />
                 <StatGauge
-                  label="訓練"
+                  label="訓練度"
                   value={character.training}
                   max={100}
                   tone="buyu"
                   icon={<StatIcon target="training" />}
                 />
               </div>
+              <p class="hint">武勇 {character.buyu} が攻撃の強さ、訓練度が受ける被害の軽減に関わる。戦況は相手の武勇・訓練度・兵数によって変わる。</p>
               {character.defending ? (
                 <p class="status-badge status-defending">あなたがこの都市を守備中</p>
               ) : null}
@@ -583,6 +584,7 @@ export function GameHubPage({
                 marketRate={province.marketRate}
                 provinceNameById={provinceNameById}
                 characterNameById={characterNameById}
+                character={character}
                 troopCap={character.toso}
                 maintenance={Boolean(gameState.maintenance)}
                 presets={commandPresets}

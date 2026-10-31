@@ -19,6 +19,7 @@ export function ExGauge({ value, tone = 'buyu' }: ExGaugeProps) {
           <span class="ex-gauge-max">/{STAT_EX_PER_LEVEL}</span>
         </span>
       </div>
+      <span class="ex-gauge-meta">次の能力+1まで {STAT_EX_PER_LEVEL - capped} EX</span>
       <div class="ex-gauge-track" aria-hidden="true">
         <div class="ex-gauge-fill" style={{ width: `${pct}%` }} />
       </div>

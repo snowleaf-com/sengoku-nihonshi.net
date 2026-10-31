@@ -192,6 +192,37 @@ describe('phase N6 commands', () => {
     expect(updated!.buyuEx).toBe(beforeEx + 2)
   })
 
+  it.each([
+    ['buyu', '武勇', 7], ['buyu', '武勇', 9],
+    ['chiryaku', '知略', 7], ['chiryaku', '知略', 9],
+    ['toso', '統率', 7], ['toso', '統率', 9],
+  ] as const)('tanren reports %s (%s) progression from EX %i', async (stat, label, ex) => {
+    const provinceId = await findNeutralProvince()
+    const { userId, character } = await seedAt(provinceId)
+    const characters = new CharacterRepository(env.DB)
+    const exKey = `${stat}Ex` as const
+    await characters.updateResources(character.id, { [stat]: 50, [exKey]: ex, updatedAt: nowSeconds() })
+    await applyCommandsToPositions(env.DB, {
+      userId,
+      commandId: 'tanren',
+      positions: [0],
+      payload: { kind: 'train_stat', stat },
+    })
+    const queued = (await new CharacterCommandRepository(env.DB).listByCharacter(character.id))[0]!
+    const before = (await characters.findById(character.id))!
+    const result = await executeCharacterCommand(env.DB, before, queued)
+    const after = (await characters.findById(character.id))!
+    expect(result.ok).toBe(true)
+    expect(after[stat]).toBe(ex === 9 ? 51 : 50)
+    expect(after[exKey]).toBe(ex === 9 ? 1 : 9)
+    if (result.ok) {
+      expect(result.message).toContain(`${label} 50→${after[stat]}`)
+      expect(result.message).toContain(`EX ${ex}/10→${after[exKey]}/10`)
+      expect(result.message).toContain(`次の能力+1まで ${10 - after[exKey]} EX`)
+    }
+    expect(after.countryMerit).toBe(before.countryMerit)
+  })
+
   it('touyou succeeds when target merit is low', async () => {
     const provinceId = await findNeutralProvince()
     const lord = await seedAt(provinceId)

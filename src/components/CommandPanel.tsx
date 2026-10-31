@@ -13,8 +13,9 @@ import {
 } from '../config/commands'
 import { formatQueueLabel } from '../config/command-payload'
 import { formatGameDate, dateAtQueueOffset, formatRealtime, realtimeAtQueueOffset } from '../config/calendar'
-import { TRADE_MAX } from '../config/net'
-import type { CharacterCommand } from '../types'
+import { STAT_EX_PER_LEVEL, TRAIN_STAT_EX_GAIN, TRAIN_STAT_GOLD_COST, TRAIN_STAT_CONTRIBUTION, TRADE_MAX } from '../config/net'
+import { applyStatEx } from '../services/commands'
+import type { Character, CharacterCommand } from '../types'
 import type { CommandPresetView } from '../services/command-presets'
 import { IconTrendingDown, IconTrendingUp } from './icons'
 import { StatIcon } from './StatIcon'
@@ -26,6 +27,7 @@ type WarTargetOption = { id: string; name: string; ownerLabel: string }
 type RecruitTargetOption = { id: string; name: string; houseLabel: string }
 
 type CommandPanelProps = {
+  character: Pick<Character, 'buyu' | 'buyuEx' | 'chiryaku' | 'chiryakuEx' | 'toso' | 'tosoEx'>
   queue: CharacterCommand[]
   currentYear: number
   currentMonth: number
@@ -81,6 +83,7 @@ function commandAvailable(command: GameCommand, inHomeLand: boolean, canShikan: 
 }
 
 export function CommandPanel({
+  character,
   queue,
   currentYear,
   currentMonth,
@@ -496,13 +499,20 @@ export function CommandPanel({
               {inHomeLand && !maintenance ? (
                 <div class="command-param-block" style={{ order: commandPickerRank('tanren') }}>
                   <strong class="command-card-label">鍛錬</strong>
-                  <p class="hint">金50・選んだ能力のEX+2・貢献+10</p>
+                  <p class="hint">武将自身の能力を伸ばす。兵の訓練度を上げるには「訓練」を使う。</p>
+                  <p class="hint">金{TRAIN_STAT_GOLD_COST}・選んだ能力のEX+{TRAIN_STAT_EX_GAIN}・貢献+{TRAIN_STAT_CONTRIBUTION}。国貢献には含まれず、税金・年貢の支給条件にはならない。</p>
+                  <p class="hint">EX{STAT_EX_PER_LEVEL}で能力+1。選択肢は現在の状態で1回鍛錬した場合の見込み。予約実行までの行動で変わる。</p>
                   <label class="field field-inline">
                     <span class="field-label">能力</span>
                     <select class="field-input" name="trainStat">
-                      <option value="buyu">武勇</option>
-                      <option value="chiryaku">知略</option>
-                      <option value="toso">統率</option>
+                      {([
+                        ['buyu', '武勇', character.buyu, character.buyuEx],
+                        ['chiryaku', '知略', character.chiryaku, character.chiryakuEx],
+                        ['toso', '統率', character.toso, character.tosoEx],
+                      ] as const).map(([stat, label, value, ex]) => {
+                        const next = applyStatEx(value, ex, TRAIN_STAT_EX_GAIN)
+                        return <option value={stat}>{label} {value}→{next.value}（EX {ex}→{next.ex}）</option>
+                      })}
                     </select>
                   </label>
                   <button
