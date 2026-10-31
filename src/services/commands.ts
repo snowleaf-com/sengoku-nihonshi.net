@@ -47,6 +47,7 @@ import {
 } from '../config/net'
 import {
   CITY_RANK_LABEL,
+  fushinCaps,
   cityRankOf,
   getProvinceMaster,
   troopCapForCity,
@@ -726,15 +727,21 @@ export async function executeCharacterCommand(
           : ('defenseMax' as const)
     const targetLabel =
       payload.target === 'agriculture' ? '農業' : payload.target === 'commerce' ? '商業' : '城壁'
+    const master = getProvinceMaster(province.id)
+    if (!master) return { ok: false, reason: '所在国が不正です' }
+    const cap = fushinCaps(master)[payload.target]
+    if (local[targetKey] >= cap) {
+      return { ok: false, reason: `${targetLabel}の普請上限（${cap}）に達しています。金は消費しません` }
+    }
     personal.money -= FUSHIN_GOLD_COST
-    const gain = Math.max(FUSHIN_MIN_GAIN, netStatGain(personal.buyu))
+    const gain = Math.min(cap - local[targetKey], Math.max(FUSHIN_MIN_GAIN, netStatGain(personal.buyu)))
     local[targetKey] += gain
     gainContribution(personal, COMMAND_CONTRIBUTION)
     gainBuyuEx(personal)
     await finishCommand(db, character, queued, personal, local)
     return {
       ok: true,
-      message: `${province.name}の${targetLabel}上限を+${gain}普請した。`,
+      message: `${province.name}の${targetLabel}上限を+${gain}普請した（現在${local[targetKey]}／普請上限${cap}）。`,
     }
   }
 
