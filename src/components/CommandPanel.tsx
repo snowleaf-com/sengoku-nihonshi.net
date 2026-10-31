@@ -27,6 +27,7 @@ type WarTargetOption = { id: string; name: string; ownerLabel: string }
 type RecruitTargetOption = { id: string; name: string; houseLabel: string }
 
 type CommandPanelProps = {
+  fushinTargets: ReadonlyArray<{ id: string; label: string; current: number; cap: number }>
   character: Pick<Character, 'buyu' | 'buyuEx' | 'chiryaku' | 'chiryakuEx' | 'toso' | 'tosoEx'>
   queue: CharacterCommand[]
   currentYear: number
@@ -83,6 +84,7 @@ function commandAvailable(command: GameCommand, inHomeLand: boolean, canShikan: 
 }
 
 export function CommandPanel({
+  fushinTargets,
   character,
   queue,
   currentYear,
@@ -474,13 +476,16 @@ export function CommandPanel({
               {inHomeLand && !maintenance ? (
                 <div class="command-param-block" style={{ order: commandPickerRank('fushin') }}>
                   <strong class="command-card-label">普請</strong>
-                  <p class="hint">金80・農業／商業／城壁の上限を1つ上げる。効果は武勇依存</p>
+                  <p class="hint">金80・農業／商業／城壁の上限を1つ上げる。効果は武勇依存。天井直前は残りの分だけ上がる。</p>
+                  <p class="hint">所在都市の現在の上限／普請の天井を表示。到達済みは選べない。予約実行時に到達していた場合は金を消費せず失敗となる。</p>
                   <label class="field field-inline">
                     <span class="field-label">対象</span>
                     <select class="field-input" name="fushinTarget">
-                      <option value="agriculture">農業</option>
-                      <option value="commerce">商業</option>
-                      <option value="defense">城壁</option>
+                      {fushinTargets.map((target) => (
+                        <option value={target.id} disabled={target.current >= target.cap}>
+                          {target.label} {target.current}／{target.cap}{target.current >= target.cap ? '（到達済み）' : ''}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <button
@@ -489,6 +494,7 @@ export function CommandPanel({
                     formaction="/actions/apply-commands"
                     name="commandId"
                     value="fushin"
+                    disabled={fushinTargets.every((target) => target.current >= target.cap)}
                     data-needs-selection
                   >
                     普請を入力

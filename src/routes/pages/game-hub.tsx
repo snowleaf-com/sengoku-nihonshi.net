@@ -24,7 +24,7 @@ import { getCommand } from '../../config/commands'
 import { formatMoney, formatRice, rankName } from '../../config/game'
 import { salaryCapForClassPoints } from '../../config/net'
 import { iconPublicPath } from '../../config/icons'
-import { cityRankOf, getProvinceMaster, PROVINCES, troopCapForCity } from '../../config/provinces'
+import { cityRankOf, fushinCaps, getProvinceMaster, PROVINCES, troopCapForCity } from '../../config/provinces'
 import { adjacentCount, listAdjacentIds } from '../../domain/province/adjacency'
 import { isInHomeLand } from '../../services/commands'
 import type { CommandPresetView } from '../../services/command-presets'
@@ -101,6 +101,12 @@ export function GameHubPage({
   houseBoardMessages = [],
 }: GameHubPageProps) {
   const master = getProvinceMaster(province.id)
+  const caps = master ? fushinCaps(master) : null
+  const fushinTargets = caps ? ([
+    { id: 'agriculture', label: '農業', current: province.agricultureMax, cap: caps.agriculture },
+    { id: 'commerce', label: '商業', current: province.commerceMax, cap: caps.commerce },
+    { id: 'defense', label: '城壁', current: province.defenseMax, cap: caps.defense },
+  ] as const) : []
   const cityRank = master ? cityRankOf(master) : 'town'
   const troopCap = troopCapForCity(character.toso, cityRank)
   const adj = master ? adjacentCount(master, PROVINCES) : 0
@@ -388,6 +394,7 @@ export function GameHubPage({
                   label="農業"
                   value={province.agriculture}
                   max={province.agricultureMax}
+                  sub={caps ? `普請の天井 ${caps.agriculture}${province.agricultureMax >= caps.agriculture ? '（到達済み）' : ''}` : undefined}
                   tone="agri"
                   icon={<StatIcon target="agriculture" />}
                 />
@@ -395,6 +402,7 @@ export function GameHubPage({
                   label="商業"
                   value={province.commerce}
                   max={province.commerceMax}
+                  sub={caps ? `普請の天井 ${caps.commerce}${province.commerceMax >= caps.commerce ? '（到達済み）' : ''}` : undefined}
                   tone="commerce"
                   icon={<StatIcon target="commerce" />}
                 />
@@ -402,6 +410,7 @@ export function GameHubPage({
                   label="城壁"
                   value={province.defense}
                   max={province.defenseMax}
+                  sub={caps ? `普請の天井 ${caps.defense}${province.defenseMax >= caps.defense ? '（到達済み）' : ''}` : undefined}
                   tone="toso"
                   icon={<StatIcon target="defense" />}
                 />
@@ -584,6 +593,7 @@ export function GameHubPage({
                 marketRate={province.marketRate}
                 provinceNameById={provinceNameById}
                 characterNameById={characterNameById}
+                fushinTargets={fushinTargets}
                 character={character}
                 troopCap={character.toso}
                 maintenance={Boolean(gameState.maintenance)}

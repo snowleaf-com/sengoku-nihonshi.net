@@ -240,3 +240,20 @@ export function initialStats(master: ProvinceMaster) {
     defenseCap: Math.floor(defense * 1.5 * scale),
   }
 }
+
+/** 普請の天井。初期上限から都市10%・中都市15%・大都市20%まで。 */
+export const FUSHIN_CAP_PERCENT: Record<CityRank, number> = {
+  town: 110,
+  mid: 115,
+  great: 120,
+}
+
+export function fushinCaps(master: ProvinceMaster) {
+  const initial = initialStats(master)
+  const percent = FUSHIN_CAP_PERCENT[cityRankOf(master)]
+  return {
+    agriculture: Math.floor(initial.agricultureCap * percent / 100),
+    commerce: Math.floor(initial.commerceCap * percent / 100),
+    defense: Math.floor(initial.defenseCap * percent / 100),
+  }
+}

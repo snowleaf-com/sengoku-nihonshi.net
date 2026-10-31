@@ -1,3 +1,4 @@
+import { fushinCaps, getProvinceMaster } from '../../src/config/provinces'
 /**
  * 壊れやすい純関数だけを薄く固定する（D1不要）。
  */
@@ -133,5 +134,14 @@ describe('unit: disaster and idle', () => {
     expect(nextIdleStreakAfterNashi(59)).toBe(60)
     expect(shouldDeleteForIdle(59)).toBe(false)
     expect(shouldDeleteForIdle(60)).toBe(true)
+  })
+})
+
+// 同じ農業Bの都市で、初期上限とランク別の伸びしろを合わせて確認。
+describe('fushin ceilings', () => {
+  it('allows 10%, 15%, and 20% growth from initial caps', () => {
+    expect(fushinCaps(getProvinceMaster('kozuke')!).agriculture).toBe(825)
+    expect(fushinCaps(getProvinceMaster('shinano')!).agriculture).toBe(905)
+    expect(fushinCaps(getProvinceMaster('mutsu')!).agriculture).toBe(990)
   })
 })
