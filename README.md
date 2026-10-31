@@ -56,7 +56,7 @@ PR では typecheck / lint / test。`main` へマージすると staging へ自�
 
 ## ドキュメント
 
-詳細は [`docs/`](./docs/) を参照。
+詳細は [`docs/`](./docs/) を参照。後日の開発再開は **[`docs/resume.md`](./docs/resume.md)** から。
 
 | 文書 | 内容 |
 |------|------|
