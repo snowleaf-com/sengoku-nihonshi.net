@@ -1056,6 +1056,9 @@ export async function executeCharacterCommand(
     }
     personal.money -= TRAIN_STAT_GOLD_COST
     gainContribution(personal, TRAIN_STAT_CONTRIBUTION, false)
+    const beforeValue = personal[payload.stat]
+    const exKey = `${payload.stat}Ex` as const
+    const beforeEx = personal[exKey]
     const statLabel =
       payload.stat === 'buyu' ? '武勇' : payload.stat === 'chiryaku' ? '知略' : '統率'
     if (payload.stat === 'buyu') {
@@ -1071,7 +1074,7 @@ export async function executeCharacterCommand(
       updatedAt: now,
     })
     await consumeQueuedCommand(db, character.id, queued)
-    return { ok: true, message: `${statLabel}を鍛錬した（EX+${TRAIN_STAT_EX_GAIN}）。` }
+    return { ok: true, message: `${statLabel}を鍛錬した（EX+${TRAIN_STAT_EX_GAIN}）。${statLabel} ${beforeValue}→${personal[payload.stat]}、EX ${beforeEx}/${STAT_EX_PER_LEVEL}→${personal[exKey]}/${STAT_EX_PER_LEVEL}。次の能力+1まで ${STAT_EX_PER_LEVEL - personal[exKey]} EX。` }
   }
 
   if (commandId === 'touyou') {
