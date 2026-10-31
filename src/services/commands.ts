@@ -936,8 +936,10 @@ export async function executeCharacterCommand(
       await provinces.updateOwner(target.id, character.houseId, now)
       await characters.clearDefendingInProvince(target.id, null, now)
 
+      personal.defending = 1
       await characters.updateResources(character.id, {
         ...personal,
+        provinceId: target.id,
         updatedAt: now,
       })
       await consumeQueuedCommand(db, character.id, queued)
@@ -991,7 +993,7 @@ export async function executeCharacterCommand(
 
       return {
         ok: true,
-        message: `${fromMaster.name}から${target.name}へ侵攻し占領した（対${vsLabel}、${roundLabel}、残兵${personal.troops}）。\n${battleLog}`,
+        message: `${fromMaster.name}から${target.name}へ侵攻し占領、そのまま守備についた（対${vsLabel}、${roundLabel}、残兵${personal.troops}）。\n${battleLog}`,
       }
     }
 
