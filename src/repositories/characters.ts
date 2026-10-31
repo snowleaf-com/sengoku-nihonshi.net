@@ -327,6 +327,7 @@ export class CharacterRepository {
   async updateResources(
     characterId: string,
     patch: {
+      provinceId?: string
       money?: number
       rice?: number
       troops?: number
@@ -360,7 +361,7 @@ export class CharacterRepository {
            buyu = ?, chiryaku = ?, toso = ?, tokubo = ?,
            buyu_ex = ?, chiryaku_ex = ?, toso_ex = ?, tokubo_ex = ?,
            idle_streak = ?, loyalty = ?,
-           updated_at = ?
+           province_id = ?, updated_at = ?
          WHERE id = ?`,
       )
       .bind(
@@ -383,6 +384,7 @@ export class CharacterRepository {
         patch.tokuboEx ?? current.tokuboEx,
         patch.idleStreak ?? current.idleStreak,
         patch.loyalty ?? current.loyalty,
+        patch.provinceId ?? current.provinceId,
         patch.updatedAt,
         characterId,
       )

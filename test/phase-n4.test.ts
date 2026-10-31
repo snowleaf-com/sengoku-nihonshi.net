@@ -196,6 +196,10 @@ describe('phase N4 war', () => {
     expect(target?.defense).toBe(0)
     expect(after?.merit).toBe((before?.merit ?? 0) + WAR_CONTRIBUTION)
     expect(after?.buyuEx).toBe(1)
+    expect(after?.provinceId).toBe(to)
+    expect(after?.defending).toBe(1)
+    expect((await characters.findDefender(to, character.houseId!))?.id).toBe(character.id)
+    expect((await new CharacterCommandRepository(env.DB).listByCharacter(character.id))[0]?.commandId).not.toBe('sensou')
 
     const news = await new WorldEventRepository(env.DB).listRecent({
       channel: 'news',
@@ -269,6 +273,11 @@ describe('phase N4 war', () => {
     expect(lordAfter?.houseId).toBeNull()
     expect(retainerAfter?.houseId).toBeNull()
     expect(lordAfter?.defending).toBe(0)
+    expect(lordAfter?.provinceId).toBe(to)
+    expect(retainerAfter?.provinceId).toBe(to)
+    const attackerAfter = await characters.findById(attacker.character.id)
+    expect(attackerAfter?.provinceId).toBe(to)
+    expect(attackerAfter?.defending).toBe(1)
 
     const news = await new WorldEventRepository(env.DB).listRecent({
       channel: 'news',
@@ -343,6 +352,38 @@ describe('phase N4 war', () => {
     const defAfter = await characters.findById(defender.character.id)
     expect(defAfter?.troops).toBe(0)
     expect(defAfter?.defending).toBe(0)
+    const attackerAfter = await characters.findById(attacker.character.id)
+    expect(attackerAfter?.provinceId).toBe(to)
+    expect(attackerAfter?.defending).toBe(1)
+    expect((await characters.findDefender(to, attacker.character.houseId!))?.id).toBe(attacker.character.id)
+  })
+
+  it('keeps the attacker at the origin without defending after a failed invasion', async () => {
+    const { from, to } = await findNeutralAdjacentPair()
+    const { userId, character } = await seedAt(from)
+    await unlockWar(character.houseId!)
+    const characters = new CharacterRepository(env.DB)
+    await characters.updateResources(character.id, {
+      troops: 1,
+      buyu: 1,
+      training: 0,
+      updatedAt: nowSeconds(),
+    })
+    await new ProvinceRepository(env.DB).updateStats(to, { defense: 1000, updatedAt: nowSeconds() })
+    await applyCommandsToPositions(env.DB, {
+      userId,
+      commandId: 'sensou',
+      positions: [0],
+      payload: { kind: 'war', provinceId: to },
+    })
+    const queued = (await new CharacterCommandRepository(env.DB).listByCharacter(character.id))[0]!
+    const result = await executeCharacterCommand(env.DB, (await characters.findById(character.id))!, queued)
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.message).toContain('侵攻に失敗')
+    const after = await characters.findById(character.id)
+    expect(after?.provinceId).toBe(from)
+    expect(after?.defending).toBe(0)
+    expect((await new ProvinceRepository(env.DB).findById(to))?.houseId).toBeNull()
   })
 
   it('rejects attacking own province', async () => {
