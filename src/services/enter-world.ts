@@ -24,6 +24,7 @@ export async function enterWorld(
     chiryaku?: string
     toso?: string
     provinceId: string
+    turnIntervalSeconds?: number
     houseName?: string
   },
 ): Promise<EnterWorldResult> {
@@ -40,6 +41,7 @@ export async function enterWorld(
   }
 
   const characterInput = {
+    turnIntervalSeconds: input.turnIntervalSeconds,
     userId: input.userId,
     name: input.name,
     iconId: input.iconId,

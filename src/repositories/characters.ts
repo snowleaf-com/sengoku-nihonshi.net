@@ -29,6 +29,7 @@ type CharacterRow = {
   loyalty: number
   fallen_to_house_id: string | null
   fallen_at_turn: number | null
+  next_command_at: number
   created_at: number
   updated_at: number
 }
@@ -37,7 +38,7 @@ const CHARACTER_COLUMNS = `id, user_id, name, icon_id, archetype_id, buyu, chiry
   buyu_ex, chiryaku_ex, toso_ex, tokubo_ex,
   house_id, province_id, rank, merit, country_merit, class_points, money, rice, troops, training, defending,
   idle_streak, loyalty, fallen_to_house_id, fallen_at_turn,
-  created_at, updated_at`
+  next_command_at, created_at, updated_at`
 
 function mapCharacter(row: CharacterRow): Character {
   return {
@@ -69,6 +70,7 @@ function mapCharacter(row: CharacterRow): Character {
     loyalty: row.loyalty ?? 100,
     fallenToHouseId: row.fallen_to_house_id ?? null,
     fallenAtTurn: row.fallen_at_turn ?? null,
+    nextCommandAt: row.next_command_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -93,6 +95,7 @@ export class CharacterRepository {
     money: number
     rice: number
     troops: number
+    nextCommandAt?: number
     createdAt: number
   }): Promise<Character> {
     await this.db
@@ -101,8 +104,8 @@ export class CharacterRepository {
            id, user_id, name, icon_id, archetype_id, buyu, chiryaku, toso, tokubo,
            buyu_ex, chiryaku_ex, toso_ex, tokubo_ex,
            house_id, province_id, rank, merit, class_points, money, rice, troops,
-           training, defending, idle_streak, loyalty, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, NULL, ?, ?, ?, 0, ?, ?, ?, 0, 0, 0, 100, ?, ?)`,
+           training, defending, idle_streak, loyalty, next_command_at, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, NULL, ?, ?, ?, 0, ?, ?, ?, 0, 0, 0, 100, ?, ?, ?)`,
       )
       .bind(
         input.id,
@@ -120,6 +123,7 @@ export class CharacterRepository {
         input.money,
         input.rice,
         input.troops,
+        input.nextCommandAt ?? 0,
         input.createdAt,
         input.createdAt,
       )
@@ -154,6 +158,7 @@ export class CharacterRepository {
       loyalty: 100,
       fallenToHouseId: null,
       fallenAtTurn: null,
+      nextCommandAt: input.nextCommandAt ?? 0,
       createdAt: input.createdAt,
       updatedAt: input.createdAt,
     }

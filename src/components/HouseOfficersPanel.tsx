@@ -1,4 +1,4 @@
-import { formatGameDate, dateAtQueueOffset, formatRealtime, realtimeAtQueueOffset } from '../config/calendar'
+import { commandDate, formatGameDate, dateAtQueueOffset, formatRealtime, realtimeAtQueueOffset } from '../config/calendar'
 import { formatQueueLabel } from '../config/command-payload'
 import { getCommand } from '../config/commands'
 import { iconPublicPath } from '../config/icons'
@@ -16,6 +16,7 @@ export type HouseOfficerRow = {
   tokubo: number
   queue: CharacterCommand[]
   /** 次コマンドまでの秒（空キューは大きい値で末尾） */
+  nextTurnAt: number
   nextDueIn: number
 }
 
@@ -62,9 +63,9 @@ export function HouseOfficersPanel({
                 (id) => provinceNameById[id] ?? null,
                 (id) => characterNameById[id] ?? null,
               )
-              const gameWhen = formatGameDate(dateAtQueueOffset(currentDate, cmd.position))
+              const gameWhen = formatGameDate(dateAtQueueOffset(commandDate(currentDate, nextTurnAt, row.nextTurnAt, turnIntervalSeconds), cmd.position))
               const realWhen = formatRealtime(
-                realtimeAtQueueOffset(nextTurnAt, cmd.position, turnIntervalSeconds),
+                realtimeAtQueueOffset(row.nextTurnAt, cmd.position, turnIntervalSeconds),
               )
               return { key: `${cmd.id}-${i}`, label, gameWhen, realWhen }
             })

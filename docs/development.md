@@ -121,3 +121,11 @@ production の `*.workers.dev` は残っていても、Passkey はカスタム�
 | migration 忘れ | local: `db:migrate:local` / staging: `db:migrate:staging` / prod: `db:migrate:production` |
 | CI の deploy が失敗 | `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` がセットされているか |
 | 型エラー（Bindings） | `npm run cf-typegen` |
+
+## 本番の世界時計・個人時計
+
+本番の1800秒制は、月更新・税金・年貢を毎時00分／30分、個人コマンドを武将登録時刻から30分ごとに実行する。stagingの60秒制は従来の一斉実行。
+
+`0017_personal_turns.sql` は既存武将の個人時計を未初期化（0）で追加する。新コードの初回進行時に登録時刻グリッド上の未来の時刻を設定し、導入前の未処理期間は一括実行しない。世界時計は既存の次回予定を半時境界へ切り上げる。通常のdeployスクリプトはmigration→deployの順なので、追加の手動データ更新は不要。
+
+遅延時は予定時刻順に最大24組まで処理し、残りは次回呼び出しで継続する。次回予定が過去なら追いつき中。管理者の強制進行は本番では世界のみ1月進め、個人の予定は前倒ししない。詳細は [Issue #32方針](./issue/32.md)。

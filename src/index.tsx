@@ -41,7 +41,7 @@ import {
 import { ensureProvincesSeeded } from './services/world'
 import { listActionResults, listRecentWarInvasions, listWorldNews } from './services/events'
 import { advanceDueTurns, ensureGameState } from './services/turns'
-import { getTurnIntervalSeconds } from './config/calendar'
+import { getTurnIntervalSeconds, commandTurnAt } from './config/calendar'
 import { nowSeconds } from './lib/id'
 import { HouseMessageRepository } from './repositories/house-messages'
 import type { AppEnv } from './types'
@@ -206,6 +206,7 @@ app.get('/game', requireAuth, async (c) => {
     toso: number
     tokubo: number
     queue: Awaited<ReturnType<CharacterCommandRepository['listByCharacter']>>
+    nextTurnAt: number
     nextDueIn: number
   }> = []
   let houseBoardMessages: Awaited<
@@ -224,6 +225,7 @@ app.get('/game', requireAuth, async (c) => {
     houseOfficers = peers.map((p, i) => {
       const queue = queues[i] ?? []
       const next = queue[0]
+      const nextAt = commandTurnAt(p, gameState.nextTurnAt, turnIntervalSeconds, nowSeconds())
       return {
         characterId: p.id,
         name: p.name,
@@ -238,8 +240,9 @@ app.get('/game', requireAuth, async (c) => {
         toso: p.toso,
         tokubo: p.tokubo,
         queue,
+        nextTurnAt: nextAt,
         nextDueIn: next
-          ? next.position * turnIntervalSeconds
+          ? nextAt + next.position * turnIntervalSeconds - nowSeconds()
           : Number.MAX_SAFE_INTEGER,
       }
     })

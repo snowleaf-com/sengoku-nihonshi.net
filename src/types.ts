@@ -87,6 +87,7 @@ export type Character = {
   fallenToHouseId: string | null
   /** 滅亡した turn_index。帰順特典の期限に使う */
   fallenAtTurn: number | null
+  nextCommandAt: number
   createdAt: number
   updatedAt: number
 }

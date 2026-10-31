@@ -78,6 +78,7 @@ gameActionRoutes.post('/character', async (c) => {
 
   try {
     await enterWorld(c.env.DB, {
+      turnIntervalSeconds: getTurnIntervalSeconds(c.env),
       userId: user.id,
       name,
       iconId,

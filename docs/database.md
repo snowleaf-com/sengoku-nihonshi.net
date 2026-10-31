@@ -158,3 +158,10 @@ migration `0013_war_from_province.sql`。
 
 - `world_events.from_province_id` … 戦争の出発国（地図矢印用）
 - 家役職表示を拡張（`HOUSE_ROLES`: 当主 / 軍師 / 大将 / 家臣。称号のみ）
+
+## 世界時計・個人時計
+
+migration `0017_personal_turns.sql`。
+
+- `characters.next_command_at` … 本番の個人コマンドの次回予定（Unix秒）。0は既存武将の初期化待ち
+- `turn_scheduler_lock` … 本番の世界・個人時計の進行を排他する期限付きロック（0017）

@@ -1,3 +1,4 @@
+import { DEFAULT_TURN_INTERVAL_SECONDS } from '../config/calendar'
 import {
   isArchetypeId,
   parseStatValue,
@@ -50,6 +51,7 @@ export async function createCharacter(
     chiryaku?: string
     toso?: string
     provinceId: string
+    turnIntervalSeconds?: number
   },
 ): Promise<Character> {
   await ensureProvincesSeeded(db)
@@ -110,6 +112,7 @@ export async function createCharacter(
     money: STARTING_MONEY,
     rice: STARTING_RICE,
     troops: STARTING_TROOPS,
+    nextCommandAt: now + (input.turnIntervalSeconds ?? DEFAULT_TURN_INTERVAL_SECONDS),
     createdAt: now,
   })
 }

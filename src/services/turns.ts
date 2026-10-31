@@ -1,4 +1,6 @@
 import {
+  nextScheduledAt,
+  usesPersonalTurns,
   START_MONTH,
   START_YEAR,
   DEFAULT_TURN_INTERVAL_SECONDS,
@@ -12,7 +14,7 @@ import { CHARACTER_RANKS, formatMoney, formatRice, rankName } from '../config/ga
 import { CLASS_PER_RANK, SALARY_RANK_MAX } from '../config/net'
 import { getProvinceMaster } from '../config/provinces'
 import { getCommand } from '../config/commands'
-import { nowSeconds } from '../lib/id'
+import { createId, nowSeconds } from '../lib/id'
 import { CharacterCommandRepository } from '../repositories/character-commands'
 import { CharacterRepository } from '../repositories/characters'
 import { GameStateRepository } from '../repositories/game-state'
@@ -48,8 +50,15 @@ export async function ensureGameState(
     return repo.save({
       date: { year: state.year || START_YEAR, month: state.month || START_MONTH },
       turnIndex: state.turnIndex,
-      nextTurnAt: now + turnIntervalSeconds,
+      nextTurnAt: usesPersonalTurns(turnIntervalSeconds) ? nextScheduledAt(now, turnIntervalSeconds) : now + turnIntervalSeconds,
       updatedAt: now,
+    })
+  }
+  if (usesPersonalTurns(turnIntervalSeconds) && state.nextTurnAt % turnIntervalSeconds !== 0) {
+    return repo.save({
+      date: state, turnIndex: state.turnIndex,
+      nextTurnAt: Math.ceil(state.nextTurnAt / turnIntervalSeconds) * turnIntervalSeconds,
+      updatedAt: nowSeconds(),
     })
   }
   return state
@@ -65,6 +74,9 @@ export async function advanceDueTurns(
 ): Promise<{ advanced: number; state: GameState }> {
   const turnIntervalSeconds =
     options.turnIntervalSeconds ?? DEFAULT_TURN_INTERVAL_SECONDS
+  if (usesPersonalTurns(turnIntervalSeconds)) {
+    return advanceProductionTurns(db, options.now ?? nowSeconds(), Boolean(options.force), turnIntervalSeconds)
+  }
   let state = await ensureGameState(db, turnIntervalSeconds)
   const now = options.now ?? nowSeconds()
   let advanced = 0
@@ -450,27 +462,11 @@ async function applyCharacterLoyaltyDrift(db: D1Database, wallClock: number): Pr
   }
 }
 
-async function advanceOneTurn(
-  db: D1Database,
-  state: GameState,
-  wallClock: number,
-  turnIntervalSeconds: number,
-): Promise<GameState> {
+async function executeTurnCommands(db: D1Database, state: GameState, wallClock: number, dueAt?: number): Promise<void> {
   const characters = new CharacterRepository(db)
   const commands = new CharacterCommandRepository(db)
   const provinces = new ProvinceRepository(db)
-  const eventBatch: Array<{
-    year: number
-    month: number
-    channel: 'result' | 'news'
-    kind: 'command' | 'income' | 'system' | 'disaster' | 'social' | 'war'
-    message: string
-    provinceId?: string | null
-    characterId?: string | null
-    houseId?: string | null
-    createdAt: number
-  }> = []
-
+  const eventBatch: Parameters<typeof recordWorldEvents>[1] = []
   const queued = await commands.listFirstPerCharacter()
   for (const item of queued) {
     const character = await characters.findById(item.characterId)
@@ -478,6 +474,7 @@ async function advanceOneTurn(
       await commands.delete(item.id)
       continue
     }
+    if (dueAt != null && character.nextCommandAt !== dueAt) continue
     const province = await provinces.findById(character.provinceId)
     const definition = getCommand(item.commandId)
     const result = await executeCharacterCommand(db, character, item)
@@ -540,6 +537,30 @@ async function advanceOneTurn(
       await commands.shiftDownAfter(character.id, item.position)
     }
   }
+
+  await recordWorldEvents(db, eventBatch)
+}
+
+async function advanceOneTurn(
+  db: D1Database,
+  state: GameState,
+  wallClock: number,
+  turnIntervalSeconds: number,
+): Promise<GameState> {
+  const characters = new CharacterRepository(db)
+  const eventBatch: Array<{
+    year: number
+    month: number
+    channel: 'result' | 'news'
+    kind: 'command' | 'income' | 'system' | 'disaster' | 'social' | 'war'
+    message: string
+    provinceId?: string | null
+    characterId?: string | null
+    houseId?: string | null
+    createdAt: number
+  }> = []
+
+  if (!usesPersonalTurns(turnIntervalSeconds)) await executeTurnCommands(db, state, wallClock)
 
   const upkeepReports = await applyTroopUpkeep(db, wallClock)
   for (const report of upkeepReports) {
@@ -628,7 +649,55 @@ async function advanceOneTurn(
   return new GameStateRepository(db).save({
     date: nextDate,
     turnIndex: state.turnIndex + 1,
-    nextTurnAt: Math.max(nextTurnAt, wallClock + turnIntervalSeconds),
+    nextTurnAt: usesPersonalTurns(turnIntervalSeconds)
+      ? (state.nextTurnAt <= wallClock ? nextTurnAt : nextScheduledAt(wallClock, turnIntervalSeconds))
+      : Math.max(nextTurnAt, wallClock + turnIntervalSeconds),
     updatedAt: wallClock,
   })
+}
+
+/** 同じ予定時刻を request と cron が二重実行しないよう、進行全体を排他する。 */
+async function advanceProductionTurns(db: D1Database, now: number, force: boolean, interval: number): Promise<{ advanced: number; state: GameState }> {
+  const owner = createId(16)
+  const lockNow = nowSeconds()
+  const lock = await db.prepare(`INSERT INTO turn_scheduler_lock (id, owner, expires_at) VALUES (1, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at
+    WHERE turn_scheduler_lock.expires_at <= ? RETURNING owner`)
+    .bind(owner, lockNow + 120, lockNow).first<{ owner: string }>()
+  if (!lock) return { advanced: 0, state: await new GameStateRepository(db).get() }
+  try {
+    let state = await ensureGameState(db, interval)
+    // 既存武将だけを将来へ初期化。以降は保存した予定時刻から進め、遅延でも位相をずらさない。
+    await db.prepare(`UPDATE characters SET next_command_at = created_at +
+      (CAST(MAX(0, ? - created_at) / ? AS INTEGER) + 1) * ? WHERE next_command_at = 0`)
+      .bind(now, interval, interval).run()
+    let advanced = 0
+    if (force) {
+      state = await advanceOneTurn(db, state, now, interval)
+      return { advanced: 1, state }
+    }
+    for (let batch = 0; batch < 24; batch += 1) {
+      const leaseNow = nowSeconds()
+      const renewed = await db.prepare('UPDATE turn_scheduler_lock SET expires_at = ? WHERE id = 1 AND owner = ? AND expires_at > ? RETURNING owner')
+        .bind(leaseNow + 120, owner, leaseNow).first<{ owner: string }>()
+      if (!renewed) break
+      const first = await db.prepare('SELECT MIN(next_command_at) AS due FROM characters WHERE next_command_at > 0')
+        .first<{ due: number | null }>()
+      const personalAt = first?.due ?? Infinity
+      const due = Math.min(state.nextTurnAt, personalAt)
+      if (due > now) break
+      // 境界と同時のコマンドは月更新・支給より先。
+      if (personalAt <= state.nextTurnAt) {
+        await executeTurnCommands(db, state, personalAt, personalAt)
+        await db.prepare('UPDATE characters SET next_command_at = next_command_at + ? WHERE next_command_at = ?')
+          .bind(interval, personalAt).run()
+      } else {
+        state = await advanceOneTurn(db, state, state.nextTurnAt, interval)
+        advanced += 1
+      }
+    }
+    return { advanced, state }
+  } finally {
+    await db.prepare('DELETE FROM turn_scheduler_lock WHERE id = 1 AND owner = ?').bind(owner).run()
+  }
 }
