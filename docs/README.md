@@ -8,6 +8,7 @@
 
 | ファイル | 内容 |
 |----------|------|
+| [resume.md](./resume.md) | **後日再開の入口**（完了・残り・未決・参照コード） |
 | [roadmap.md](./roadmap.md) | **全体計画**（NETルール + 令制国、N1〜N6 完了） |
 | [issue/](./issue/) | **Issue ごとの対応方針**（設計判断。実装チェックは別） |
 | [impl.md](./impl.md) | **実装バックログ**（Slice・チェックリスト） |
@@ -23,6 +24,8 @@
 MVP までの phase 記録は [`past/`](./past/)。経緯の参照用。仕様の正は上表とソース。
 
 ## 読む順番（おすすめ）
+
+まず後日の再開時は [resume.md](./resume.md) を読む。
 
 1. [roadmap.md](./roadmap.md) — 方針とフェーズ（MVP 完了）
 2. [impl.md](./impl.md) / [issue/](./issue/) — これからやるもの
